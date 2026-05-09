@@ -20,7 +20,7 @@
 
 <script>
     async function loadBudgets() {
-        var r = await fetch('/api/v1/budgets');
+        var r = await fetch('/api/v1/budgets', { headers: authHeaders() });
         var d = await r.json();
         var container = document.getElementById('budgets-list');
         if (d.status !== 'success') { container.innerHTML = '<p>Нет бюджетов. Создайте первый.</p>'; return; }
@@ -32,7 +32,7 @@
         e.preventDefault();
         var r = await fetch('/api/v1/budgets', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: authHeaders(),
             body: JSON.stringify({
                 category_id: parseInt(document.getElementById('bg-category').value),
                 target_amount: parseFloat(document.getElementById('bg-amount').value)

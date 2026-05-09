@@ -26,7 +26,7 @@
 
 <script>
     async function loadTransactions() {
-        var r = await fetch('/api/v1/transactions');
+        var r = await fetch('/api/v1/transactions', { headers: authHeaders() });
         var d = await r.json();
         if (d.status !== 'success') return;
         var tbody = document.getElementById('tx-table');
@@ -38,7 +38,7 @@
         e.preventDefault();
         var r = await fetch('/api/v1/user/1/create_transaction', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: authHeaders(),
             body: JSON.stringify({
                 amount: parseFloat(document.getElementById('tx-amount').value),
                 category_id: parseInt(document.getElementById('tx-category').value),

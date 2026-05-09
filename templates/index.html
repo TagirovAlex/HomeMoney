@@ -31,8 +31,8 @@
 <script>
     async function loadDashboard() {
         try {
-            var r = await fetch('/api/v1/transactions');
-            var d = await r.json();
+        var r = await fetch('/api/v1/transactions', { headers: authHeaders() });
+        var d = await r.json();
             if (d.status === 'success') {
                 document.getElementById('total-spent').textContent = d.data.total_spent.toFixed(2) + ' RUB';
                 document.getElementById('total-budgeted').textContent = d.data.total_budgeted.toFixed(2) + ' RUB';

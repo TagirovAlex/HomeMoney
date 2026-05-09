@@ -11,14 +11,18 @@
         <header>
             <div class="header-left">
                 <a href="/" class="logo">HomeMoney</a>
-                <nav>
+                <nav id="main-nav">
                     <a href="/transactions" class="nav-link">Транзакции</a>
                     <a href="/budgets" class="nav-link">Бюджеты</a>
                     <a href="/reports" class="nav-link">Отчёты</a>
                     <a href="/admin" class="nav-link">Админ</a>
                 </nav>
             </div>
-            <button id="theme-toggle" aria-label="Переключить тему">🌙</button>
+            <div class="header-right">
+                <span id="user-email" class="user-email" style="display:none"></span>
+                <button id="theme-toggle" aria-label="Переключить тему">🌙</button>
+                <button id="logout-btn" class="btn-logout" style="display:none">Выйти</button>
+            </div>
         </header>
         <main>
             {% block content %}{% endblock %}
@@ -28,7 +32,7 @@
         (function() {
             var btn = document.getElementById('theme-toggle');
             var html = document.documentElement;
-            function init() {
+            function initTheme() {
                 var t = localStorage.getItem('theme');
                 if (t) { html.setAttribute('data-theme', t); btn.textContent = t === 'dark' ? '☀️' : '🌙'; }
                 else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -42,7 +46,41 @@
                 localStorage.setItem('theme', next);
                 btn.textContent = next === 'dark' ? '☀️' : '🌙';
             });
-            init();
+            initTheme();
+
+            // --- API helper ---
+            var authHeaders = function() {
+                var t = localStorage.getItem('token');
+                return t ? { 'Authorization': 'Bearer ' + t, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+            };
+
+            // --- Auth check ---
+            var token = localStorage.getItem('token');
+            var userStr = localStorage.getItem('user');
+            var userEmail = document.getElementById('user-email');
+            var logoutBtn = document.getElementById('logout-btn');
+
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+
+            if (userStr) {
+                try {
+                    var u = JSON.parse(userStr);
+                    userEmail.textContent = u.email;
+                    userEmail.style.display = 'inline';
+                } catch(e) {}
+            }
+
+            logoutBtn.style.display = 'inline-block';
+            logoutBtn.addEventListener('click', function() {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            });
+
+            // Active nav link
             var links = document.querySelectorAll('.nav-link');
             var path = window.location.pathname;
             links.forEach(function(l) { if (l.getAttribute('href') === path) l.classList.add('active'); });

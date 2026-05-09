@@ -38,9 +38,13 @@
 
 <script>
     async function loadUsers() {
-        var r = await fetch('/api/v1/health');
+        var r = await fetch('/api/v1/users', { headers: authHeaders() });
         var d = await r.json();
-        document.getElementById('users-body').innerHTML = '<tr><td colspan="3">Для списка пользователей нужен GET /api/v1/users (админ-эндпоинт).</td></tr>';
+        var tbody = document.getElementById('users-body');
+        if (d.status !== 'success') { tbody.innerHTML = '<tr><td colspan="3">' + (d.message || 'Ошибка') + '</td></tr>'; return; }
+        tbody.innerHTML = d.data.map(function(u) {
+            return '<tr><td>' + u.id + '</td><td>' + u.email + '</td><td>' + u.role + '</td></tr>';
+        }).join('');
     }
 
     async function addCategory(e) {
@@ -49,7 +53,7 @@
         var desc = document.getElementById('cat-desc').value;
         var r = await fetch('/api/v1/categories', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: authHeaders(),
             body: JSON.stringify({name: name, description: desc})
         });
         var d = await r.json();
@@ -59,7 +63,7 @@
     async function backup(type) {
         var out = document.getElementById('backup-result');
         out.textContent = 'Создание бэкапа...';
-        var r = await fetch('/api/v1/backup?type=' + type);
+        var r = await fetch('/api/v1/backup?type=' + type, { headers: authHeaders() });
         var d = await r.json();
         out.textContent = d.message || JSON.stringify(d, null, 2);
     }

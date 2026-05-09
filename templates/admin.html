@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}HomeMoney | Админ{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Панель администратора</h2>
+</div>
+
+<div class="admin-grid">
+    <div class="card admin-card">
+        <h3>Пользователи</h3>
+        <table class="data-table" id="users-table">
+            <thead><tr><th>ID</th><th>Email</th><th>Роль</th></tr></thead>
+            <tbody id="users-body"><tr><td colspan="3">Загрузка...</td></tr></tbody>
+        </table>
+    </div>
+
+    <div class="card admin-card">
+        <h3>Управление категориями</h3>
+        <form onsubmit="addCategory(event)">
+            <label>Название <input type="text" id="cat-name" required></label>
+            <label>Описание <input type="text" id="cat-desc"></label>
+            <button type="submit" class="btn">Добавить</button>
+        </form>
+        <table class="data-table" id="categories-table">
+            <thead><tr><th>ID</th><th>Название</th></tr></thead>
+            <tbody id="categories-body"><tr><td colspan="2">Загрузка...</td></tr></tbody>
+        </table>
+    </div>
+
+    <div class="card admin-card">
+        <h3>Резервное копирование</h3>
+        <p>Создать полную копию базы данных или экспорт в JSON.</p>
+        <button class="btn" onclick="backup('full')">SQLite бэкап</button>
+        <button class="btn" onclick="backup('json')">JSON экспорт</button>
+        <pre id="backup-result" class="backup-output"></pre>
+    </div>
+</div>
+
+<script>
+    async function loadUsers() {
+        var r = await fetch('/api/v1/health');
+        var d = await r.json();
+        document.getElementById('users-body').innerHTML = '<tr><td colspan="3">Для списка пользователей нужен GET /api/v1/users (админ-эндпоинт).</td></tr>';
+    }
+
+    async function addCategory(e) {
+        e.preventDefault();
+        var name = document.getElementById('cat-name').value;
+        var desc = document.getElementById('cat-desc').value;
+        var r = await fetch('/api/v1/categories', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name: name, description: desc})
+        });
+        var d = await r.json();
+        alert(d.message || d.error);
+    }
+
+    async function backup(type) {
+        var out = document.getElementById('backup-result');
+        out.textContent = 'Создание бэкапа...';
+        var r = await fetch('/api/v1/backup?type=' + type);
+        var d = await r.json();
+        out.textContent = d.message || JSON.stringify(d, null, 2);
+    }
+
+    window.onload = loadUsers;
+</script>
+{% endblock %}

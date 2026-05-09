@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}HomeMoney{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-layout">
+        <header>
+            <div class="header-left">
+                <a href="/" class="logo">HomeMoney</a>
+                <nav>
+                    <a href="/transactions" class="nav-link">Транзакции</a>
+                    <a href="/budgets" class="nav-link">Бюджеты</a>
+                    <a href="/reports" class="nav-link">Отчёты</a>
+                    <a href="/admin" class="nav-link">Админ</a>
+                </nav>
+            </div>
+            <button id="theme-toggle" aria-label="Переключить тему">🌙</button>
+        </header>
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    <script>
+        (function() {
+            var btn = document.getElementById('theme-toggle');
+            var html = document.documentElement;
+            function init() {
+                var t = localStorage.getItem('theme');
+                if (t) { html.setAttribute('data-theme', t); btn.textContent = t === 'dark' ? '☀️' : '🌙'; }
+                else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    localStorage.setItem('theme', 'dark'); html.setAttribute('data-theme', 'dark'); btn.textContent = '☀️';
+                }
+            }
+            btn.addEventListener('click', function() {
+                var cur = html.getAttribute('data-theme') || 'light';
+                var next = cur === 'light' ? 'dark' : 'light';
+                html.setAttribute('data-theme', next);
+                localStorage.setItem('theme', next);
+                btn.textContent = next === 'dark' ? '☀️' : '🌙';
+            });
+            init();
+            var links = document.querySelectorAll('.nav-link');
+            var path = window.location.pathname;
+            links.forEach(function(l) { if (l.getAttribute('href') === path) l.classList.add('active'); });
+        })();
+    </script>
+</body>
+</html>

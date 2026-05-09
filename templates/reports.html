@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}HomeMoney | Отчёты{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Отчёты</h2>
+    <form class="period-form" onsubmit="loadReport(event)">
+        <label>Месяц <select id="r-month">
+            {% for m in range(1,13) %}<option value="{{ m }}" {% if m == 5 %}selected{% endif %}>{{ m }}</option>{% endfor %}
+        </select></label>
+        <label>Год <select id="r-year">
+            {% for y in range(2024,2027) %}<option value="{{ y }}" {% if y == 2024 %}selected{% endif %}>{{ y }}</option>{% endfor %}
+        </select></label>
+        <button type="submit" class="btn">Сформировать</button>
+    </form>
+</div>
+
+<div class="summary-cards" id="report-summary"></div>
+<div class="section">
+    <h3>Детализация по категориям</h3>
+    <table class="data-table">
+        <thead><tr><th>Категория</th><th>Потрачено</th><th>Бюджет</th><th>Остаток</th></tr></thead>
+        <tbody id="report-table"></tbody>
+    </table>
+</div>
+
+<script>
+    async function loadReport(e) {
+        if (e) e.preventDefault();
+        var m = document.getElementById('r-month').value;
+        var y = document.getElementById('r-year').value;
+        var r = await fetch('/api/v1/reports?month=' + m + '&year=' + y);
+        var d = await r.json();
+        if (d.status !== 'success') { alert(d.message); return; }
+        var data = d.data;
+        document.getElementById('report-summary').innerHTML =
+            '<div class="card"><span class="card-label">Всего</span><span class="card-value">' + data.summary.total_spent.toFixed(2) + ' RUB</span></div>' +
+            '<div class="card"><span class="card-label">Бюджет</span><span class="card-value">' + data.summary.total_budgeted.toFixed(2) + ' RUB</span></div>';
+        var tbody = document.getElementById('report-table');
+        var keys = Object.keys(data.detailed_spending || {});
+        if (keys.length === 0) { tbody.innerHTML = '<tr><td colspan="4">Нет данных за выбранный период.</td></tr>'; return; }
+        tbody.innerHTML = keys.map(function(k) {
+            var item = data.detailed_spending[k];
+            var rem = (item.budget - item.spent).toFixed(2);
+            return '<tr><td>' + item.name + '</td><td>' + item.spent.toFixed(2) + '</td><td>' + item.budget.toFixed(2) + '</td><td>' + rem + '</td></tr>';
+        }).join('');
+    }
+    window.onload = loadReport;
+</script>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}HomeMoney | Транзакции{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Транзакции</h2>
+    <button class="btn" onclick="showAddForm()">+ Добавить</button>
+</div>
+
+<div id="add-form" class="form-card" style="display:none">
+    <h3>Новая транзакция</h3>
+    <form onsubmit="addTransaction(event)">
+        <label>Сумма <input type="number" step="0.01" id="tx-amount" required></label>
+        <label>Категория <input type="number" id="tx-category" placeholder="ID категории" required></label>
+        <label>Описание <input type="text" id="tx-desc"></label>
+        <button type="submit" class="btn">Сохранить</button>
+        <button type="button" class="btn btn-secondary" onclick="hideAddForm()">Отмена</button>
+    </form>
+</div>
+
+<table class="data-table">
+    <thead>
+        <tr><th>ID</th><th>Категория</th><th>Сумма</th><th>Описание</th><th>Дата</th></tr>
+    </thead>
+    <tbody id="tx-table"></tbody>
+</table>
+
+<script>
+    async function loadTransactions() {
+        var r = await fetch('/api/v1/transactions');
+        var d = await r.json();
+        if (d.status !== 'success') return;
+        var tbody = document.getElementById('tx-table');
+        tbody.innerHTML = '<tr><td colspan="5">API возвращает сводку, а не список. Добавьте эндпоинт /api/v1/user/1/transactions для детального списка.</td></tr>';
+    }
+    function showAddForm() { document.getElementById('add-form').style.display = 'block'; }
+    function hideAddForm() { document.getElementById('add-form').style.display = 'none'; }
+    async function addTransaction(e) {
+        e.preventDefault();
+        var r = await fetch('/api/v1/user/1/create_transaction', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                amount: parseFloat(document.getElementById('tx-amount').value),
+                category_id: parseInt(document.getElementById('tx-category').value),
+                description: document.getElementById('tx-desc').value
+            })
+        });
+        var d = await r.json();
+        alert(d.message || d.error);
+        if (r.ok) { hideAddForm(); loadTransactions(); }
+    }
+    window.onload = loadTransactions;
+</script>
+{% endblock %}

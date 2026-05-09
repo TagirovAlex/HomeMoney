@@ -28,9 +28,23 @@ def create_app():
 
     @app.route('/')
     def index():
-        """Главный маршрут - рендеринг дашборда."""
-        # Передаем контекст для шаблона (например, текущего пользователя)
         return render_template('index.html', user_id=1)
+
+    @app.route('/transactions')
+    def transactions_page():
+        return render_template('transactions.html')
+
+    @app.route('/budgets')
+    def budgets_page():
+        return render_template('budgets.html')
+
+    @app.route('/reports')
+    def reports_page():
+        return render_template('reports.html')
+
+    @app.route('/admin')
+    def admin_page():
+        return render_template('admin.html')
 
     # --- API Эндпоинты: CRUD и Отчетность ---
 
@@ -150,6 +164,31 @@ def create_app():
         if not user or not AuthService.verify_password(data['password'], user.hashed_password):
             return jsonify({"status": "error", "message": "Неверный email или пароль"}), 401
         return jsonify({"status": "success", "user_id": user.id, "role": user.role})
+
+    @app.route('/api/v1/backup', methods=['GET'])
+    def backup_api():
+        from utils.backup_service import BackupService
+        svc = BackupService()
+        result = svc.create_backup(request.args.get('type', 'full'))
+        return jsonify({"status": "success" if "Ошибка" not in result else "error", "message": result})
+
+    @app.route('/api/v1/categories', methods=['GET', 'POST'])
+    def categories_api():
+        from models.database import Category
+        from utils.database_session import get_db
+        if request.method == 'GET':
+            with get_db() as session:
+                cats = session.query(Category).all()
+            return jsonify({"status": "success", "data": [{"id": c.id, "name": c.name, "description": c.description} for c in cats]})
+        data = request.get_json()
+        if not data or not data.get('name'):
+            return jsonify({"status": "error", "message": "name обязателен"}), 400
+        with get_db() as session:
+            cat = Category(name=data['name'], description=data.get('description', ''))
+            session.add(cat)
+            session.commit()
+            session.refresh(cat)
+        return jsonify({"status": "success", "category_id": cat.id}), 201
 
     @app.errorhandler(403)
     def forbidden(e):

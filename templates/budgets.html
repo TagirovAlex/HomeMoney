@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}HomeMoney | Бюджеты{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Бюджеты</h2>
+    <button class="btn" onclick="showAddForm()">+ Создать</button>
+</div>
+
+<div id="add-form" class="form-card" style="display:none">
+    <h3>Новый бюджет</h3>
+    <form onsubmit="addBudget(event)">
+        <label>Категория <input type="number" id="bg-category" placeholder="ID категории" required></label>
+        <label>Лимит <input type="number" step="0.01" id="bg-amount" required></label>
+        <button type="submit" class="btn">Сохранить</button>
+        <button type="button" class="btn btn-secondary" onclick="hideAddForm()">Отмена</button>
+    </form>
+</div>
+
+<div id="budgets-list" class="budgets-grid"></div>
+
+<script>
+    async function loadBudgets() {
+        var r = await fetch('/api/v1/budgets');
+        var d = await r.json();
+        var container = document.getElementById('budgets-list');
+        if (d.status !== 'success') { container.innerHTML = '<p>Нет бюджетов. Создайте первый.</p>'; return; }
+        container.innerHTML = '<p>API возвращает созданные бюджеты. Для отображения списка нужен GET /api/v1/budgets.</p>';
+    }
+    function showAddForm() { document.getElementById('add-form').style.display = 'block'; }
+    function hideAddForm() { document.getElementById('add-form').style.display = 'none'; }
+    async function addBudget(e) {
+        e.preventDefault();
+        var r = await fetch('/api/v1/budgets', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                category_id: parseInt(document.getElementById('bg-category').value),
+                target_amount: parseFloat(document.getElementById('bg-amount').value)
+            })
+        });
+        var d = await r.json();
+        alert(d.message || d.error);
+        if (r.ok) { hideAddForm(); loadBudgets(); }
+    }
+    window.onload = loadBudgets;
+</script>
+{% endblock %}

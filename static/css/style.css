@@ -91,3 +91,43 @@ button, .btn {
 button:hover, .btn:hover {
     opacity: 0.9;
 }
+
+/* --- ERROR PAGES --- */
+.error-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+.error-container .logo {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--color-text);
+    text-decoration: none;
+}
+.error-main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+}
+.error-card {
+    text-align: center;
+    background: var(--color-card-bg);
+    padding: 60px 80px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+.error-code {
+    display: block;
+    font-size: 6rem;
+    font-weight: 800;
+    color: var(--color-primary);
+    line-height: 1;
+    margin-bottom: 16px;
+}
+.error-message {
+    font-size: 1.2rem;
+    color: var(--color-secondary);
+    margin-bottom: 32px;
+}

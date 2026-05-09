@@ -151,6 +151,18 @@ def create_app():
             return jsonify({"status": "error", "message": "Неверный email или пароль"}), 401
         return jsonify({"status": "success", "user_id": user.id, "role": user.role})
 
+    @app.errorhandler(403)
+    def forbidden(e):
+        return render_template('error.html', code=403, message="Доступ запрещён"), 403
+
+    @app.errorhandler(404)
+    def not_found(e):
+        return render_template('error.html', code=404, message="Страница не найдена"), 404
+
+    @app.errorhandler(500)
+    def server_error(e):
+        return render_template('error.html', code=500, message="Внутренняя ошибка сервера"), 500
+
     return app
 
 if __name__ == '__main__':

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ code }} | HomeMoney</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="error-container">
+        <header>
+            <a href="/" class="logo">HomeMoney</a>
+            <button id="theme-toggle" aria-label="Переключить тему">🌙</button>
+        </header>
+        <main class="error-main">
+            <div class="error-card">
+                <span class="error-code">{{ code }}</span>
+                <p class="error-message">{{ message }}</p>
+                <a href="/" class="btn">На главную</a>
+            </div>
+        </main>
+    </div>
+    <script>
+        (function() {
+            var btn = document.getElementById('theme-toggle');
+            var html = document.documentElement;
+            function init() {
+                var t = localStorage.getItem('theme');
+                if (t) { html.setAttribute('data-theme', t); btn.textContent = t === 'dark' ? '☀️' : '🌙'; }
+                else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    localStorage.setItem('theme', 'dark'); html.setAttribute('data-theme', 'dark'); btn.textContent = '☀️';
+                }
+            }
+            btn.addEventListener('click', function() {
+                var cur = html.getAttribute('data-theme') || 'light';
+                var next = cur === 'light' ? 'dark' : 'light';
+                html.setAttribute('data-theme', next);
+                localStorage.setItem('theme', next);
+                btn.textContent = next === 'dark' ? '☀️' : '🌙';
+            });
+            init();
+        })();
+    </script>
+</body>
+</html>

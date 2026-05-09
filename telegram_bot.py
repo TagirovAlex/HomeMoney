@@ -22,9 +22,9 @@ async def main():
     from data_access.repositories.budget_repository import SQLAlchemyBudgetRepository
 
     # Создание экземпляров репозиториев (в реальном боте они должны работать с асинхронным пулом)
-    user_repo = SQLAlchemyUserRepository(db=None) 
-    transaction_repo = SQLAlchemyTransactionRepository(db=None)
-    budget_repo = SQLAlchemyBudgetRepository(db=None)
+    user_repo = SQLAlchemyUserRepository()
+    transaction_repo = SQLAlchemyTransactionRepository()
+    budget_repo = SQLAlchemyBudgetRepository()
 
     # Инициализация сервиса (Use Case Layer)
     financial_service = FinancialService(

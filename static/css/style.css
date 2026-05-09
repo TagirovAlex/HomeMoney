@@ -1,0 +1,93 @@
+/* Общие переменные - здесь будут определены переменные для тем */
+
+:root {
+    /* Светлая тема (Default) */
+    --color-bg: #ffffff;
+    --color-text: #1a1a1a;
+    --color-primary: #007bff; /* Синий акцентный цвет */
+    --color-secondary: #6c757d; 
+    --color-card-bg: #f8f9fa;
+    --color-border: #dee2ex;
+}
+
+/* Тёмная тема - активируется через атрибут data-theme="dark" */
+[data-theme='dark'] {
+    --color-bg: #1a1a1a;
+    --color-text: #e4e4e4;
+    --color-primary: #3e92cc; /* Светлее синий для темного фона */
+    --color-secondary: #aaa; 
+    --color-card-bg: #2c2c2c;
+    --color-border: #444;
+}
+
+body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    margin: 0;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* --- HEADER & LAYOUT --- */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 5%;
+    border-bottom: 1px solid var(--color-border);
+    background-color: var(--color-card-bg);
+}
+
+/* --- CARD STYLES --- */
+.summary-cards {
+    display: flex;
+    gap: 20px;
+    padding: 30px 5%;
+    margin-bottom: 30px;
+    justify-content: space-around;
+}
+
+.card {
+    background-color: var(--color-card-bg);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    flex-grow: 1;
+    text-align: center;
+}
+
+/* --- TABLE STYLES --- */
+#transactions-list {
+    width: 90%;
+    margin: 20px auto;
+    border-collapse: collapse;
+    background-color: var(--color-card-bg);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+#transactions-list th {
+    background-color: var(--color-primary);
+    color: white;
+    padding: 15px;
+    text-align: left;
+}
+
+#transactions-list td {
+    padding: 15px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+/* --- BUTTONS AND FORMS --- */
+button, .btn {
+    background-color: var(--color-primary);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.2s;
+}
+
+button:hover, .btn:hover {
+    opacity: 0.9;
+}

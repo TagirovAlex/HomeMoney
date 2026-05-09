@@ -1,28 +1,46 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
-# Импорт User из модели (предполагаем его доступность)
 from models.database import User 
-
+from utils.database_session import get_db
 
 class IUserRepository(ABC):
     """Интерфейс репозитория для работы с пользователями."""
 
     @abstractmethod
     def get_by_email(self, email: str) -> Optional[User]:
-        """Найти пользователя по email."""
         pass
 
     @abstractmethod
-    def get_all(self) -> List[User]:
-        """Получить список всех пользователей (для админа)."""
+    def get_all(self, current_user_id: int, role: str) -> List[User]:
         pass
 
-    @abstractmethod
+class SQLAlchemyUserRepository:
+    """Рабочий репозиторий пользователей с использованием SQLAlchemy."""
+
+    def __init__(self):
+        self._db = get_db
+
+    def get_by_email(self, email: str) -> Optional[User]:
+        with self._db() as session:
+            return session.query(User).filter(User.email == email).first()
+
+    def get_all(self, current_user_id: int, role: str) -> List[User]:
+        with self._db() as session:
+            if role != 'Admin':
+                # Обычный пользователь видит только себя
+                return [session.query(User).filter(User.id == current_user_id).first()]
+            else:
+                # Админ видит всех
+                return session.query(User).all()
+
     def create(self, user_data: dict) -> User:
-        """Создать нового пользователя."""
-        pass
+        with self._db() as session:
+            new_user = User(**user_data)
+            session.add(new_user)
+            session.commit()
+            session.refresh(new_user)
+            return new_user
 
-    @abstractmethod
     def get_by_id(self, user_id: int) -> Optional[User]:
-        """Получить пользователя по ID."""
-        pass
+        with self._db() as session:
+            return session.query(User).filter(User.id == user_id).first()

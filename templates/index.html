@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeMoney | Личный финансовый менеджер</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏠 HomeMoney</h1>
+            <button id="theme-toggle" aria-label="Переключить тему">🌙</button>
+        </header>
+
+        <!-- Секция дашборда, которая будет заполнена данными из API -->
+        <main>
+            <h2>📊 Финансовая сводка (Май 2024)</h2>
+            <div class="summary-cards" id="summary-data">
+                <!-- Здесь будут карточки данных: Расходы / Бюджет / Транзакции -->
+                <div class="card">Расход за месяц: <span id="total-spent">--</span></div>
+                <div class="card">Бюджет на год: <span id="total-budgeted">--</span></div>
+            </div>
+
+            <!-- Секция таблиц, которая будет заполняться JS при загрузке данных -->
+            <h3>Последние транзакции</h3>
+            <table id="transactions-list">
+                <thead>
+                    <tr><th>Категория</th><th>Описание</th><th>Сумма</th></tr>
+                </thead>
+                <tbody>
+                    <!-- Данные будут вставлены через JavaScript/API -->
+                </tbody>
+            </table>
+
+        </main>
+    </div>
+
+    <script>
+        // 1. Логика переключения темы (Dark/Light Mode)
+        const toggleButton = document.getElementById('theme-toggle');
+        const htmlElement = document.documentElement;
+        
+        function initializeTheme() {
+            // Читаем из localStorage, если есть предпочтение пользователя
+            let storedTheme = localStorage.getItem('theme');
+            if (storedTheme) {
+                htmlElement.setAttribute('data-theme', storedTheme);
+                updateToggleIcon(storedTheme);
+            } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                // Если ОС задает темную тему по умолчанию
+                localStorage.setItem('theme', 'dark');
+                htmlElement.setAttribute('data-theme', 'dark');
+                updateToggleIcon('dark');
+            } else {
+                 // По умолчанию - светлая тема (или та, что в CSS)
+                htmlElement.setAttribute('data-theme', 'light');
+            }
+        }
+
+        function updateToggleIcon(theme) {
+            toggleButton.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+
+        function toggleTheme() {
+            let currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+            let newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            
+            htmlElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateToggleIcon(newTheme);
+        }
+
+        toggleButton.addEventListener('click', toggleTheme);
+        initializeTheme();
+
+
+        // 2. Логика загрузки данных с API (Заглушка для примера)
+        async function loadDashboardData() {
+            try {
+                const response = await fetch('/api/v1/transactions'); // Используем сам эндпоинт, который создали
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    const summary = data.data;
+                    document.getElementById('total-spent').textContent = `${summary.total_spent.toFixed(2)} ${'RUB'}`;
+                    document.getElementById('total-budgeted').textContent = `${summary.total_budgeted.toFixed(2)} ${'RUB'}`;
+                } else {
+                    console.error("Failed to load data:", data.message);
+                }
+            } catch (error) {
+                console.error("Ошибка при загрузке данных с API:", error);
+            }
+        }
+
+        // Загружаем данные после загрузки страницы
+        window.onload = loadDashboardData;
+    </script>
+</body>
+</html>

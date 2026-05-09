@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+home_money.db
+*.sqlite
+backup_*
+venv/

@@ -390,6 +390,34 @@ def create_app():
             return jsonify({"status": "error", "message": "; ".join(errors)}), 500
         return jsonify({"status": "success", "message": "Настройки сохранены. Перезапустите бота/сервер для применения."})
 
+    @app.route('/api/v1/admin/bot/start', methods=['POST'])
+    @require_auth
+    def bot_start():
+        if request.current_user["role"] != "Admin":
+            return jsonify({"status": "error", "message": "Только для администратора"}), 403
+        from utils.bot_manager import start_bot
+        msg = start_bot()
+        ok = "Ошибка" not in msg and "уже" not in msg
+        return jsonify({"status": "success" if ok else "error", "message": msg})
+
+    @app.route('/api/v1/admin/bot/stop', methods=['POST'])
+    @require_auth
+    def bot_stop():
+        if request.current_user["role"] != "Admin":
+            return jsonify({"status": "error", "message": "Только для администратора"}), 403
+        from utils.bot_manager import stop_bot
+        msg = stop_bot()
+        return jsonify({"status": "success", "message": msg})
+
+    @app.route('/api/v1/admin/bot/status', methods=['GET'])
+    @require_auth
+    def bot_status():
+        if request.current_user["role"] != "Admin":
+            return jsonify({"status": "error", "message": "Только для администратора"}), 403
+        from utils.bot_manager import status_bot
+        st = status_bot()
+        return jsonify({"status": "success", "data": st})
+
     # --- Error handlers ---
 
     @app.errorhandler(403)

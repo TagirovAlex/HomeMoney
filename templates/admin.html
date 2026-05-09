@@ -46,6 +46,14 @@
     </div>
 
     <div class="card admin-card" style="grid-column: 1 / -1;">
+        <h3>Telegram Bot</h3>
+        <p>Статус: <strong id="bot-status-text">проверка...</strong></p>
+        <p><button class="btn" onclick="botStart()">▶️ Запустить</button>
+        <button class="btn btn-secondary" onclick="botStop()">⏹ Остановить</button></p>
+        <pre id="bot-result" class="backup-output"></pre>
+    </div>
+
+    <div class="card admin-card" style="grid-column: 1 / -1;">
         <h3>Настройки Telegram бота</h3>
         <form onsubmit="saveBotSettings(event)" style="max-width:600px">
             <label>Bot Token <input type="text" id="cfg-bot-token" placeholder="HM_BOT_TOKEN"></label>
@@ -174,6 +182,35 @@
         document.getElementById('settings-result').textContent = d.message || JSON.stringify(d);
     }
 
+    async function loadBotStatus() {
+        var r = await fetch('/api/v1/admin/bot/status', { headers: h() });
+        var d = await r.json();
+        var el = document.getElementById('bot-status-text');
+        if (d.status === 'success' && d.data.running) {
+            el.textContent = '✅ запущен (PID: ' + d.data.pid + ')';
+        } else {
+            el.textContent = '⏹ остановлен';
+        }
+    }
+
+    async function botStart() {
+        var out = document.getElementById('bot-result');
+        out.textContent = 'Запуск...';
+        var r = await fetch('/api/v1/admin/bot/start', { method: 'POST', headers: h() });
+        var d = await r.json();
+        out.textContent = d.message;
+        loadBotStatus();
+    }
+
+    async function botStop() {
+        var out = document.getElementById('bot-result');
+        out.textContent = 'Остановка...';
+        var r = await fetch('/api/v1/admin/bot/stop', { method: 'POST', headers: h() });
+        var d = await r.json();
+        out.textContent = d.message;
+        loadBotStatus();
+    }
+
     async function backup(type) {
         var out = document.getElementById('backup-result');
         out.textContent = 'Создание бэкапа...';
@@ -182,6 +219,6 @@
         out.textContent = d.message;
     }
 
-    window.onload = function() { loadPending(); loadUsers(); loadCategories(); loadSettings(); };
+    window.onload = function() { loadPending(); loadUsers(); loadCategories(); loadSettings(); loadBotStatus(); };
 </script>
 {% endblock %}

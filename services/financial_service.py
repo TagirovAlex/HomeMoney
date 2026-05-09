@@ -161,6 +161,34 @@ class FinancialService:
             })
         return result
 
+    def get_filtered_user_transactions(self, user_id: int, month: int = None, year: int = None, category_id: int = None, page: int = 1, limit: int = 50) -> dict:
+        from models.database import Category
+        from utils.database_session import get_db
+        from datetime import date
+
+        today = date.today()
+        m = month or today.month
+        y = year or today.year
+        transactions, total = self.transaction_repo.get_filtered_for_user(
+            user_id, month=m, year=y, category_id=category_id, page=page, limit=limit
+        )
+        with get_db() as session:
+            cats = {c.id: {"name": c.name, "icon": c.icon or ""} for c in session.query(Category).all()}
+        result = []
+        for t in transactions:
+            cat = cats.get(t.category_id, {"name": f"ID:{t.category_id}", "icon": "📁"})
+            result.append({
+                "id": t.id,
+                "amount": t.amount,
+                "category_id": t.category_id,
+                "category_name": cat["name"],
+                "category_icon": cat["icon"],
+                "description": t.description or "",
+                "date": t.date.isoformat() if t.date else "",
+            })
+        return {"data": result, "total": total, "page": page, "limit": limit,
+                "month": m, "year": y}
+
     def process_regular_payments(self, user_id: int) -> dict:
         if not self.income_repo:
             return {"processed": 0, "errors": ["income_repo не подключён"]}

@@ -17,6 +17,24 @@
     </form>
 </div>
 
+<div class="filter-bar">
+    <label>Месяц
+        <select id="f-month">
+            <option value="1">Янв</option><option value="2">Фев</option><option value="3">Мар</option>
+            <option value="4">Апр</option><option value="5">Май</option><option value="6">Июн</option>
+            <option value="7">Июл</option><option value="8">Авг</option><option value="9">Сен</option>
+            <option value="10">Окт</option><option value="11">Ноя</option><option value="12">Дек</option>
+        </select>
+    </label>
+    <label>Год
+        <select id="f-year"></select>
+    </label>
+    <label>Категория
+        <select id="f-category"><option value="">Все</option></select>
+    </label>
+    <button class="btn" onclick="loadTransactions()">Применить</button>
+</div>
+
 <table class="data-table">
     <thead>
         <tr><th>ID</th><th>Категория</th><th>Сумма</th><th>Описание</th><th>Дата</th></tr>
@@ -24,11 +42,40 @@
     <tbody id="tx-table"></tbody>
 </table>
 
+<div class="pagination" id="pagination" style="display:none">
+    <button class="btn btn-secondary" id="prev-page" onclick="goPage(-1)">← Назад</button>
+    <span id="page-info"></span>
+    <button class="btn btn-secondary" id="next-page" onclick="goPage(1)">Вперед →</button>
+</div>
+
 <script>
-    var userId = null;
+    var userId = null, curPage = 1, totalPages = 1;
 
     function getUser() {
         try { var u = JSON.parse(localStorage.getItem('user')); userId = u.id; } catch(e) { userId = null; }
+    }
+
+    function initFilters() {
+        var now = new Date();
+        var m = document.getElementById('f-month');
+        m.value = now.getMonth() + 1;
+        var y = document.getElementById('f-year');
+        for (var i = now.getFullYear() - 2; i <= now.getFullYear() + 1; i++) {
+            var opt = document.createElement('option');
+            opt.value = i; opt.textContent = i;
+            if (i === now.getFullYear()) opt.selected = true;
+            y.appendChild(opt);
+        }
+        loadCategoriesFilter();
+    }
+
+    async function loadCategoriesFilter() {
+        var r = await fetch('/api/v1/categories', { headers: authHeaders() });
+        var d = await r.json();
+        if (d.status !== 'success') return;
+        var sel = document.getElementById('f-category');
+        sel.innerHTML = '<option value="">Все</option>' +
+            d.data.map(function(c) { return '<option value="' + c.id + '">' + c.name + '</option>'; }).join('');
     }
 
     async function loadCategories() {
@@ -37,13 +84,16 @@
         if (d.status !== 'success') return;
         var sel = document.getElementById('tx-category');
         sel.innerHTML = '<option value="">-- Выберите --</option>' +
-            d.data.map(function(c) { return '<option value="' + c.id + '">' + c.name + '</option>'; }).join('');
+            d.data.map(function(c) { return '<option value="' + c.id + '">' + (c.icon || '') + ' ' + c.name + '</option>'; }).join('');
     }
 
     async function loadTransactions() {
         getUser();
         if (!userId) return;
-        var r = await fetch('/api/v1/user/' + userId + '/transactions', { headers: authHeaders() });
+        var m = document.getElementById('f-month').value;
+        var y = document.getElementById('f-year').value;
+        var cat = document.getElementById('f-category').value;
+        var r = await fetch('/api/v1/user/' + userId + '/transactions?month=' + m + '&year=' + y + '&category_id=' + cat + '&page=' + curPage + '&limit=20', { headers: authHeaders() });
         var d = await r.json();
         var tbody = document.getElementById('tx-table');
         if (d.status !== 'success') { tbody.innerHTML = '<tr><td colspan="5">' + d.message + '</td></tr>'; return; }
@@ -51,6 +101,18 @@
         tbody.innerHTML = d.data.map(function(tx) {
             return '<tr><td>' + tx.id + '</td><td>' + (tx.category_icon || '📁') + ' ' + tx.category_name + '</td><td>' + tx.amount.toFixed(2) + '</td><td>' + tx.description + '</td><td>' + (tx.date ? tx.date.slice(0, 10) : '') + '</td></tr>';
         }).join('');
+        totalPages = Math.ceil(d.total / d.limit) || 1;
+        document.getElementById('pagination').style.display = 'block';
+        document.getElementById('page-info').textContent = curPage + ' / ' + totalPages;
+        document.getElementById('prev-page').disabled = curPage <= 1;
+        document.getElementById('next-page').disabled = curPage >= totalPages;
+    }
+
+    function goPage(delta) {
+        var np = curPage + delta;
+        if (np < 1 || np > totalPages) return;
+        curPage = np;
+        loadTransactions();
     }
 
     function showAddForm() { document.getElementById('add-form').style.display = 'block'; }
@@ -74,6 +136,6 @@
         if (r.ok) { hideAddForm(); loadTransactions(); }
     }
 
-    window.onload = function() { loadCategories(); loadTransactions(); };
+    window.onload = function() { initFilters(); loadCategories(); loadTransactions(); };
 </script>
 {% endblock %}

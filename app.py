@@ -115,8 +115,10 @@ def create_app():
     @require_auth
     def list_transactions():
         uid = request.current_user["user_id"]
+        from datetime import date
+        today = date.today()
         try:
-            summary = financial_service.get_monthly_summary(uid, month=5, year=2024)
+            summary = financial_service.get_monthly_summary(uid, month=today.month, year=today.year)
             return jsonify({"status": "success", "data": summary})
         except Exception as e:
             return jsonify({"status": "error", "message": f"Ошибка: {str(e)}"}), 500
@@ -143,8 +145,18 @@ def create_app():
         if request.current_user["user_id"] != user_id and request.current_user["role"] != "Admin":
             return jsonify({"status": "error", "message": "Доступ запрещён"}), 403
         try:
-            txs = financial_service.get_user_transactions(user_id)
-            return jsonify({"status": "success", "data": txs})
+            month = request.args.get('month', type=int)
+            year = request.args.get('year', type=int)
+            cat = request.args.get('category_id', type=int)
+            page = request.args.get('page', 1, type=int)
+            limit = request.args.get('limit', 50, type=int)
+            result = financial_service.get_filtered_user_transactions(
+                user_id, month=month, year=year, category_id=cat, page=page, limit=limit
+            )
+            return jsonify({"status": "success", "data": result["data"],
+                            "total": result["total"], "page": result["page"],
+                            "limit": result["limit"], "month": result["month"],
+                            "year": result["year"]})
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 

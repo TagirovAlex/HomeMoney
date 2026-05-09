@@ -63,20 +63,23 @@ pip install flask sqlalchemy aiogram bcrypt pyjwt python-dotenv aiohttp-socks gu
 ok "Зависимости установлены"
 
 # --- Файл .env ---
-generate_secret() {
-    tr -dc 'A-Za-z0-9!@#$%^&*()_+-=' < /dev/urandom 2>/dev/null | head -c 40 || python3 -c "import secrets; print(secrets.token_urlsafe(32))"
-}
-
 if [ ! -f .env ]; then
     info "Создание .env из шаблона..."
     cp .env.example .env
 
-    SECRET=$(generate_secret)
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        sed -i '' "s/change-me-to-random-secret-32-bytes!!/$SECRET/" .env
-    else
-        sed -i "s/change-me-to-random-secret-32-bytes!!/$SECRET/" .env
-    fi
+    python3 << 'PYEOF'
+import re, secrets
+with open(".env", "r") as f:
+    content = f.read()
+content = re.sub(
+    r"change-me-to-random-secret-32-bytes!!",
+    secrets.token_urlsafe(32),
+    content
+)
+with open(".env", "w") as f:
+    f.write(content)
+print("HM_SECRET_KEY заменён на случайный")
+PYEOF
 
     # В production DEBUG=false
     echo -e "\n# Production" >> .env

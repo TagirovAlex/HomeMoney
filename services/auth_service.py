@@ -3,8 +3,10 @@ import jwt
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import request, jsonify
+from config import Config
 
-SECRET_KEY = "hm-dev-secret-key-32-bytes-min!!"
+SECRET_KEY = Config.SECRET_KEY
+
 
 class AuthService:
 

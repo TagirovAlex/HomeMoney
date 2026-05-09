@@ -4,6 +4,7 @@ from data_access.repositories.transaction_repository import SQLAlchemyTransactio
 from data_access.repositories.budget_repository import SQLAlchemyBudgetRepository
 from services.financial_service import FinancialService
 from services.auth_service import AuthService, require_auth
+from config import Config
 
 def create_app():
     app = Flask(__name__)
@@ -198,7 +199,7 @@ def create_app():
 if __name__ == '__main__':
     try:
         app = create_app()
-        print("--- HomeMoney запущен (Debug=True) ---")
-        app.run(debug=True)
+        print(f"--- HomeMoney запущен (Debug={Config.DEBUG}) ---")
+        app.run(debug=Config.DEBUG)
     except Exception as e:
         print(f"КРИТИЧЕСКАЯ ОШИБКА: {e}")

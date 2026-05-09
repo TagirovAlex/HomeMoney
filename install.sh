@@ -16,17 +16,24 @@ source venv/bin/activate
 
 # 2. Установка всех зависимостей
 echo "[SETUP] Установка Python зависимостей..."
-pip install flask sqlalchemy psycopg2-binary aiogram bcrypt
+pip install flask sqlalchemy psycopg2-binary aiogram bcrypt python-dotenv aiohttp-socks
 if [ $? -ne 0 ]; then
     echo "❌ ОШИБКА: Не удалось установить все зависимости. Проверьте подключение к сети или версии Python."
     exit 1
 fi
 
-# 3. Инициализация базы данных
+# 3. Настройка конфигурации
+echo "[SETUP] Настройка конфигурации..."
+if [ ! -f .env ]; then
+    cp .env.example .env
+    echo "⚠️ Создан .env из .env.example. Отредактируйте HM_BOT_TOKEN и HM_SECRET_KEY перед запуском."
+fi
+
+# 4. Инициализация базы данных
 echo "[SETUP] Инициализация структуры базы данных (создание таблиц)..."
 python -c "from utils.database_session import init_db; init_db()"
 
-# 4. Создание первого пользователя-Администратора
+# 5. Создание первого пользователя-Администратора
 echo "[SETUP] Создание начального административного пользователя..."
 python -c "
 import os, sys

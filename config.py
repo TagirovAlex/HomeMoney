@@ -1,16 +1,22 @@
-from datetime import datetime
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 class Config:
-    """Общие настройки конфигурации приложения."""
-    SECRET_KEY = 'super_secret_key_dev_123' # В production использовать переменные окружения!
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///home_money.db')
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-class DevelopmentConfig(Config):
-    """Конфигурация для разработки."""
-    DEBUG = True
+    # Секрет для JWT
+    SECRET_KEY = os.environ.get("HM_SECRET_KEY", "hm-dev-secret-key-32-bytes-min!!")
 
-class ProductionConfig(Config):
-    """Конфигурация для продакшена."""
-    DEBUG = False
+    # База данных
+    DATABASE_URL = os.environ.get("HM_DATABASE_URL", "sqlite:///./home_money.db")
+
+    # Telegram Bot
+    BOT_TOKEN = os.environ.get("HM_BOT_TOKEN", "")
+
+    # SOCKS прокси (оставьте пустым, если не нужен)
+    BOT_PROXY_URL = os.environ.get("HM_BOT_PROXY_URL", "")
+
+    # Flask
+    DEBUG = os.environ.get("HM_DEBUG", "true").lower() in ("true", "1", "yes")

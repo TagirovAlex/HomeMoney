@@ -1,39 +1,34 @@
 from aiogram import Bot, Dispatcher
-# Импортируем сервисный слой и репозитории для работы с ботом
-from services.financial_service import FinancialService 
-from data_access.repositories.user_repository import IUserRepository # Для получения данных пользователя
+from aiogram.client.session.aiohttp import AiohttpSession
+from config import Config
 
-async def setup_bot(bot: Bot):
-    """Инициализация диспетчера и регистрация обработчиков."""
-    dispatcher = Dispatcher()
-    # Здесь будут регистрироваться все хэндлеры (обработчики команд)
-    from handlers.command_handlers import register_commands # Создадим этот файл позже
-    register_commands(dispatcher)
-
-    return dispatcher
 
 async def main():
-    """Основная асинхронная функция запуска бота."""
-    # Получение экземпляров репозиториев для внедрения в сервисный слой
-    # Здесь должна быть сложная логика получения DI-зависимостей от Flask/DI Container.
-    # Для MVP: используем заглушки, как и в Web API.
-    from data_access.repositories.user_repository import SQLAlchemyUserRepository 
-    from data_access.repositories.transaction_repository import SQLAlchemyTransactionRepository 
-    from data_access.repositories.budget_repository import SQLAlchemyBudgetRepository
+    token = Config.BOT_TOKEN
+    if not token:
+        print("ОШИБКА: HM_BOT_TOKEN не задан. Укажите токен в .env или переменной окружения.")
+        return
 
-    # Создание экземпляров репозиториев (в реальном боте они должны работать с асинхронным пулом)
-    user_repo = SQLAlchemyUserRepository()
-    transaction_repo = SQLAlchemyTransactionRepository()
-    budget_repo = SQLAlchemyBudgetRepository()
+    proxy_url = Config.BOT_PROXY_URL
+    if proxy_url:
+        from aiohttp_socks import ProxyConnector
+        connector = ProxyConnector.from_url(proxy_url)
+        session = AiohttpSession(connector=connector)
+        bot = Bot(token=token, session=session)
+        print(f"Бот запущен через прокси: {proxy_url}")
+    else:
+        bot = Bot(token=token)
+        print("Бот запущен напрямую (без прокси)")
 
-    # Инициализация сервиса (Use Case Layer)
-    financial_service = FinancialService(
-        transaction_repo=transaction_repo, 
-        budget_repo=budget_repo
-    )
-    
-    dispatcher = await setup_bot(bot) # Настраиваем обработчики
+    dp = Dispatcher()
 
-    print("Bot started. Polling for updates...")
-    # Запуск бота (в продакшене через worker/supervisor)
-    await dispatcher.start_polling(bot)
+    from handlers.command_handlers import router
+    dp.include_router(router)
+
+    print("Telegram Bot запущен. Polling...")
+    await dp.start_polling(bot)
+
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())

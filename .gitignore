@@ -4,3 +4,4 @@ home_money.db
 *.sqlite
 backup_*
 venv/
+.env

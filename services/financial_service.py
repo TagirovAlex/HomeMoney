@@ -170,14 +170,17 @@ class FinancialService:
         errors = []
         for src in due:
             try:
+                from datetime import datetime
+                txn_date = src.next_date or datetime.combine(date.today(), datetime.min.time())
                 self.transaction_repo.add_transaction({
                     "user_id": user_id,
                     "amount": abs(src.amount),
                     "category_id": src.category_id,
                     "description": f"[Авто] {src.name}: {src.description or src.name}",
+                    "date": txn_date,
                 })
                 # Рассчитываем следующую дату
-                next_d = src.next_date or date.today()
+                next_d = txn_date
                 if src.period == "daily":
                     from datetime import timedelta as tdelta
                     next_d = next_d + tdelta(days=1)

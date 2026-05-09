@@ -320,7 +320,8 @@ def create_app():
         data = request.get_json()
         if not data or not data.get('name'):
             return jsonify({"status": "error", "message": "name обязателен"}), 400
-        from datetime import date
+        from datetime import date, timedelta
+        from calendar import monthrange
         rec = {
             "user_id": request.current_user["user_id"],
             "name": data['name'],
@@ -332,7 +333,27 @@ def create_app():
             "day_of_period": int(data.get('day_of_period', 1)),
         }
         if rec["is_regular"]:
-            rec["next_date"] = date.today()
+            today = date.today()
+            period = rec["period"]
+            dop = rec["day_of_period"]
+            if period == "monthly":
+                max_day = monthrange(today.year, today.month)[1]
+                if dop <= max_day and dop >= today.day:
+                    rec["next_date"] = date(today.year, today.month, dop)
+                else:
+                    m = today.month + 1
+                    y = today.year
+                    if m > 12:
+                        m = 1; y += 1
+                    max_day = monthrange(y, m)[1]
+                    rec["next_date"] = date(y, m, min(dop, max_day))
+            elif period == "weekly":
+                days_ahead = dop - today.isoweekday()
+                if days_ahead <= 0:
+                    days_ahead += 7
+                rec["next_date"] = today + timedelta(days=days_ahead)
+            else:
+                rec["next_date"] = today
         src = income_repo.create(rec)
         return jsonify({"status": "success", "income_id": src.id}), 201
 

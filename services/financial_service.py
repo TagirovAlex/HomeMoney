@@ -115,19 +115,26 @@ class FinancialService:
         total_spent = sum(t.amount for t in transactions)
 
         # 1. Группировка и анализ расходов по категориям
+        from models.database import Category
+        from utils.database_session import get_db
+        with get_db() as session:
+            cat_info = {c.id: {"name": c.name, "icon": c.icon or ""} for c in session.query(Category).all()}
+
         category_map: dict[int, dict] = {}
         for budget in self.budget_repo.get_active_budgets_for_user(user_id=user_id, month=month, year=year):
-            category_map[budget.category_id] = {"name": f"ID:{budget.category_id}", "total_spent": 0.0, "budget": budget.target_amount}
+            info = cat_info.get(budget.category_id, {"name": f"ID:{budget.category_id}", "icon": ""})
+            category_map[budget.category_id] = {"name": info["name"], "icon": info["icon"], "total_spent": 0.0, "budget": budget.target_amount}
 
         for t in transactions:
             if t.category_id not in category_map:
-                category_map[t.category_id] = {"name": f"ID:{t.category_id}", "total_spent": 0.0, "budget": 0.0}
+                info = cat_info.get(t.category_id, {"name": f"ID:{t.category_id}", "icon": ""})
+                category_map[t.category_id] = {"name": info["name"], "icon": info["icon"], "total_spent": 0.0, "budget": 0.0}
             category_map[t.category_id]["total_spent"] += t.amount
 
         # Финальная сборка отчета
         report["summary"] = self.get_monthly_summary(user_id, month=month, year=year)
         report["detailed_spending"] = {
-            cat_id: {"name": category_map[cat_id]["name"], "spent": round(category_map[cat_id]["total_spent"], 2), "budget": round(category_map[cat_id]["budget"], 2)}
+            cat_id: {"name": category_map[cat_id]["name"], "icon": category_map[cat_id]["icon"], "spent": round(category_map[cat_id]["total_spent"], 2), "budget": round(category_map[cat_id]["budget"], 2)}
             for cat_id in category_map
         }
 
@@ -139,14 +146,16 @@ class FinancialService:
 
         transactions = self.transaction_repo.get_all_for_user(user_id)
         with get_db() as session:
-            cats = {c.id: c.name for c in session.query(Category).all()}
+            cats = {c.id: {"name": c.name, "icon": c.icon or ""} for c in session.query(Category).all()}
         result = []
         for t in transactions:
+            cat = cats.get(t.category_id, {"name": f"ID:{t.category_id}", "icon": "📁"})
             result.append({
                 "id": t.id,
                 "amount": t.amount,
                 "category_id": t.category_id,
-                "category_name": cats.get(t.category_id, f"ID:{t.category_id}"),
+                "category_name": cat["name"],
+                "category_icon": cat["icon"],
                 "description": t.description or "",
                 "date": t.date.isoformat() if t.date else "",
             })

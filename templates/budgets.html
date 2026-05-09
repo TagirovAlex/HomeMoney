@@ -34,7 +34,7 @@
         var container = document.getElementById('budgets-list');
         if (d.status !== 'success' || !d.data.length) { container.innerHTML = '<p>Нет бюджетов. Создайте первый.</p>'; return; }
         container.innerHTML = d.data.map(function(b) {
-            return '<div class="card"><span class="card-label">' + b.category_name + '</span><span class="card-value">' + b.target_amount.toFixed(2) + ' RUB</span></div>';
+            return '<div class="card"><span class="card-label">' + (b.category_icon || '📁') + ' ' + b.category_name + '</span><span class="card-value">' + b.target_amount.toFixed(2) + ' RUB</span></div>';
         }).join('');
     }
     function showAddForm() { document.getElementById('add-form').style.display = 'block'; }

@@ -153,8 +153,12 @@ def create_app():
         from utils.database_session import get_db
         with get_db() as session:
             cats = {c.id: c.name for c in session.query(Category).all()}
+        from models.database import Category as CatModel
+        with get_db() as session:
+            cat_icons = {c.id: c.icon or "" for c in session.query(CatModel).all()}
         return jsonify({"status": "success", "data": [
             {"id": b.id, "category_id": b.category_id, "category_name": cats.get(b.category_id, f"ID:{b.category_id}"),
+             "category_icon": cat_icons.get(b.category_id, ""),
              "target_amount": b.target_amount,
              "period_start": b.period_start_date.isoformat() if b.period_start_date else "",
              "period_end": b.period_end_date.isoformat() if b.period_end_date else ""}
@@ -247,16 +251,50 @@ def create_app():
         if request.method == 'GET':
             with get_db() as session:
                 cats = session.query(Category).all()
-            return jsonify({"status": "success", "data": [{"id": c.id, "name": c.name, "description": c.description} for c in cats]})
+            return jsonify({"status": "success", "data": [{"id": c.id, "name": c.name, "description": c.description or "", "icon": c.icon or ""} for c in cats]})
         data = request.get_json()
         if not data or not data.get('name'):
             return jsonify({"status": "error", "message": "name обязателен"}), 400
         with get_db() as session:
-            cat = Category(name=data['name'], description=data.get('description', ''))
+            cat = Category(name=data['name'], description=data.get('description', ''), icon=data.get('icon', ''))
             session.add(cat)
             session.commit()
             session.refresh(cat)
         return jsonify({"status": "success", "category_id": cat.id}), 201
+
+    @app.route('/api/v1/categories/<int:cat_id>', methods=['PUT'])
+    @require_auth
+    def update_category(cat_id):
+        from models.database import Category
+        from utils.database_session import get_db
+        data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "Нет данных"}), 400
+        with get_db() as session:
+            cat = session.query(Category).filter(Category.id == cat_id).first()
+            if not cat:
+                return jsonify({"status": "error", "message": "Категория не найдена"}), 404
+            if 'name' in data:
+                cat.name = data['name']
+            if 'description' in data:
+                cat.description = data['description']
+            if 'icon' in data:
+                cat.icon = data['icon']
+            session.commit()
+        return jsonify({"status": "success", "message": "Категория обновлена"})
+
+    @app.route('/api/v1/categories/<int:cat_id>', methods=['DELETE'])
+    @require_auth
+    def delete_category(cat_id):
+        from models.database import Category
+        from utils.database_session import get_db
+        with get_db() as session:
+            cat = session.query(Category).filter(Category.id == cat_id).first()
+            if not cat:
+                return jsonify({"status": "error", "message": "Категория не найдена"}), 404
+            session.delete(cat)
+            session.commit()
+        return jsonify({"status": "success", "message": "Категория удалена"})
 
     @app.route('/api/v1/incomes', methods=['GET'])
     @require_auth
@@ -327,6 +365,30 @@ def create_app():
         uid = request.current_user["user_id"]
         result = financial_service.process_regular_payments(uid)
         return jsonify({"status": "success", "data": result})
+
+    @app.route('/api/v1/admin/settings', methods=['GET', 'PUT'])
+    @require_auth
+    def admin_settings():
+        if request.current_user["role"] != "Admin":
+            return jsonify({"status": "error", "message": "Только для администратора"}), 403
+        from utils.env_manager import get_settings, update_settings
+        if request.method == 'GET':
+            s = get_settings()
+            return jsonify({"status": "success", "data": {
+                "HM_BOT_TOKEN": s.get("HM_BOT_TOKEN", ""),
+                "HM_BOT_PROXY_URL": s.get("HM_BOT_PROXY_URL", ""),
+                "HM_BOT_ALLOWED_USERS": s.get("HM_BOT_ALLOWED_USERS", ""),
+                "HM_DEBUG": s.get("HM_DEBUG", "true"),
+            }})
+        data = request.get_json()
+        allowed = {"HM_BOT_TOKEN", "HM_BOT_PROXY_URL", "HM_BOT_ALLOWED_USERS", "HM_DEBUG"}
+        updates = {k: str(v) for k, v in data.items() if k in allowed}
+        if not updates:
+            return jsonify({"status": "error", "message": "Нет допустимых полей"}), 400
+        errors = update_settings(updates)
+        if errors:
+            return jsonify({"status": "error", "message": "; ".join(errors)}), 500
+        return jsonify({"status": "success", "message": "Настройки сохранены. Перезапустите бота/сервер для применения."})
 
     # --- Error handlers ---
 

@@ -41,7 +41,8 @@
         tbody.innerHTML = keys.map(function(k) {
             var item = data.detailed_spending[k];
             var rem = (item.budget - item.spent).toFixed(2);
-            return '<tr><td>' + item.name + '</td><td>' + item.spent.toFixed(2) + '</td><td>' + item.budget.toFixed(2) + '</td><td>' + rem + '</td></tr>';
+            var icon = item.icon || '📁';
+            return '<tr><td>' + icon + ' ' + item.name + '</td><td>' + item.spent.toFixed(2) + '</td><td>' + item.budget.toFixed(2) + '</td><td>' + rem + '</td></tr>';
         }).join('');
     }
     window.onload = loadReport;

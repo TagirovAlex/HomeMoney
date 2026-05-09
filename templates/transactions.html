@@ -49,7 +49,7 @@
         if (d.status !== 'success') { tbody.innerHTML = '<tr><td colspan="5">' + d.message + '</td></tr>'; return; }
         if (!d.data.length) { tbody.innerHTML = '<tr><td colspan="5">Нет транзакций</td></tr>'; return; }
         tbody.innerHTML = d.data.map(function(tx) {
-            return '<tr><td>' + tx.id + '</td><td>' + tx.category_name + '</td><td>' + tx.amount.toFixed(2) + '</td><td>' + tx.description + '</td><td>' + (tx.date ? tx.date.slice(0, 10) : '') + '</td></tr>';
+            return '<tr><td>' + tx.id + '</td><td>' + (tx.category_icon || '📁') + ' ' + tx.category_name + '</td><td>' + tx.amount.toFixed(2) + '</td><td>' + tx.description + '</td><td>' + (tx.date ? tx.date.slice(0, 10) : '') + '</td></tr>';
         }).join('');
     }
 

@@ -59,7 +59,7 @@ ok "Виртуальное окружение создано"
 # --- Установка зависимостей ---
 info "Установка Python зависимостей..."
 pip install --upgrade pip setuptools wheel
-pip install flask sqlalchemy aiogram bcrypt python-dotenv aiohttp-socks gunicorn
+pip install flask sqlalchemy aiogram bcrypt pyjwt python-dotenv aiohttp-socks gunicorn
 ok "Зависимости установлены"
 
 # --- Файл .env ---

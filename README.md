@@ -48,7 +48,7 @@ sudo bash install.sh
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-pip install flask sqlalchemy aiogram bcrypt python-dotenv aiohttp-socks gunicorn
+pip install flask sqlalchemy aiogram bcrypt pyjwt python-dotenv aiohttp-socks gunicorn
 
 cp .env.example .env
 # Отредактируйте HM_SECRET_KEY, HM_BOT_TOKEN и пр.

@@ -55,6 +55,10 @@ def create_app():
     def incomes_page():
         return render_template('incomes.html')
 
+    @app.route('/categories')
+    def categories_page():
+        return render_template('categories.html')
+
     # --- Публичные API ---
 
     @app.route('/api/v1/health', methods=['GET'])

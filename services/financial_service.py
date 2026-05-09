@@ -129,3 +129,22 @@ class FinancialService:
         }
 
         return report
+
+    def get_user_transactions(self, user_id: int) -> list:
+        from models.database import Category
+        from utils.database_session import get_db
+
+        transactions = self.transaction_repo.get_all_for_user(user_id)
+        with get_db() as session:
+            cats = {c.id: c.name for c in session.query(Category).all()}
+        result = []
+        for t in transactions:
+            result.append({
+                "id": t.id,
+                "amount": t.amount,
+                "category_id": t.category_id,
+                "category_name": cats.get(t.category_id, f"ID:{t.category_id}"),
+                "description": t.description or "",
+                "date": t.date.isoformat() if t.date else "",
+            })
+        return result

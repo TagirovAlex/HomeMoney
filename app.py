@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request, render_template
 from data_access.repositories.user_repository import SQLAlchemyUserRepository
 from data_access.repositories.transaction_repository import SQLAlchemyTransactionRepository
 from data_access.repositories.budget_repository import SQLAlchemyBudgetRepository
+from data_access.repositories.income_repository import SQLAlchemyIncomeSourceRepository
 from services.financial_service import FinancialService
 from services.auth_service import AuthService, require_auth
 from config import Config
@@ -16,6 +17,7 @@ def create_app():
     user_repo = SQLAlchemyUserRepository()
     transaction_repo = SQLAlchemyTransactionRepository()
     budget_repo = SQLAlchemyBudgetRepository()
+    income_repo = SQLAlchemyIncomeSourceRepository()
 
     financial_service = FinancialService(
         transaction_repo=transaction_repo,
@@ -47,6 +49,10 @@ def create_app():
     @app.route('/admin')
     def admin_page():
         return render_template('admin.html')
+
+    @app.route('/incomes')
+    def incomes_page():
+        return render_template('incomes.html')
 
     # --- Публичные API ---
 
@@ -125,6 +131,34 @@ def create_app():
             return jsonify({"status": "error", "message": str(e)}), 400
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
+
+    @app.route('/api/v1/user/<int:user_id>/transactions', methods=['GET'])
+    @require_auth
+    def user_transactions(user_id):
+        if request.current_user["user_id"] != user_id and request.current_user["role"] != "Admin":
+            return jsonify({"status": "error", "message": "Доступ запрещён"}), 403
+        try:
+            txs = financial_service.get_user_transactions(user_id)
+            return jsonify({"status": "success", "data": txs})
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+
+    @app.route('/api/v1/budgets', methods=['GET'])
+    @require_auth
+    def list_budgets():
+        uid = request.current_user["user_id"]
+        budgets = budget_repo.get_all_for_user(uid)
+        from models.database import Category
+        from utils.database_session import get_db
+        with get_db() as session:
+            cats = {c.id: c.name for c in session.query(Category).all()}
+        return jsonify({"status": "success", "data": [
+            {"id": b.id, "category_id": b.category_id, "category_name": cats.get(b.category_id, f"ID:{b.category_id}"),
+             "target_amount": b.target_amount,
+             "period_start": b.period_start_date.isoformat() if b.period_start_date else "",
+             "period_end": b.period_end_date.isoformat() if b.period_end_date else ""}
+            for b in budgets
+        ]})
 
     @app.route('/api/v1/budgets', methods=['POST'])
     @require_auth
@@ -222,6 +256,34 @@ def create_app():
             session.commit()
             session.refresh(cat)
         return jsonify({"status": "success", "category_id": cat.id}), 201
+
+    @app.route('/api/v1/incomes', methods=['GET'])
+    @require_auth
+    def list_incomes():
+        uid = request.current_user["user_id"]
+        srcs = income_repo.get_by_user(uid)
+        return jsonify({"status": "success", "data": [{"id": s.id, "name": s.name, "is_regular": s.is_regular} for s in srcs]})
+
+    @app.route('/api/v1/incomes', methods=['POST'])
+    @require_auth
+    def create_income():
+        data = request.get_json()
+        if not data or not data.get('name'):
+            return jsonify({"status": "error", "message": "name обязателен"}), 400
+        src = income_repo.create({
+            "user_id": request.current_user["user_id"],
+            "name": data['name'],
+            "is_regular": data.get('is_regular', True),
+        })
+        return jsonify({"status": "success", "income_id": src.id}), 201
+
+    @app.route('/api/v1/incomes/<int:income_id>', methods=['DELETE'])
+    @require_auth
+    def delete_income(income_id):
+        ok = income_repo.delete(income_id, request.current_user["user_id"])
+        if not ok:
+            return jsonify({"status": "error", "message": "Источник дохода не найден"}), 404
+        return jsonify({"status": "success", "message": "Источник дохода удалён"})
 
     # --- Error handlers ---
 

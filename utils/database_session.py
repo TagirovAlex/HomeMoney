@@ -4,13 +4,33 @@ from sqlalchemy.orm import sessionmaker
 from models.database import Base
 from config import Config
 
-engine = create_engine(Config.DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+_engine = None
+_SessionLocal = None
+
+
+def _get_engine():
+    global _engine
+    if _engine is None:
+        _engine = create_engine(Config.DATABASE_URL, connect_args={"check_same_thread": False})
+    return _engine
+
+
+def _get_session_local():
+    global _SessionLocal
+    if _SessionLocal is None:
+        _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_get_engine())
+    return _SessionLocal
+
+
+def reset_engine():
+    global _engine, _SessionLocal
+    _engine = None
+    _SessionLocal = None
 
 
 @contextmanager
 def get_db():
-    db = SessionLocal()
+    db = _get_session_local()()
     try:
         yield db
     finally:
@@ -18,4 +38,4 @@ def get_db():
 
 
 def init_db():
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=_get_engine())

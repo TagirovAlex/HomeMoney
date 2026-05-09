@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}HomeMoney | Доходы{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Источники дохода</h2>
+    <button class="btn" onclick="showAddForm()">+ Добавить</button>
+</div>
+
+<div id="add-form" class="form-card" style="display:none">
+    <h3>Новый источник дохода</h3>
+    <form onsubmit="addIncome(event)">
+        <label>Название <input type="text" id="inc-name" required></label>
+        <label><input type="checkbox" id="inc-regular" checked> Регулярный доход</label>
+        <button type="submit" class="btn">Сохранить</button>
+        <button type="button" class="btn btn-secondary" onclick="hideAddForm()">Отмена</button>
+    </form>
+</div>
+
+<div id="incomes-list" class="summary-cards"></div>
+
+<script>
+    async function loadIncomes() {
+        var r = await fetch('/api/v1/incomes', { headers: authHeaders() });
+        var d = await r.json();
+        var container = document.getElementById('incomes-list');
+        if (d.status !== 'success' || !d.data.length) { container.innerHTML = '<p>Нет источников дохода. Добавьте первый.</p>'; return; }
+        container.innerHTML = d.data.map(function(s) {
+            return '<div class="card"><span class="card-label">' + (s.is_regular ? '🔄 ' : '📌 ') + s.name + '</span>' +
+                '<span class="card-value"><button class="btn btn-secondary" onclick="deleteIncome(' + s.id + ')">Удалить</button></span></div>';
+        }).join('');
+    }
+    function showAddForm() { document.getElementById('add-form').style.display = 'block'; }
+    function hideAddForm() { document.getElementById('add-form').style.display = 'none'; }
+    async function addIncome(e) {
+        e.preventDefault();
+        var r = await fetch('/api/v1/incomes', {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({
+                name: document.getElementById('inc-name').value,
+                is_regular: document.getElementById('inc-regular').checked
+            })
+        });
+        var d = await r.json();
+        alert(d.message || d.error);
+        if (r.ok) { hideAddForm(); document.getElementById('inc-name').value = ''; loadIncomes(); }
+    }
+    async function deleteIncome(id) {
+        if (!confirm('Удалить этот источник дохода?')) return;
+        var r = await fetch('/api/v1/incomes/' + id, { method: 'DELETE', headers: authHeaders() });
+        var d = await r.json();
+        alert(d.message); loadIncomes();
+    }
+    window.onload = loadIncomes;
+</script>
+{% endblock %}

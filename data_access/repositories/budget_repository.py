@@ -10,6 +10,10 @@ class IBudgetRepository(ABC):
     def get_active_budgets_for_user(self, user_id: int, month: int, year: int) -> List[Budget]:
         pass
 
+    @abstractmethod
+    def create_budget(self, budget_data: dict) -> Budget:
+        pass
+
 class SQLAlchemyBudgetRepository:
     """Рабочий репозиторий бюджетов с использованием SQLAlchemy."""
 
@@ -40,3 +44,7 @@ class SQLAlchemyBudgetRepository:
             session.commit()
             session.refresh(new_budget)
             return new_budget
+
+    def get_all_for_user(self, user_id: int) -> List[Budget]:
+        with self._db() as session:
+            return session.query(Budget).filter(Budget.user_id == user_id).all()

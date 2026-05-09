@@ -39,3 +39,31 @@ def get_db():
 
 def init_db():
     Base.metadata.create_all(bind=_get_engine())
+    _run_migrations()
+
+
+def _run_migrations():
+    from sqlalchemy import inspect, text
+    engine = _get_engine()
+    with engine.connect() as conn:
+        inspector = inspect(engine)
+        # categories.icon
+        if 'categories' in inspector.get_table_names():
+            cols = [c['name'] for c in inspector.get_columns('categories')]
+            if 'icon' not in cols:
+                conn.execute(text("ALTER TABLE categories ADD COLUMN icon VARCHAR DEFAULT ''"))
+        # income_sources columns added over time
+        if 'income_sources' in inspector.get_table_names():
+            cols = [c['name'] for c in inspector.get_columns('income_sources')]
+            for col_def in [
+                ('amount', "ALTER TABLE income_sources ADD COLUMN amount FLOAT DEFAULT 0.0"),
+                ('category_id', "ALTER TABLE income_sources ADD COLUMN category_id INTEGER DEFAULT 1"),
+                ('description', "ALTER TABLE income_sources ADD COLUMN description VARCHAR DEFAULT ''"),
+                ('period', "ALTER TABLE income_sources ADD COLUMN period VARCHAR DEFAULT 'monthly'"),
+                ('day_of_period', "ALTER TABLE income_sources ADD COLUMN day_of_period INTEGER DEFAULT 1"),
+                ('next_date', "ALTER TABLE income_sources ADD COLUMN next_date DATETIME"),
+                ('is_active', "ALTER TABLE income_sources ADD COLUMN is_active BOOLEAN DEFAULT 1"),
+            ]:
+                if col_def[0] not in cols:
+                    conn.execute(text(col_def[1]))
+        conn.commit()

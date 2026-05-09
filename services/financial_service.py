@@ -112,13 +112,13 @@ class FinancialService:
         total_spent = sum(t.amount for t in transactions)
 
         # 1. Группировка и анализ расходов по категориям
-        category_map: dict[int, dict] = {} 
+        category_map: dict[int, dict] = {}
         for budget in self.budget_repo.get_active_budgets_for_user(user_id=user_id, month=month, year=year):
-            category_map[budget.category_id] = {"name": "Неизвестная Категория", "total_spent": 0.0, "budget": budget.target_amount}
+            category_map[budget.category_id] = {"name": f"ID:{budget.category_id}", "total_spent": 0.0, "budget": budget.target_amount}
 
         for t in transactions:
-            # Логика получения имени категории (упрощенно для MVP)
-            category_map[t.category_id]["name"] = f"ID:{t.category_id}" 
+            if t.category_id not in category_map:
+                category_map[t.category_id] = {"name": f"ID:{t.category_id}", "total_spent": 0.0, "budget": 0.0}
             category_map[t.category_id]["total_spent"] += t.amount
 
         # Финальная сборка отчета

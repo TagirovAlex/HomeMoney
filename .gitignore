@@ -3,5 +3,6 @@ __pycache__/
 home_money.db
 *.sqlite
 backup_*
+!utils/backup_service.py
 venv/
 .env

@@ -16,7 +16,7 @@ source venv/bin/activate
 
 # 2. Установка всех зависимостей
 echo "[SETUP] Установка Python зависимостей..."
-pip install flask sqlalchemy psycopg2-binary aiogram
+pip install flask sqlalchemy psycopg2-binary aiogram bcrypt
 if [ $? -ne 0 ]; then
     echo "❌ ОШИБКА: Не удалось установить все зависимости. Проверьте подключение к сети или версии Python."
     exit 1
@@ -29,23 +29,23 @@ python -c "from utils.database_session import init_db; init_db()"
 # 4. Создание первого пользователя-Администратора
 echo "[SETUP] Создание начального административного пользователя..."
 python -c "
-import os
-from data_access.repositories.user_repository import SQLAlchemyUserRepository # Должен быть в текущей директории
-from models.database import User
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from data_access.repositories.user_repository import SQLAlchemyUserRepository
+from services.auth_service import AuthService
 
 try:
-    # ВНИМАНИЕ: Пароль должен быть хеширован Bcrypt перед использованием!
+    hashed = AuthService.hash_password('admin123')
     admin_data = {
-        \"email\": \"admin@homemoney.com\", 
-        \"hashed_password\": \"(ПОМЕСТИТЬ_ХЕШ_ПАРОЛЯ_АДМИНА)\", # !!! ОБЯЗАТЕЛЬНО ИСПРАВИТЬ !!!
-        \"role\": \"Admin\"
+        'email': 'admin@homemoney.com',
+        'hashed_password': hashed,
+        'role': 'Admin'
     }
-    user_repo = SQLAlchemyUserRepository() 
+    user_repo = SQLAlchemyUserRepository()
     new_user = user_repo.create(admin_data)
-    print(f\"✅ Успешно создан администратор с ID: {new_user.id}\")
-
+    print(f'✅ Создан администратор ID: {new_user.id} (email: admin@homemoney.com / пароль: admin123)')
 except Exception as e:
-    print(f\"⚠️ Предупреждение при создании админа (это нормально, если пользователь уже существует или проблема с хешем): {e}\")"
+    print(f'⚠️ Предупреждение: {e}')"
 
 echo ""
 echo "======================================================="

@@ -4,6 +4,7 @@ from data_access.repositories.user_repository import SQLAlchemyUserRepository
 from data_access.repositories.transaction_repository import SQLAlchemyTransactionRepository
 from data_access.repositories.budget_repository import SQLAlchemyBudgetRepository
 from services.financial_service import FinancialService
+from services.auth_service import AuthService
 
 def create_app():
     """Фабрика приложения Flask."""
@@ -127,6 +128,28 @@ def create_app():
     @app.route('/api/v1/health', methods=['GET'])
     def health_check():
         return jsonify({"status": "ok", "service": "Financial Management API", "version": "1.0"})
+
+    @app.route('/api/v1/register', methods=['POST'])
+    def register():
+        data = request.get_json()
+        if not data or not data.get('email') or not data.get('password'):
+            return jsonify({"status": "error", "message": "email и password обязательны"}), 400
+        existing = user_repo.get_by_email(data['email'])
+        if existing:
+            return jsonify({"status": "error", "message": "Email уже занят"}), 409
+        hashed = AuthService.hash_password(data['password'])
+        user = user_repo.create({"email": data['email'], "hashed_password": hashed, "role": data.get("role", "User")})
+        return jsonify({"status": "success", "user_id": user.id}), 201
+
+    @app.route('/api/v1/login', methods=['POST'])
+    def login():
+        data = request.get_json()
+        if not data or not data.get('email') or not data.get('password'):
+            return jsonify({"status": "error", "message": "email и password обязательны"}), 400
+        user = user_repo.get_by_email(data['email'])
+        if not user or not AuthService.verify_password(data['password'], user.hashed_password):
+            return jsonify({"status": "error", "message": "Неверный email или пароль"}), 401
+        return jsonify({"status": "success", "user_id": user.id, "role": user.role})
 
     return app
 

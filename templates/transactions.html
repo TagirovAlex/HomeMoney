@@ -44,12 +44,21 @@
 
 <div class="pagination" id="pagination" style="display:none">
     <button class="btn btn-secondary" id="prev-page" onclick="goPage(-1)">← Назад</button>
-    <span id="page-info"></span>
+    <span id="page-info" style="margin:0 12px"></span>
     <button class="btn btn-secondary" id="next-page" onclick="goPage(1)">Вперед →</button>
+    <label style="margin-left:auto;font-size:0.85rem;color:var(--color-secondary)">
+        Показать
+        <select id="page-size" onchange="changeLimit()" style="padding:4px 8px;border:1px solid var(--color-border);border-radius:4px;background:var(--color-bg);color:var(--color-text)">
+            <option value="10">10</option>
+            <option value="20" selected>20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </select>
+    </label>
 </div>
 
 <script>
-    var userId = null, curPage = 1, totalPages = 1;
+    var userId = null, curPage = 1, totalPages = 1, pageSize = 20;
 
     function getUser() {
         try { var u = JSON.parse(localStorage.getItem('user')); userId = u.id; } catch(e) { userId = null; }
@@ -93,7 +102,7 @@
         var m = document.getElementById('f-month').value;
         var y = document.getElementById('f-year').value;
         var cat = document.getElementById('f-category').value;
-        var r = await fetch('/api/v1/user/' + userId + '/transactions?month=' + m + '&year=' + y + '&category_id=' + cat + '&page=' + curPage + '&limit=20', { headers: authHeaders() });
+        var r = await fetch('/api/v1/user/' + userId + '/transactions?month=' + m + '&year=' + y + '&category_id=' + cat + '&page=' + curPage + '&limit=' + pageSize, { headers: authHeaders() });
         var d = await r.json();
         var tbody = document.getElementById('tx-table');
         if (d.status !== 'success') { tbody.innerHTML = '<tr><td colspan="5">' + d.message + '</td></tr>'; return; }
@@ -112,6 +121,12 @@
         var np = curPage + delta;
         if (np < 1 || np > totalPages) return;
         curPage = np;
+        loadTransactions();
+    }
+
+    function changeLimit() {
+        pageSize = parseInt(document.getElementById('page-size').value);
+        curPage = 1;
         loadTransactions();
     }
 
@@ -136,6 +151,6 @@
         if (r.ok) { hideAddForm(); loadTransactions(); }
     }
 
-    window.onload = function() { initFilters(); loadCategories(); loadTransactions(); };
+    window.onload = function() { initFilters(); loadCategories(); pageSize = parseInt(document.getElementById('page-size').value); loadTransactions(); };
 </script>
 {% endblock %}

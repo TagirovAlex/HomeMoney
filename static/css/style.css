@@ -133,12 +133,23 @@ main { flex: 1; padding: 24px 5%; max-width: 1200px; margin: 0 auto; width: 100%
 /* --- BUDGETS --- */
 .budgets-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
 
+/* --- FILTER BAR --- */
+.filter-bar { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 20px; }
+.filter-bar label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--color-secondary); }
+.filter-bar select, .filter-bar input { padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-bg); color: var(--color-text); }
+
+/* --- PAGINATION --- */
+.pagination { display: flex; align-items: center; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
+.pagination button:disabled { opacity: 0.4; cursor: default; }
+
 /* --- ADMIN --- */
 .admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 24px; }
 .admin-card { text-align: left; }
 .admin-card h3 { margin: 0 0 16px; }
-.admin-card form { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-.admin-card label { font-size: 0.85rem; color: var(--color-secondary); }
+.admin-card form { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; align-items: flex-end; }
+.admin-card form input { flex: 1; min-width: 100px; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-bg); color: var(--color-text); }
+.admin-card form .btn { flex-shrink: 0; white-space: nowrap; }
+.admin-card label { font-size: 0.85rem; color: var(--color-secondary); width: 100%; }
 .admin-card input { padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-bg); color: var(--color-text); }
 .backup-output { margin-top: 12px; padding: 12px; background: var(--color-bg); border-radius: 6px; font-size: 0.85rem; white-space: pre-wrap; word-break: break-word; }
 

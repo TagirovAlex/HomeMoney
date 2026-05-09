@@ -50,7 +50,7 @@
             initTheme();
 
             // --- API helper ---
-            var authHeaders = function() {
+            window.authHeaders = function() {
                 var t = localStorage.getItem('token');
                 return t ? { 'Authorization': 'Bearer ' + t, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
             };

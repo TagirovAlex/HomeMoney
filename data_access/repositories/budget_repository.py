@@ -48,3 +48,23 @@ class SQLAlchemyBudgetRepository:
     def get_all_for_user(self, user_id: int) -> List[Budget]:
         with self._db() as session:
             return session.query(Budget).filter(Budget.user_id == user_id).all()
+
+    def update_budget(self, budget_id: int, user_id: int, data: dict) -> Optional[Budget]:
+        with self._db() as session:
+            b = session.query(Budget).filter(Budget.id == budget_id, Budget.user_id == user_id).first()
+            if not b:
+                return None
+            for k, v in data.items():
+                setattr(b, k, v)
+            session.commit()
+            session.refresh(b)
+            return b
+
+    def delete_budget(self, budget_id: int, user_id: int) -> bool:
+        with self._db() as session:
+            b = session.query(Budget).filter(Budget.id == budget_id, Budget.user_id == user_id).first()
+            if not b:
+                return False
+            session.delete(b)
+            session.commit()
+            return True

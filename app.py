@@ -197,6 +197,35 @@ def create_app():
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 
+    @app.route('/api/v1/budgets/<int:budget_id>', methods=['PUT'])
+    @require_auth
+    def update_budget(budget_id):
+        data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "Нет данных"}), 400
+        allowed = {"target_amount", "category_id"}
+        update = {k: v for k, v in data.items() if k in allowed}
+        if not update:
+            return jsonify({"status": "error", "message": "Нет полей для обновления"}), 400
+        result = budget_repo.update_budget(budget_id, request.current_user["user_id"], update)
+        if not result:
+            return jsonify({"status": "error", "message": "Бюджет не найден"}), 404
+        from models.database import Category as CatModel
+        from utils.database_session import get_db
+        with get_db() as session:
+            cat = session.query(CatModel).filter(CatModel.id == result.category_id).first()
+        return jsonify({"status": "success", "budget_id": result.id,
+                        "category_icon": cat.icon if cat else "",
+                        "category_name": cat.name if cat else f"ID:{result.category_id}"})
+
+    @app.route('/api/v1/budgets/<int:budget_id>', methods=['DELETE'])
+    @require_auth
+    def delete_budget(budget_id):
+        ok = budget_repo.delete_budget(budget_id, request.current_user["user_id"])
+        if not ok:
+            return jsonify({"status": "error", "message": "Бюджет не найден"}), 404
+        return jsonify({"status": "success", "message": "Бюджет удалён"})
+
     @app.route('/api/v1/reports', methods=['GET'])
     @require_auth
     def generate_report():

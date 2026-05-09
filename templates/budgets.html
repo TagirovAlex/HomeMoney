@@ -7,11 +7,12 @@
 </div>
 
 <div id="add-form" class="form-card" style="display:none">
-    <h3>Новый бюджет</h3>
-    <form onsubmit="addBudget(event)">
+    <h3 id="add-form-title">Новый бюджет</h3>
+    <form onsubmit="saveBudget(event)">
+        <input type="hidden" id="bg-edit-id" value="">
         <label>Категория <select id="bg-category" required></select></label>
         <label>Лимит <input type="number" step="0.01" id="bg-amount" required></label>
-        <button type="submit" class="btn">Сохранить</button>
+        <button type="submit" class="btn" id="bg-submit">Сохранить</button>
         <button type="button" class="btn btn-secondary" onclick="hideAddForm()">Отмена</button>
     </form>
 </div>
@@ -25,7 +26,7 @@
         if (d.status !== 'success') return;
         var sel = document.getElementById('bg-category');
         sel.innerHTML = '<option value="">-- Выберите --</option>' +
-            d.data.map(function(c) { return '<option value="' + c.id + '">' + c.name + '</option>'; }).join('');
+            d.data.map(function(c) { return '<option value="' + c.id + '">' + (c.icon || '') + ' ' + c.name + '</option>'; }).join('');
     }
 
     async function loadBudgets() {
@@ -34,25 +35,57 @@
         var container = document.getElementById('budgets-list');
         if (d.status !== 'success' || !d.data.length) { container.innerHTML = '<p>Нет бюджетов. Создайте первый.</p>'; return; }
         container.innerHTML = d.data.map(function(b) {
-            return '<div class="card"><span class="card-label">' + (b.category_icon || '📁') + ' ' + b.category_name + '</span><span class="card-value">' + b.target_amount.toFixed(2) + ' RUB</span></div>';
+            return '<div class="card" style="text-align:left;position:relative">' +
+                '<div style="display:flex;justify-content:space-between;align-items:flex-start">' +
+                '<div><span class="card-label">' + (b.category_icon || '📁') + ' ' + b.category_name + '</span>' +
+                '<span class="card-value" style="font-size:1.3rem">' + b.target_amount.toFixed(2) + ' RUB</span></div>' +
+                '<div style="display:flex;gap:6px;flex-shrink:0">' +
+                '<button class="btn btn-secondary" style="padding:6px 12px;font-size:0.85rem" onclick="editBudget(' + b.id + ',' + b.category_id + ',' + b.target_amount + ')">✏️</button>' +
+                '<button class="btn btn-secondary" style="padding:6px 12px;font-size:0.85rem" onclick="deleteBudget(' + b.id + ')">✕</button></div></div></div>';
         }).join('');
     }
-    function showAddForm() { document.getElementById('add-form').style.display = 'block'; }
+
+    function showAddForm() {
+        document.getElementById('bg-edit-id').value = '';
+        document.getElementById('bg-category').value = '';
+        document.getElementById('bg-amount').value = '';
+        document.getElementById('add-form-title').textContent = 'Новый бюджет';
+        document.getElementById('bg-submit').textContent = 'Сохранить';
+        document.getElementById('add-form').style.display = 'block';
+    }
     function hideAddForm() { document.getElementById('add-form').style.display = 'none'; }
-    async function addBudget(e) {
+
+    function editBudget(id, catId, amount) {
+        document.getElementById('bg-edit-id').value = id;
+        document.getElementById('bg-category').value = catId;
+        document.getElementById('bg-amount').value = amount;
+        document.getElementById('add-form-title').textContent = 'Редактировать бюджет';
+        document.getElementById('bg-submit').textContent = '✏️';
+        document.getElementById('add-form').style.display = 'block';
+    }
+
+    async function saveBudget(e) {
         e.preventDefault();
-        var r = await fetch('/api/v1/budgets', {
-            method: 'POST',
-            headers: authHeaders(),
-            body: JSON.stringify({
-                category_id: parseInt(document.getElementById('bg-category').value),
-                target_amount: parseFloat(document.getElementById('bg-amount').value)
-            })
-        });
+        var editId = document.getElementById('bg-edit-id').value;
+        var body = {
+            category_id: parseInt(document.getElementById('bg-category').value),
+            target_amount: parseFloat(document.getElementById('bg-amount').value)
+        };
+        var url = editId ? '/api/v1/budgets/' + editId : '/api/v1/budgets';
+        var method = editId ? 'PUT' : 'POST';
+        var r = await fetch(url, { method: method, headers: authHeaders(), body: JSON.stringify(body) });
         var d = await r.json();
         alert(d.message || d.error);
         if (r.ok) { hideAddForm(); loadBudgets(); }
     }
+
+    async function deleteBudget(id) {
+        if (!confirm('Удалить бюджет?')) return;
+        var r = await fetch('/api/v1/budgets/' + id, { method: 'DELETE', headers: authHeaders() });
+        var d = await r.json();
+        alert(d.message); loadBudgets();
+    }
+
     window.onload = function() { loadCategories(); loadBudgets(); };
 </script>
 {% endblock %}

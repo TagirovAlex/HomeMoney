@@ -46,7 +46,8 @@ try:
     admin_data = {
         'email': 'admin@homemoney.com',
         'hashed_password': hashed,
-        'role': 'Admin'
+        'role': 'Admin',
+        'status': 'active'
     }
     user_repo = SQLAlchemyUserRepository()
     new_user = user_repo.create(admin_data)

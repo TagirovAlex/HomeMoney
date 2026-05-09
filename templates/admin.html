@@ -7,67 +7,109 @@
 
 <div class="admin-grid">
     <div class="card admin-card">
-        <h3>Пользователи</h3>
-        <table class="data-table" id="users-table">
-            <thead><tr><th>ID</th><th>Email</th><th>Роль</th></tr></thead>
-            <tbody id="users-body"><tr><td colspan="3">Загрузка...</td></tr></tbody>
+        <h3>Заявки на регистрацию</h3>
+        <table class="data-table">
+            <thead><tr><th>ID</th><th>Email</th><th>Telegram ID</th><th></th></tr></thead>
+            <tbody id="pending-body"><tr><td colspan="4">Загрузка...</td></tr></tbody>
         </table>
     </div>
 
     <div class="card admin-card">
-        <h3>Управление категориями</h3>
+        <h3>Пользователи</h3>
+        <table class="data-table">
+            <thead><tr><th>ID</th><th>Email</th><th>Роль</th><th>Статус</th></tr></thead>
+            <tbody id="users-body"><tr><td colspan="4">Загрузка...</td></tr></tbody>
+        </table>
+    </div>
+
+    <div class="card admin-card">
+        <h3>Категории</h3>
         <form onsubmit="addCategory(event)">
-            <label>Название <input type="text" id="cat-name" required></label>
-            <label>Описание <input type="text" id="cat-desc"></label>
-            <button type="submit" class="btn">Добавить</button>
+            <input type="text" id="cat-name" placeholder="Название" required>
+            <input type="text" id="cat-desc" placeholder="Описание">
+            <button type="submit" class="btn">+</button>
         </form>
-        <table class="data-table" id="categories-table">
+        <table class="data-table">
             <thead><tr><th>ID</th><th>Название</th></tr></thead>
             <tbody id="categories-body"><tr><td colspan="2">Загрузка...</td></tr></tbody>
         </table>
     </div>
 
     <div class="card admin-card">
-        <h3>Резервное копирование</h3>
-        <p>Создать полную копию базы данных или экспорт в JSON.</p>
-        <button class="btn" onclick="backup('full')">SQLite бэкап</button>
-        <button class="btn" onclick="backup('json')">JSON экспорт</button>
+        <h3>Бэкапы</h3>
+        <p>Создать копию базы данных.</p>
+        <button class="btn" onclick="backup('full')">SQLite</button>
+        <button class="btn" onclick="backup('json')">JSON</button>
         <pre id="backup-result" class="backup-output"></pre>
     </div>
 </div>
 
 <script>
+    var h = function() { return { 'Authorization': 'Bearer ' + localStorage.getItem('token'), 'Content-Type': 'application/json' }; };
+
+    async function loadPending() {
+        var r = await fetch('/api/v1/users/pending', { headers: h() });
+        var d = await r.json();
+        var tbody = document.getElementById('pending-body');
+        if (d.status !== 'success' || !d.data.length) { tbody.innerHTML = '<tr><td colspan="4">Нет заявок.</td></tr>'; return; }
+        tbody.innerHTML = d.data.map(function(u) {
+            return '<tr><td>' + u.id + '</td><td>' + u.email + '</td><td>' + (u.telegram_id || '') +
+                '</td><td><button class="btn" onclick="approve(' + u.id + ')">Да</button> ' +
+                '<button class="btn btn-secondary" onclick="reject(' + u.id + ')">Нет</button></td></tr>';
+        }).join('');
+    }
+
+    async function approve(id) {
+        var r = await fetch('/api/v1/users/' + id + '/approve', { method: 'POST', headers: h() });
+        var d = await r.json();
+        alert(d.message); loadPending(); loadUsers();
+    }
+
+    async function reject(id) {
+        var r = await fetch('/api/v1/users/' + id + '/reject', { method: 'POST', headers: h() });
+        var d = await r.json();
+        alert(d.message); loadPending(); loadUsers();
+    }
+
     async function loadUsers() {
-        var r = await fetch('/api/v1/users', { headers: authHeaders() });
+        var r = await fetch('/api/v1/users', { headers: h() });
         var d = await r.json();
         var tbody = document.getElementById('users-body');
-        if (d.status !== 'success') { tbody.innerHTML = '<tr><td colspan="3">' + (d.message || 'Ошибка') + '</td></tr>'; return; }
+        if (d.status !== 'success') { tbody.innerHTML = '<tr><td colspan="4">' + d.message + '</td></tr>'; return; }
         tbody.innerHTML = d.data.map(function(u) {
-            return '<tr><td>' + u.id + '</td><td>' + u.email + '</td><td>' + u.role + '</td></tr>';
+            return '<tr><td>' + u.id + '</td><td>' + u.email + '</td><td>' + u.role + '</td><td>' + u.status + '</td></tr>';
+        }).join('');
+    }
+
+    async function loadCategories() {
+        var r = await fetch('/api/v1/categories', { headers: h() });
+        var d = await r.json();
+        var tbody = document.getElementById('categories-body');
+        if (d.status !== 'success') { tbody.innerHTML = '<tr><td colspan="2">' + d.message + '</td></tr>'; return; }
+        tbody.innerHTML = d.data.map(function(c) {
+            return '<tr><td>' + c.id + '</td><td>' + c.name + '</td></tr>';
         }).join('');
     }
 
     async function addCategory(e) {
         e.preventDefault();
-        var name = document.getElementById('cat-name').value;
-        var desc = document.getElementById('cat-desc').value;
         var r = await fetch('/api/v1/categories', {
-            method: 'POST',
-            headers: authHeaders(),
-            body: JSON.stringify({name: name, description: desc})
+            method: 'POST', headers: h(),
+            body: JSON.stringify({ name: document.getElementById('cat-name').value, description: document.getElementById('cat-desc').value })
         });
         var d = await r.json();
-        alert(d.message || d.error);
+        alert(d.message || JSON.stringify(d));
+        if (r.ok) { document.getElementById('cat-name').value = ''; document.getElementById('cat-desc').value = ''; loadCategories(); }
     }
 
     async function backup(type) {
         var out = document.getElementById('backup-result');
         out.textContent = 'Создание бэкапа...';
-        var r = await fetch('/api/v1/backup?type=' + type, { headers: authHeaders() });
+        var r = await fetch('/api/v1/backup?type=' + type, { headers: h() });
         var d = await r.json();
-        out.textContent = d.message || JSON.stringify(d, null, 2);
+        out.textContent = d.message;
     }
 
-    window.onload = loadUsers;
+    window.onload = function() { loadPending(); loadUsers(); loadCategories(); };
 </script>
 {% endblock %}

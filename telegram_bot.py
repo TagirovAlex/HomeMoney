@@ -1,12 +1,24 @@
 from aiogram import Bot, Dispatcher
 from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.types import Message
 from config import Config
+
+
+def _parse_allowed_users(raw: str) -> set[int]:
+    if not raw or not raw.strip():
+        return set()
+    result = set()
+    for part in raw.split(","):
+        part = part.strip()
+        if part.isdigit():
+            result.add(int(part))
+    return result
 
 
 async def main():
     token = Config.BOT_TOKEN
     if not token:
-        print("ОШИБКА: HM_BOT_TOKEN не задан. Укажите токен в .env или переменной окружения.")
+        print("ОШИБКА: HM_BOT_TOKEN не задан.")
         return
 
     proxy_url = Config.BOT_PROXY_URL
@@ -15,12 +27,27 @@ async def main():
         connector = ProxyConnector.from_url(proxy_url)
         session = AiohttpSession(connector=connector)
         bot = Bot(token=token, session=session)
-        print(f"Бот запущен через прокси: {proxy_url}")
+        print(f"Бот через прокси: {proxy_url}")
     else:
         bot = Bot(token=token)
-        print("Бот запущен напрямую (без прокси)")
+        print("Бот напрямую (без прокси)")
+
+    allowed = _parse_allowed_users(Config.BOT_ALLOWED_USERS)
+    if allowed:
+        print(f"Принимаются сообщения только от ID: {allowed}")
+    else:
+        print("Принимаются сообщения от всех пользователей")
 
     dp = Dispatcher()
+
+    if allowed:
+
+        @dp.message.middleware()
+        async def whitelist_mw(handler, event: Message, data: dict):
+            if event.from_user and event.from_user.id not in allowed:
+                await event.answer("Доступ запрещён. Ваш Telegram ID не авторизован.")
+                return
+            return await handler(event, data)
 
     from handlers.command_handlers import router
     dp.include_router(router)

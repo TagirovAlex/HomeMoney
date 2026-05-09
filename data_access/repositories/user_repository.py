@@ -44,3 +44,16 @@ class SQLAlchemyUserRepository:
     def get_by_id(self, user_id: int) -> Optional[User]:
         with self._db() as session:
             return session.query(User).filter(User.id == user_id).first()
+
+    def update_status(self, user_id: int, status: str) -> Optional[User]:
+        with self._db() as session:
+            user = session.query(User).filter(User.id == user_id).first()
+            if user:
+                user.status = status
+                session.commit()
+                session.refresh(user)
+            return user
+
+    def get_pending(self) -> List[User]:
+        with self._db() as session:
+            return session.query(User).filter(User.status == "pending").all()

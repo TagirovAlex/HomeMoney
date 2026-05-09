@@ -18,5 +18,8 @@ class Config:
     # SOCKS прокси (оставьте пустым, если не нужен)
     BOT_PROXY_URL = os.environ.get("HM_BOT_PROXY_URL", "")
 
+    # Кто может писать боту (через запятую Telegram ID, пусто = все)
+    BOT_ALLOWED_USERS = os.environ.get("HM_BOT_ALLOWED_USERS", "")
+
     # Flask
     DEBUG = os.environ.get("HM_DEBUG", "true").lower() in ("true", "1", "yes")

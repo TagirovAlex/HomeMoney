@@ -63,9 +63,20 @@ def create_app():
         if existing:
             return jsonify({"status": "error", "message": "Email уже занят"}), 409
         hashed = AuthService.hash_password(data['password'])
-        user = user_repo.create({"email": data['email'], "hashed_password": hashed, "role": data.get("role", "User")})
-        token = AuthService.create_token(user.id, user.role)
-        return jsonify({"status": "success", "token": token, "user": {"id": user.id, "email": user.email, "role": user.role}}), 201
+        role = data.get("role", "User")
+        user_data = {
+            "email": data['email'],
+            "hashed_password": hashed,
+            "role": role,
+            "status": "active" if role == "Admin" else "pending",
+        }
+        if data.get("telegram_id"):
+            user_data["telegram_id"] = str(data["telegram_id"])
+        user = user_repo.create(user_data)
+        if user.status == "active":
+            token = AuthService.create_token(user.id, user.role)
+            return jsonify({"status": "success", "token": token, "user": {"id": user.id, "email": user.email, "role": user.role}}), 201
+        return jsonify({"status": "success", "message": "Регистрация выполнена. Дождитесь подтверждения администратором.", "user_id": user.id}), 201
 
     @app.route('/api/v1/login', methods=['POST'])
     def login():
@@ -75,8 +86,12 @@ def create_app():
         user = user_repo.get_by_email(data['email'])
         if not user or not AuthService.verify_password(data['password'], user.hashed_password):
             return jsonify({"status": "error", "message": "Неверный email или пароль"}), 401
+        if user.status == "pending":
+            return jsonify({"status": "error", "message": "Аккаунт ожидает подтверждения администратором."}), 403
+        if user.status == "rejected":
+            return jsonify({"status": "error", "message": "Аккаунт отклонён."}), 403
         token = AuthService.create_token(user.id, user.role)
-        return jsonify({"status": "success", "token": token, "user": {"id": user.id, "email": user.email, "role": user.role}})
+        return jsonify({"status": "success", "token": token, "user": {"id": user.id, "email": user.email, "role": user.role, "status": user.status}})
 
     # --- Защищённые API ---
 
@@ -159,7 +174,35 @@ def create_app():
         if request.current_user["role"] != "Admin":
             return jsonify({"status": "error", "message": "Только для администратора"}), 403
         users = user_repo.get_all(request.current_user["user_id"], request.current_user["role"])
-        return jsonify({"status": "success", "data": [{"id": u.id, "email": u.email, "role": u.role} for u in users]})
+        return jsonify({"status": "success", "data": [{"id": u.id, "email": u.email, "role": u.role, "status": u.status, "telegram_id": u.telegram_id} for u in users]})
+
+    @app.route('/api/v1/users/pending', methods=['GET'])
+    @require_auth
+    def pending_users():
+        if request.current_user["role"] != "Admin":
+            return jsonify({"status": "error", "message": "Только для администратора"}), 403
+        users = user_repo.get_pending()
+        return jsonify({"status": "success", "data": [{"id": u.id, "email": u.email, "telegram_id": u.telegram_id} for u in users]})
+
+    @app.route('/api/v1/users/<int:user_id>/approve', methods=['POST'])
+    @require_auth
+    def approve_user(user_id):
+        if request.current_user["role"] != "Admin":
+            return jsonify({"status": "error", "message": "Только для администратора"}), 403
+        user = user_repo.update_status(user_id, "active")
+        if not user:
+            return jsonify({"status": "error", "message": "Пользователь не найден"}), 404
+        return jsonify({"status": "success", "message": f"Пользователь {user.email} подтверждён"})
+
+    @app.route('/api/v1/users/<int:user_id>/reject', methods=['POST'])
+    @require_auth
+    def reject_user(user_id):
+        if request.current_user["role"] != "Admin":
+            return jsonify({"status": "error", "message": "Только для администратора"}), 403
+        user = user_repo.update_status(user_id, "rejected")
+        if not user:
+            return jsonify({"status": "error", "message": "Пользователь не найден"}), 404
+        return jsonify({"status": "success", "message": f"Пользователь {user.email} отклонён"})
 
     @app.route('/api/v1/categories', methods=['GET', 'POST'])
     @require_auth

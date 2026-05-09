@@ -10,6 +10,8 @@ class User(Base):
     email = Column(String, unique=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     role = Column(String, default='User') # Admin or User
+    status = Column(String, default='active') # pending, active, rejected
+    telegram_id = Column(String, default='')
 
 class Category(Base):
     __tablename__ = 'categories'

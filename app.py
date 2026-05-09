@@ -21,7 +21,8 @@ def create_app():
 
     financial_service = FinancialService(
         transaction_repo=transaction_repo,
-        budget_repo=budget_repo
+        budget_repo=budget_repo,
+        income_repo=income_repo,
     )
 
     # --- Страницы ---
@@ -262,7 +263,14 @@ def create_app():
     def list_incomes():
         uid = request.current_user["user_id"]
         srcs = income_repo.get_by_user(uid)
-        return jsonify({"status": "success", "data": [{"id": s.id, "name": s.name, "is_regular": s.is_regular} for s in srcs]})
+        return jsonify({"status": "success", "data": [{
+            "id": s.id, "name": s.name, "is_regular": s.is_regular,
+            "amount": s.amount, "category_id": s.category_id,
+            "description": s.description or "", "period": s.period,
+            "day_of_period": s.day_of_period,
+            "next_date": s.next_date.isoformat() if s.next_date else None,
+            "is_active": s.is_active,
+        } for s in srcs]})
 
     @app.route('/api/v1/incomes', methods=['POST'])
     @require_auth
@@ -270,12 +278,40 @@ def create_app():
         data = request.get_json()
         if not data or not data.get('name'):
             return jsonify({"status": "error", "message": "name обязателен"}), 400
-        src = income_repo.create({
+        from datetime import date
+        rec = {
             "user_id": request.current_user["user_id"],
             "name": data['name'],
             "is_regular": data.get('is_regular', True),
-        })
+            "amount": float(data.get('amount', 0)),
+            "category_id": int(data.get('category_id', 1)),
+            "description": data.get('description', ''),
+            "period": data.get('period', 'monthly'),
+            "day_of_period": int(data.get('day_of_period', 1)),
+        }
+        if rec["is_regular"]:
+            rec["next_date"] = date.today()
+        src = income_repo.create(rec)
         return jsonify({"status": "success", "income_id": src.id}), 201
+
+    @app.route('/api/v1/incomes/<int:income_id>', methods=['PUT'])
+    @require_auth
+    def update_income(income_id):
+        data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "Нет данных"}), 400
+        allowed = {"name", "is_regular", "amount", "category_id", "description", "period", "day_of_period", "next_date", "is_active"}
+        update = {}
+        for k in allowed:
+            if k in data:
+                v = data[k]
+                if k in ("amount",): v = float(v)
+                if k in ("category_id", "day_of_period"): v = int(v)
+                update[k] = v
+        src = income_repo.update(income_id, request.current_user["user_id"], update)
+        if not src:
+            return jsonify({"status": "error", "message": "Источник дохода не найден"}), 404
+        return jsonify({"status": "success", "message": "Источник дохода обновлён"})
 
     @app.route('/api/v1/incomes/<int:income_id>', methods=['DELETE'])
     @require_auth
@@ -284,6 +320,13 @@ def create_app():
         if not ok:
             return jsonify({"status": "error", "message": "Источник дохода не найден"}), 404
         return jsonify({"status": "success", "message": "Источник дохода удалён"})
+
+    @app.route('/api/v1/incomes/process', methods=['POST'])
+    @require_auth
+    def process_regular_incomes():
+        uid = request.current_user["user_id"]
+        result = financial_service.process_regular_payments(uid)
+        return jsonify({"status": "success", "data": result})
 
     # --- Error handlers ---
 

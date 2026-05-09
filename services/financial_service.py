@@ -1,15 +1,18 @@
 from data_access.repositories.transaction_repository import ITransactionRepository
 from data_access.repositories.budget_repository import IBudgetRepository
-from models.database import Transaction, Budget 
+from data_access.repositories.income_repository import IIncomeSourceRepository
+from models.database import Transaction, Budget
 from datetime import date, timedelta
+from calendar import monthrange
 
 class FinancialService:
     """Сервисный слой (Use Case) для бизнес-логики финансов."""
 
-    def __init__(self, transaction_repo: ITransactionRepository, budget_repo: IBudgetRepository):
+    def __init__(self, transaction_repo: ITransactionRepository, budget_repo: IBudgetRepository, income_repo: IIncomeSourceRepository = None):
         # Зависимости внедряются через конструктор. Это обеспечивает тестируемость.
         self.transaction_repo = transaction_repo
         self.budget_repo = budget_repo
+        self.income_repo = income_repo
 
     def add_transaction(self, user_id: int, amount: float, category_id: int, description: str = "") -> Transaction:
         """Реализовать бизнес-правила добавления транзакции и сохранить ее."""
@@ -148,3 +151,46 @@ class FinancialService:
                 "date": t.date.isoformat() if t.date else "",
             })
         return result
+
+    def process_regular_payments(self, user_id: int) -> dict:
+        if not self.income_repo:
+            return {"processed": 0, "errors": ["income_repo не подключён"]}
+        from datetime import datetime
+        due = self.income_repo.get_due_regular(user_id)
+        processed = 0
+        errors = []
+        for src in due:
+            try:
+                self.transaction_repo.add_transaction({
+                    "user_id": user_id,
+                    "amount": abs(src.amount),
+                    "category_id": src.category_id,
+                    "description": f"[Авто] {src.name}: {src.description or src.name}",
+                })
+                # Рассчитываем следующую дату
+                next_d = src.next_date or date.today()
+                if src.period == "daily":
+                    from datetime import timedelta as tdelta
+                    next_d = next_d + tdelta(days=1)
+                elif src.period == "weekly":
+                    next_d = next_d + tdelta(weeks=1)
+                elif src.period == "monthly":
+                    m = next_d.month + 1
+                    y = next_d.year
+                    if m > 12:
+                        m = 1; y += 1
+                    max_day = monthrange(y, m)[1]
+                    day = min(src.day_of_period, max_day)
+                    next_d = date(y, m, day)
+                elif src.period == "yearly":
+                    y = next_d.year + 1
+                    max_day = monthrange(y, next_d.month)[1]
+                    day = min(src.day_of_period, max_day)
+                    next_d = date(y, next_d.month, day)
+                else:
+                    next_d = next_d + tdelta(days=30)
+                self.income_repo.update(src.id, user_id, {"next_date": next_d})
+                processed += 1
+            except Exception as e:
+                errors.append(f"{src.name}: {str(e)}")
+        return {"processed": processed, "errors": errors}

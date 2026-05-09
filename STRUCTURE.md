@@ -1,34 +1,68 @@
-# 🌳 Структура проекта HomeMoney (Project Structure)
+# Структура проекта HomeMoney
 
-Это карта всех файлов и папок, которые составляют кодовую базу. Понимание этой структуры критично для работы в соответствии с принципами Clean Architecture.
+```
+HomeMoney/
+│
+├── app.py                         # Flask entrypoint + все API-маршруты и страницы
+├── config.py                      # Центральная конфигурация из .env
+├── seed_demo.py                   # Наполнение демо-данными
+│
+├── install.sh                     # Интерактивный установщик для Debian 12
+├── uninstall.sh                   # Скрипт полного удаления из системы
+│
+├── .env.example                   # Шаблон конфигурации
+├── .gitignore
+│
+├── models/
+│   └── database.py                # ORM-модели: User, Category, Transaction, Budget, IncomeSource
+│
+├── services/
+│   ├── auth_service.py            # JWT (create/verify token), bcrypt (hash/verify password), require_auth
+│   └── financial_service.py       # Бизнес-логика: транзакции, бюджеты, отчёты
+│
+├── data_access/
+│   └── repositories/              # Data Access Layer (Repository Pattern)
+│       ├── user_repository.py     # IUserRepository + SQLAlchemyUserRepository
+│       ├── transaction_repository.py  # ITransactionRepository + SQLAlchemyTransactionRepository
+│       ├── budget_repository.py   # IBudgetRepository + SQLAlchemyBudgetRepository
+│       └── income_repository.py   # IIncomeSourceRepository + SQLAlchemyIncomeSourceRepository
+│
+├── utils/
+│   ├── database_session.py        # Lazy SQLite engine + context manager get_db()
+│   └── backup_service.py          # Полная копия SQLite + JSON-экспорт
+│
+├── telegram_bot.py                # Aiogram 3.x бот (SOCKS proxy, whitelist, wizard)
+│
+├── templates/                     # Jinja2 шаблоны (8 страниц)
+│   ├── base.html                  # Базовый layout (навигация, тема, auth)
+│   ├── login.html                 # Вход / Регистрация
+│   ├── index.html                 # Дашборд (сводка за месяц)
+│   ├── transactions.html          # Список транзакций + добавление
+│   ├── incomes.html               # Источники дохода
+│   ├── budgets.html               # Бюджеты по категориям
+│   ├── reports.html               # Отчёты по месяцам
+│   ├── admin.html                 # Админ-панель (пользователи, категории, бэкапы)
+│   └── error.html                 # 403 / 404 / 500
+│
+├── static/
+│   └── css/
+│       └── style.css              # Единый CSS (светлая/тёмная тема, responsive)
+│
+└── tests/                         # Тесты (31 шт.)
+    ├── test_auth_service.py       # Unit-тесты AuthService
+    ├── test_financial_service.py  # Unit-тесты FinancialService
+    └── test_api.py                # Интеграционные тесты API
+```
 
-## 📁 Каталог `models/`
-*   **`database.py`**: Определяет все ORM-модели SQLAlchemy (`User`, `Transaction`, `Budget` и т.д.). Это контракт, который определяет *данные*.
+## Слои архитектуры (Clean Architecture)
 
-## 📂 Каталог `utils/`
-*   **`database_session.py`**: Управляет подключением к базе данных (SQLite) через контекстный менеджер сессии. Обеспечивает безопасный доступ ко всем данным.
-*   **`backup_service.py`**: Содержит бизнес-логику для создания и восстановления резервных копий.
+```
+HTTP Request → Flask Route → require_auth (JWT) → Service Layer → Repository → SQLite
+                                                                      ↑
+Telegram Bot → aiogram Handler → Service Layer → Repository → SQLite
+```
 
-## 🧱 Каталог `data_access/repositories/` (Data Access Layer)
-Здесь живут **конфигурации взаимодействия с БД**. Каждый файл содержит два элемента: абстрактный интерфейс (`I...Repository`) и рабочую реализацию (`SQLAlchemy...Repository`).
-*   **`user_repository.py`**: Работа с данными пользователей, включая логику разделения данных по ролям (Admin/User).
-*   **`transaction_repository.py`**: Взаимодействие со всеми записями расходов и доходов.
-*   **`budget_repository.py`**: Управление лимитами расходов для отчетов.
-
-## ⚙️ Каталог `services/` (Use Case Layer)
-Это "мозг" приложения. Здесь находится вся бизнес-математика — **правила учета финансов**.
-*   **`financial_service.py`**: Главный сервис, который вызывает репозитории и применяет правила (например, расчет месячной сводки, проверка превышения бюджета).
-
-## 🌐 Точки входа (Entry Points)
-Эти файлы используются для запуска приложения или взаимодействия с пользователем:
-
-1.  **`app.py`**: Основной API Flask-сервер. Обрабатывает HTTP-запросы и передает их бизнес-слою (`FinancialService`).
-2.  **`telegram_bot.py`**: Точка входа для бота, который также использует `FinancialService`.
-
----
-
-## 🧭 Как использовать? (Workflow)
-1. **Web API:** Клиент вызывает `/api/v1/transactions` $\rightarrow$ Flask -> `financial_service` $\rightarrow$ Вызывает репозиторий $\rightarrow$ Работает с сессией БД.
-2. **Бот:** Пользователь отправляет команду в Telegram $\rightarrow$ Bot Handler (`handlers/*`) $\rightarrow$ Вызывает `financial_service` $\rightarrow$ ... и так далее.
-
-*Этот файл является схемой архитектуры, не содержит исполняемого кода.*
+1. **Models** (`models/`) — описание сущностей БД
+2. **Repositories** (`data_access/repositories/`) — абстрактные интерфейсы + реализации SQLAlchemy
+3. **Services** (`services/`) — бизнес-логика (use cases)
+4. **Presentation** (`app.py`, `telegram_bot.py`, `templates/`) — точки входа

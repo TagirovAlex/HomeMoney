@@ -17,24 +17,22 @@
     </form>
 </div>
 
-<div class="form-card" style="margin-bottom:20px">
-    <div class="filter-bar">
-        <label>Месяц
-            <select id="f-month">
-                <option value="1">Янв</option><option value="2">Фев</option><option value="3">Мар</option>
-                <option value="4">Апр</option><option value="5">Май</option><option value="6">Июн</option>
-                <option value="7">Июл</option><option value="8">Авг</option><option value="9">Сен</option>
-                <option value="10">Окт</option><option value="11">Ноя</option><option value="12">Дек</option>
-            </select>
-        </label>
-        <label>Год
-            <select id="f-year"></select>
-        </label>
-        <label>Категория
-            <select id="f-category"><option value="">Все</option></select>
-        </label>
-        <button class="btn" onclick="loadTransactions()">Применить</button>
-    </div>
+<div class="filter-bar">
+    <label>Месяц
+        <select id="f-month">
+            <option value="1">Янв</option><option value="2">Фев</option><option value="3">Мар</option>
+            <option value="4">Апр</option><option value="5">Май</option><option value="6">Июн</option>
+            <option value="7">Июл</option><option value="8">Авг</option><option value="9">Сен</option>
+            <option value="10">Окт</option><option value="11">Ноя</option><option value="12">Дек</option>
+        </select>
+    </label>
+    <label>Год
+        <select id="f-year"></select>
+    </label>
+    <label>Категория
+        <select id="f-category"><option value="">Все</option></select>
+    </label>
+    <button class="btn" onclick="loadTransactions()">Применить</button>
 </div>
 
 <table class="data-table">

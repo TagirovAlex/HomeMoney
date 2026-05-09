@@ -134,9 +134,10 @@ main { flex: 1; padding: 24px 5%; max-width: 1200px; margin: 0 auto; width: 100%
 .budgets-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
 
 /* --- FILTER BAR --- */
-.filter-bar { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 20px; }
-.filter-bar label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--color-secondary); }
-.filter-bar select, .filter-bar input { padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-bg); color: var(--color-text); }
+.filter-bar { display: flex; gap: 12px; align-items: flex-end; flex-wrap: nowrap; margin-bottom: 20px; background: var(--color-card-bg); padding: 12px 16px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08); }
+.filter-bar label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--color-secondary); white-space: nowrap; }
+.filter-bar select, .filter-bar input { padding: 6px 10px; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-bg); color: var(--color-text); }
+.filter-bar .btn { padding: 6px 14px; white-space: nowrap; }
 
 /* --- PAGINATION --- */
 .pagination { display: flex; align-items: center; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
@@ -187,6 +188,7 @@ main { flex: 1; padding: 24px 5%; max-width: 1200px; margin: 0 auto; width: 100%
     nav { flex-wrap: wrap; }
     .summary-cards { flex-direction: column; }
     .admin-grid { grid-template-columns: 1fr; }
+    .filter-bar { flex-wrap: wrap; }
     .error-card { padding: 40px 24px; }
     .error-code { font-size: 4rem; }
 }

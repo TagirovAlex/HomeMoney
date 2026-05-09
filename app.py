@@ -45,7 +45,9 @@ def create_app():
 
     @app.route('/reports')
     def reports_page():
-        return render_template('reports.html')
+        from datetime import date
+        today = date.today()
+        return render_template('reports.html', current_month=today.month, current_year=today.year)
 
     @app.route('/admin')
     def admin_page():

@@ -146,10 +146,7 @@ async def handle_help(message: Message):
 
 # ─── /addtx ──────────────────────────────────────────────────────────
 
-@router.message(Command("addtx"))
-@auth_required
-async def cmd_addtx(message: Message):
-    tg_id = message.from_user.id
+async def _cmd_addtx(tg_id: int, message: Message):
     sess = get_session(tg_id)
     sess["step"] = "select_category"
     sess["data"] = {}
@@ -163,6 +160,11 @@ async def cmd_addtx(message: Message):
         for c in cats
     ])
     await message.answer("Выберите категорию:", reply_markup=kb)
+
+@router.message(Command("addtx"))
+@auth_required
+async def cmd_addtx(message: Message):
+    await _cmd_addtx(message.from_user.id, message)
 
 @router.callback_query(lambda c: c.data and c.data.startswith("txcat:"))
 async def cb_tx_select_category(callback: CallbackQuery):
@@ -228,12 +230,9 @@ async def tx_enter_desc(message: Message):
         await message.answer(f"❌ Ошибка: {e}")
         sess["step"] = None
 
-# ─── /tx ─────────────────────────────────────────────────────────────
+# ─── Внутренние реализации (принимают tg_id явно) ───────────────────
 
-@router.message(Command("tx"))
-@auth_required
-async def cmd_tx(message: Message):
-    tg_id = message.from_user.id
+async def _cmd_tx(tg_id: int, message: Message):
     sess = get_session(tg_id)
     try:
         tx_repo = SQLAlchemyTransactionRepository()
@@ -253,12 +252,7 @@ async def cmd_tx(message: Message):
     except Exception as e:
         await message.answer(f"❌ Ошибка: {e}")
 
-# ─── /report ─────────────────────────────────────────────────────────
-
-@router.message(Command("report"))
-@auth_required
-async def cmd_report(message: Message):
-    tg_id = message.from_user.id
+async def _cmd_report(tg_id: int, message: Message):
     sess = get_session(tg_id)
     from datetime import date
     today = date.today()
@@ -298,12 +292,7 @@ async def cmd_report(message: Message):
     except Exception as e:
         await message.answer(f"❌ Ошибка: {e}")
 
-# ─── /budgets ────────────────────────────────────────────────────────
-
-@router.message(Command("budgets"))
-@auth_required
-async def cmd_budgets(message: Message):
-    tg_id = message.from_user.id
+async def _cmd_budgets(tg_id: int, message: Message):
     sess = get_session(tg_id)
     try:
         bg_repo = SQLAlchemyBudgetRepository()
@@ -321,12 +310,7 @@ async def cmd_budgets(message: Message):
     except Exception as e:
         await message.answer(f"❌ Ошибка: {e}")
 
-# ─── /incomes ────────────────────────────────────────────────────────
-
-@router.message(Command("incomes"))
-@auth_required
-async def cmd_incomes(message: Message):
-    tg_id = message.from_user.id
+async def _cmd_incomes(tg_id: int, message: Message):
     sess = get_session(tg_id)
     try:
         inc_repo = SQLAlchemyIncomeSourceRepository()
@@ -348,29 +332,78 @@ async def cmd_incomes(message: Message):
     except Exception as e:
         await message.answer(f"❌ Ошибка: {e}")
 
+# ─── /tx ─────────────────────────────────────────────────────────────
+
+@router.message(Command("tx"))
+@auth_required
+async def cmd_tx(message: Message):
+    await _cmd_tx(message.from_user.id, message)
+
+# ─── /report ─────────────────────────────────────────────────────────
+
+@router.message(Command("report"))
+@auth_required
+async def cmd_report(message: Message):
+    await _cmd_report(message.from_user.id, message)
+
+# ─── /budgets ────────────────────────────────────────────────────────
+
+@router.message(Command("budgets"))
+@auth_required
+async def cmd_budgets(message: Message):
+    await _cmd_budgets(message.from_user.id, message)
+
+# ─── /incomes ────────────────────────────────────────────────────────
+
+@router.message(Command("incomes"))
+@auth_required
+async def cmd_incomes(message: Message):
+    await _cmd_incomes(message.from_user.id, message)
+
 # ─── Инлайн-кнопки ──────────────────────────────────────────────────
+
+async def _ensure_auth(callback: CallbackQuery) -> int | None:
+    tg_id = callback.from_user.id
+    sess = get_session(tg_id)
+    if not try_auto_login(tg_id, sess):
+        await callback.message.answer(
+            "❌ Требуется авторизация.\nИспользуйте /login email пароль"
+        )
+        await callback.answer()
+        return None
+    return tg_id
 
 @router.callback_query(lambda c: c.data == "addtx")
 async def cb_addtx(callback: CallbackQuery):
-    await cmd_addtx(callback.message)
-    await callback.answer()
+    tg_id = await _ensure_auth(callback)
+    if tg_id is not None:
+        await _cmd_addtx(tg_id, callback.message)
+        await callback.answer()
 
 @router.callback_query(lambda c: c.data == "tx")
 async def cb_tx(callback: CallbackQuery):
-    await cmd_tx(callback.message)
-    await callback.answer()
+    tg_id = await _ensure_auth(callback)
+    if tg_id is not None:
+        await _cmd_tx(tg_id, callback.message)
+        await callback.answer()
 
 @router.callback_query(lambda c: c.data == "report")
 async def cb_report(callback: CallbackQuery):
-    await cmd_report(callback.message)
-    await callback.answer()
+    tg_id = await _ensure_auth(callback)
+    if tg_id is not None:
+        await _cmd_report(tg_id, callback.message)
+        await callback.answer()
 
 @router.callback_query(lambda c: c.data == "budgets")
 async def cb_budgets(callback: CallbackQuery):
-    await cmd_budgets(callback.message)
-    await callback.answer()
+    tg_id = await _ensure_auth(callback)
+    if tg_id is not None:
+        await _cmd_budgets(tg_id, callback.message)
+        await callback.answer()
 
 @router.callback_query(lambda c: c.data == "incomes")
 async def cb_incomes(callback: CallbackQuery):
-    await cmd_incomes(callback.message)
-    await callback.answer()
+    tg_id = await _ensure_auth(callback)
+    if tg_id is not None:
+        await _cmd_incomes(tg_id, callback.message)
+        await callback.answer()

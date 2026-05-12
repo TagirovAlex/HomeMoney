@@ -24,10 +24,10 @@ async def main():
     proxy_url = Config.get_proxy_url()
     if proxy_url:
         session = AiohttpSession(proxy=proxy_url)
-        bot = Bot(token=token, session=session)
+        bot = Bot(token=token, session=session, parse_mode="HTML")
         print(f"Бот через прокси: {proxy_url}")
     else:
-        bot = Bot(token=token)
+        bot = Bot(token=token, parse_mode="HTML")
         print("Бот напрямую (без прокси)")
 
     allowed = _parse_allowed_users(Config.BOT_ALLOWED_USERS)

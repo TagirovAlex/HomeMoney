@@ -87,7 +87,6 @@ def stop_bot() -> str:
 
 def check_proxy() -> dict:
     try:
-        import urllib.request, json
         from config import Config
         host = Config.BOT_PROXY_HOST
         if not host:
@@ -97,10 +96,15 @@ def check_proxy() -> dict:
             auth = f"{Config.BOT_PROXY_USERNAME}:{Config.BOT_PROXY_PASSWORD}@"
         port = f":{Config.BOT_PROXY_PORT}" if Config.BOT_PROXY_PORT else ""
         proxy_url = f"socks5://{auth}{host}{port}"
-        proxy_handler = urllib.request.ProxyHandler({"http": proxy_url, "https": proxy_url})
-        opener = urllib.request.build_opener(proxy_handler)
-        resp = opener.open("https://api.telegram.org", timeout=15)
-        return {"ok": True, "proxy": proxy_url, "status": resp.status}
+        import asyncio, aiohttp
+        from aiohttp_socks import ProxyConnector
+        async def _probe():
+            connector = ProxyConnector.from_url(proxy_url)
+            async with aiohttp.ClientSession(connector=connector) as sess:
+                async with sess.get("https://api.telegram.org", timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                    return resp.status
+        status = asyncio.run(_probe())
+        return {"ok": True, "proxy": proxy_url, "status": status}
     except Exception as e:
         msg = str(e).encode("utf-8", errors="replace").decode("utf-8")
         return {"ok": False, "error": msg}

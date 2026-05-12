@@ -102,7 +102,8 @@ def check_proxy() -> dict:
         resp = opener.open("https://api.telegram.org", timeout=15)
         return {"ok": True, "proxy": proxy_url, "status": resp.status}
     except Exception as e:
-        return {"ok": False, "error": str(e)}
+        msg = str(e).encode("utf-8", errors="replace").decode("utf-8")
+        return {"ok": False, "error": msg}
 
 def _check_telegram_api() -> dict:
     try:
@@ -120,7 +121,8 @@ def _check_telegram_api() -> dict:
                     "first_name": bot_user.get("first_name", "")}
         return {"reachable": False, "error": data.get("description", "API error")}
     except Exception as e:
-        return {"reachable": False, "error": str(e)}
+        msg = str(e).encode("utf-8", errors="replace").decode("utf-8")
+        return {"reachable": False, "error": msg}
 
 def status_bot() -> dict:
     pid = _read_pid()

@@ -71,3 +71,17 @@ class TestFinancialService:
         budget = service.create_budget(category_id=1, target_amount=1000.0, user_id=1)
         assert budget.id == 1
         mock_budget_repo.create_budget.assert_called_once_with({"user_id": 1, "category_id": 1, "target_amount": 1000.0})
+
+    def test_process_regular_payments_no_repo(self, service):
+        result = service.process_regular_payments(1)
+        assert result["processed"] == 0
+        assert "income_repo не подключён" in str(result["errors"])
+
+    def test_process_regular_payments_empty(self, service, mock_tx_repo, mock_budget_repo):
+        from data_access.repositories.income_repository import IIncomeSourceRepository
+        mock_income_repo = create_autospec(IIncomeSourceRepository)
+        mock_income_repo.get_due_regular.return_value = []
+        service.income_repo = mock_income_repo
+        result = service.process_regular_payments(1)
+        assert result["processed"] == 0
+        assert result["errors"] == []

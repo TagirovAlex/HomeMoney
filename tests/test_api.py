@@ -124,6 +124,105 @@ class TestAuthProtectedAPI:
             headers={"Authorization": f"Bearer {token}"})
         assert r.status_code == 200
 
+    def test_transactions_with_filters(self, client):
+        token = auth_token(client, "user@test.com", "user")
+        r = client.get("/api/v1/user/2/transactions?month=5&year=2024&category_id=1&page=1&limit=10",
+            headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 200
+        d = r.get_json()
+        assert d["status"] == "success"
+        assert "total" in d
+        assert "page" in d
+        assert "limit" in d
+        assert d["page"] == 1
+
+    def test_create_category(self, client):
+        token = auth_token(client, "user@test.com", "user")
+        r = client.post("/api/v1/categories",
+            json={"name": "TestCat", "icon": "📁", "description": "test"},
+            headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 201
+        assert r.get_json()["status"] == "success"
+
+    def test_update_category(self, client):
+        token = auth_token(client, "admin@test.com", "admin")
+        r = client.put("/api/v1/categories/1",
+            json={"name": "UpdatedFood", "icon": "🍎"},
+            headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 200
+        assert r.get_json()["status"] == "success"
+
+    def test_delete_category(self, client):
+        token = auth_token(client, "admin@test.com", "admin")
+        r = client.delete("/api/v1/categories/1",
+            headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 200
+
+    def test_update_budget(self, client):
+        token = auth_token(client, "user@test.com", "user")
+        r = client.post("/api/v1/budgets",
+            json={"category_id": 1, "target_amount": 5000.0},
+            headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 201
+        bid = r.get_json()["budget_id"]
+        r = client.put(f"/api/v1/budgets/{bid}",
+            json={"target_amount": 8000.0},
+            headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 200
+
+    def test_delete_budget(self, client):
+        token = auth_token(client, "user@test.com", "user")
+        r = client.post("/api/v1/budgets",
+            json={"category_id": 1, "target_amount": 3000.0},
+            headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 201
+        bid = r.get_json()["budget_id"]
+        r = client.delete(f"/api/v1/budgets/{bid}",
+            headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 200
+
+    def test_update_income(self, client):
+        token = auth_token(client, "user@test.com", "user")
+        r = client.post("/api/v1/incomes",
+            json={"name": "Bonus", "amount": 5000, "is_regular": True},
+            headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 201
+        iid = r.get_json()["income_id"]
+        r = client.put(f"/api/v1/incomes/{iid}",
+            json={"amount": 7000},
+            headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 200
+
+    def test_delete_income(self, client):
+        token = auth_token(client, "user@test.com", "user")
+        r = client.post("/api/v1/incomes",
+            json={"name": "Temp", "amount": 1000, "is_regular": True},
+            headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 201
+        iid = r.get_json()["income_id"]
+        r = client.delete(f"/api/v1/incomes/{iid}",
+            headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 200
+
+    def test_process_incomes(self, client):
+        token = auth_token(client, "user@test.com", "user")
+        r = client.post("/api/v1/incomes/process",
+            headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 200
+        d = r.get_json()
+        assert d["status"] == "success"
+        assert "processed" in d["data"]
+
+    def test_categories_page(self, client):
+        r = client.get("/categories")
+        assert r.status_code == 200
+
+    def test_report_no_params_returns_400(self, client):
+        token = auth_token(client, "admin@test.com", "admin")
+        r = client.get("/api/v1/reports",
+            headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 400
+
 class TestAdminAPI:
     def test_list_users(self, client):
         token = auth_token(client, "admin@test.com", "admin")

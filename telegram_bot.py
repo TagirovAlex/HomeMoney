@@ -52,6 +52,12 @@ async def main():
     from handlers.command_handlers import router
     dp.include_router(router)
 
+    try:
+        await bot.delete_webhook(drop_pending_updates=True)
+        print("Webhook удалён (если был).")
+    except Exception as e:
+        print(f"Предупреждение: не удалось удалить webhook — {e}")
+
     print("Telegram Bot запущен. Polling...")
     await dp.start_polling(bot)
 

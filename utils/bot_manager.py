@@ -44,11 +44,12 @@ def start_bot() -> str:
     if not os.path.exists(BOT_SCRIPT):
         return "Ошибка: telegram_bot.py не найден"
 
+    log_file = open(os.path.join(PROJECT_DIR, ".bot.log"), "a")
     proc = subprocess.Popen(
         ["python", BOT_SCRIPT],
         cwd=PROJECT_DIR,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdout=log_file,
+        stderr=subprocess.STDOUT,
         start_new_session=True,
     )
     _write_pid(proc.pid)

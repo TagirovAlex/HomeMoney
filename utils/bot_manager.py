@@ -85,40 +85,48 @@ def stop_bot() -> str:
         return "Ошибка при остановке: {}".format(e)
 
 
+import asyncio, aiohttp
+from aiohttp_socks import ProxyConnector
+
+
+def _make_session():
+    from config import Config
+    proxy_url = Config.get_proxy_url()
+    if proxy_url:
+        connector = ProxyConnector.from_url(proxy_url)
+        return aiohttp.ClientSession(connector=connector)
+    return aiohttp.ClientSession()
+
+
+async def _fetch(url: str, timeout: int = 15):
+    async with _make_session() as sess:
+        async with sess.get(url, timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
+            return resp.status, await resp.read()
+
+
 def check_proxy() -> dict:
+    from config import Config
+    proxy_url = Config.get_proxy_url()
+    if not proxy_url:
+        return {"ok": False, "error": "Хост прокси не указан"}
     try:
-        from config import Config
-        host = Config.BOT_PROXY_HOST
-        if not host:
-            return {"ok": False, "error": "Хост прокси не указан"}
-        auth = ""
-        if Config.BOT_PROXY_USERNAME and Config.BOT_PROXY_PASSWORD:
-            auth = f"{Config.BOT_PROXY_USERNAME}:{Config.BOT_PROXY_PASSWORD}@"
-        port = f":{Config.BOT_PROXY_PORT}" if Config.BOT_PROXY_PORT else ""
-        proxy_url = f"socks5://{auth}{host}{port}"
-        import asyncio, aiohttp
-        from aiohttp_socks import ProxyConnector
-        async def _probe():
-            connector = ProxyConnector.from_url(proxy_url)
-            async with aiohttp.ClientSession(connector=connector) as sess:
-                async with sess.get("https://api.telegram.org", timeout=aiohttp.ClientTimeout(total=15)) as resp:
-                    return resp.status
-        status = asyncio.run(_probe())
+        status, _ = asyncio.run(_fetch("https://api.telegram.org", 15))
         return {"ok": True, "proxy": proxy_url, "status": status}
     except Exception as e:
         msg = str(e).encode("utf-8", errors="replace").decode("utf-8")
         return {"ok": False, "error": msg}
 
+
 def _check_telegram_api() -> dict:
+    from config import Config
+    token = Config.BOT_TOKEN
+    if not token:
+        return {"reachable": False, "error": "HM_BOT_TOKEN не задан"}
     try:
-        import urllib.request, json
-        from config import Config
-        token = Config.BOT_TOKEN
-        if not token:
-            return {"reachable": False, "error": "HM_BOT_TOKEN не задан"}
+        import json
         url = f"https://api.telegram.org/bot{token}/getMe"
-        resp = urllib.request.urlopen(url, timeout=10)
-        data = json.loads(resp.read().decode())
+        status, body = asyncio.run(_fetch(url, 10))
+        data = json.loads(body.decode())
         if data.get("ok"):
             bot_user = data["result"]
             return {"reachable": True, "username": bot_user.get("username", ""),

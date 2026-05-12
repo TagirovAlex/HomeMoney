@@ -21,7 +21,7 @@ async def main():
         print("ОШИБКА: HM_BOT_TOKEN не задан.")
         return
 
-    proxy_url = Config.BOT_PROXY_URL
+    proxy_url = Config.get_proxy_url()
     if proxy_url:
         from aiohttp_socks import ProxyConnector
         connector = ProxyConnector.from_url(proxy_url)

@@ -15,8 +15,24 @@ class Config:
     # Telegram Bot
     BOT_TOKEN = os.environ.get("HM_BOT_TOKEN", "")
 
-    # SOCKS прокси (оставьте пустым, если не нужен)
-    BOT_PROXY_URL = os.environ.get("HM_BOT_PROXY_URL", "")
+    # SOCKS прокси (отдельные поля)
+    BOT_PROXY_HOST = os.environ.get("HM_BOT_PROXY_HOST", "")
+    BOT_PROXY_PORT = os.environ.get("HM_BOT_PROXY_PORT", "")
+    BOT_PROXY_USERNAME = os.environ.get("HM_BOT_PROXY_USERNAME", "")
+    BOT_PROXY_PASSWORD = os.environ.get("HM_BOT_PROXY_PASSWORD", "")
+
+    @staticmethod
+    def get_proxy_url() -> str:
+        host = Config.BOT_PROXY_HOST
+        if not host:
+            return ""
+        auth = ""
+        if Config.BOT_PROXY_USERNAME and Config.BOT_PROXY_PASSWORD:
+            auth = f"{Config.BOT_PROXY_USERNAME}:{Config.BOT_PROXY_PASSWORD}@"
+        port = f":{Config.BOT_PROXY_PORT}" if Config.BOT_PROXY_PORT else ""
+        return f"socks5://{auth}{host}{port}"
+
+
 
     # Кто может писать боту (через запятую Telegram ID, пусто = все)
     BOT_ALLOWED_USERS = os.environ.get("HM_BOT_ALLOWED_USERS", "")

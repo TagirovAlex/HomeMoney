@@ -57,7 +57,17 @@
         <h3>Настройки Telegram бота</h3>
         <form onsubmit="saveBotSettings(event)" style="max-width:600px">
             <label>Bot Token <input type="text" id="cfg-bot-token" placeholder="HM_BOT_TOKEN"></label>
-            <label>Proxy URL <input type="text" id="cfg-bot-proxy" placeholder="socks5://127.0.0.1:1080"></label>
+            <fieldset style="border:1px solid var(--color-border);border-radius:6px;padding:12px;margin:8px 0">
+                <legend style="font-size:0.85rem;color:var(--color-secondary)">Прокси (SOCKS5)</legend>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <label style="flex:2;min-width:140px">Хост <input type="text" id="cfg-proxy-host" placeholder="127.0.0.1" style="width:100%"></label>
+                    <label style="flex:1;min-width:70px">Порт <input type="text" id="cfg-proxy-port" placeholder="1080" style="width:100%"></label>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+                    <label style="flex:1;min-width:120px">Логин <input type="text" id="cfg-proxy-user" placeholder="(необязательно)" style="width:100%"></label>
+                    <label style="flex:1;min-width:120px">Пароль <input type="password" id="cfg-proxy-pass" placeholder="(необязательно)" style="width:100%"></label>
+                </div>
+            </fieldset>
             <label>Allowed Users (Telegram ID, запятые) <input type="text" id="cfg-bot-users" placeholder="123456,789012"></label>
             <label>Debug mode
                 <select id="cfg-debug">
@@ -164,7 +174,10 @@
         var d = await r.json();
         if (d.status !== 'success') return;
         document.getElementById('cfg-bot-token').value = d.data.HM_BOT_TOKEN || '';
-        document.getElementById('cfg-bot-proxy').value = d.data.HM_BOT_PROXY_URL || '';
+        document.getElementById('cfg-proxy-host').value = d.data.HM_BOT_PROXY_HOST || '';
+        document.getElementById('cfg-proxy-port').value = d.data.HM_BOT_PROXY_PORT || '';
+        document.getElementById('cfg-proxy-user').value = d.data.HM_BOT_PROXY_USERNAME || '';
+        document.getElementById('cfg-proxy-pass').value = d.data.HM_BOT_PROXY_PASSWORD || '';
         document.getElementById('cfg-bot-users').value = d.data.HM_BOT_ALLOWED_USERS || '';
         document.getElementById('cfg-debug').value = d.data.HM_DEBUG || 'true';
     }
@@ -173,7 +186,10 @@
         e.preventDefault();
         var body = {
             HM_BOT_TOKEN: document.getElementById('cfg-bot-token').value,
-            HM_BOT_PROXY_URL: document.getElementById('cfg-bot-proxy').value,
+            HM_BOT_PROXY_HOST: document.getElementById('cfg-proxy-host').value,
+            HM_BOT_PROXY_PORT: document.getElementById('cfg-proxy-port').value,
+            HM_BOT_PROXY_USERNAME: document.getElementById('cfg-proxy-user').value,
+            HM_BOT_PROXY_PASSWORD: document.getElementById('cfg-proxy-pass').value,
             HM_BOT_ALLOWED_USERS: document.getElementById('cfg-bot-users').value,
             HM_DEBUG: document.getElementById('cfg-debug').value,
         };

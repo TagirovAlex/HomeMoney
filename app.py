@@ -444,12 +444,15 @@ def create_app():
             s = get_settings()
             return jsonify({"status": "success", "data": {
                 "HM_BOT_TOKEN": s.get("HM_BOT_TOKEN", ""),
-                "HM_BOT_PROXY_URL": s.get("HM_BOT_PROXY_URL", ""),
+                "HM_BOT_PROXY_HOST": s.get("HM_BOT_PROXY_HOST", ""),
+                "HM_BOT_PROXY_PORT": s.get("HM_BOT_PROXY_PORT", ""),
+                "HM_BOT_PROXY_USERNAME": s.get("HM_BOT_PROXY_USERNAME", ""),
+                "HM_BOT_PROXY_PASSWORD": s.get("HM_BOT_PROXY_PASSWORD", ""),
                 "HM_BOT_ALLOWED_USERS": s.get("HM_BOT_ALLOWED_USERS", ""),
                 "HM_DEBUG": s.get("HM_DEBUG", "true"),
             }})
         data = request.get_json()
-        allowed = {"HM_BOT_TOKEN", "HM_BOT_PROXY_URL", "HM_BOT_ALLOWED_USERS", "HM_DEBUG"}
+        allowed = {"HM_BOT_TOKEN", "HM_BOT_PROXY_HOST", "HM_BOT_PROXY_PORT", "HM_BOT_PROXY_USERNAME", "HM_BOT_PROXY_PASSWORD", "HM_BOT_ALLOWED_USERS", "HM_DEBUG"}
         updates = {k: str(v) for k, v in data.items() if k in allowed}
         if not updates:
             return jsonify({"status": "error", "message": "Нет допустимых полей"}), 400

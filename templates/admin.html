@@ -47,7 +47,8 @@
 
     <div class="card admin-card" style="grid-column: 1 / -1;">
         <h3>Telegram Bot</h3>
-        <p>Статус: <strong id="bot-status-text">проверка...</strong></p>
+        <p>Статус процесса: <strong id="bot-status-text">проверка...</strong></p>
+        <p>API: <strong id="bot-health-text">проверка...</strong></p>
         <p><button class="btn" onclick="botStart()">▶️ Запустить</button>
         <button class="btn btn-secondary" onclick="botStop()">⏹ Остановить</button></p>
         <pre id="bot-result" class="backup-output"></pre>
@@ -206,6 +207,13 @@
             el.textContent = '✅ запущен (PID: ' + d.data.pid + ')';
         } else {
             el.textContent = '⏹ остановлен';
+        }
+        var hel = document.getElementById('bot-health-text');
+        var health = d.data.health || {};
+        if (health.reachable) {
+            hel.innerHTML = '✅ Online — @' + (health.username || '') + ' (' + (health.first_name || '') + ')';
+        } else {
+            hel.innerHTML = '❌ ' + (health.error || 'недоступен');
         }
     }
 

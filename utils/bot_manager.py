@@ -85,10 +85,29 @@ def stop_bot() -> str:
         return "Ошибка при остановке: {}".format(e)
 
 
+def _check_telegram_api() -> dict:
+    try:
+        import urllib.request, json
+        from config import Config
+        token = Config.BOT_TOKEN
+        if not token:
+            return {"reachable": False, "error": "HM_BOT_TOKEN не задан"}
+        url = f"https://api.telegram.org/bot{token}/getMe"
+        resp = urllib.request.urlopen(url, timeout=10)
+        data = json.loads(resp.read().decode())
+        if data.get("ok"):
+            bot_user = data["result"]
+            return {"reachable": True, "username": bot_user.get("username", ""),
+                    "first_name": bot_user.get("first_name", "")}
+        return {"reachable": False, "error": data.get("description", "API error")}
+    except Exception as e:
+        return {"reachable": False, "error": str(e)}
+
 def status_bot() -> dict:
     pid = _read_pid()
-    if pid and _process_exists(pid):
-        return {"running": True, "pid": pid, "script": BOT_SCRIPT}
-    if pid:
+    running = bool(pid and _process_exists(pid))
+    if pid and not running:
         _remove_pid()
-    return {"running": False, "pid": None, "script": BOT_SCRIPT}
+    health = _check_telegram_api()
+    return {"running": running, "pid": pid if running else None,
+            "script": BOT_SCRIPT, "health": health}

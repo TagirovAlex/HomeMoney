@@ -86,20 +86,19 @@ def stop_bot() -> str:
         return "Ошибка при остановке: {}".format(e)
 
 
-import asyncio, aiohttp
-from aiohttp_socks import ProxyConnector
-
-
 def _make_session():
     from config import Config
+    import aiohttp
     proxy_url = Config.get_proxy_url()
     if proxy_url:
+        from aiohttp_socks import ProxyConnector
         connector = ProxyConnector.from_url(proxy_url)
         return aiohttp.ClientSession(connector=connector)
     return aiohttp.ClientSession()
 
 
 async def _fetch(url: str, timeout: int = 15):
+    import aiohttp
     async with _make_session() as sess:
         async with sess.get(url, timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
             return resp.status, await resp.read()

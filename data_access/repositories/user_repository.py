@@ -57,3 +57,12 @@ class SQLAlchemyUserRepository:
     def get_pending(self) -> List[User]:
         with self._db() as session:
             return session.query(User).filter(User.status == "pending").all()
+
+    def update_telegram_id(self, user_id: int, telegram_id: str) -> Optional[User]:
+        with self._db() as session:
+            user = session.query(User).filter(User.id == user_id).first()
+            if user:
+                user.telegram_id = telegram_id
+                session.commit()
+                session.refresh(user)
+            return user

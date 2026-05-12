@@ -9,7 +9,7 @@ from data_access.repositories.budget_repository import SQLAlchemyBudgetRepositor
 from data_access.repositories.income_repository import SQLAlchemyIncomeSourceRepository
 from services.financial_service import FinancialService
 from services.auth_service import AuthService
-from models.database import Category
+from models.database import Category, User
 from utils.database_session import get_db
 
 router = Router()
@@ -20,6 +20,18 @@ def get_session(tg_id: int) -> dict:
     if tg_id not in user_sessions:
         user_sessions[tg_id] = {"step": None, "data": {}}
     return user_sessions[tg_id]
+
+def try_auto_login(tg_id: int, sess: dict) -> bool:
+    if "user_id" in sess:
+        return True
+    with get_db() as s:
+        user = s.query(User).filter(User.telegram_id == str(tg_id)).first()
+        if user and user.status == "active":
+            sess["user_id"] = user.id
+            sess["email"] = user.email
+            sess["role"] = user.role
+            return True
+    return False
 
 def menu_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -34,7 +46,7 @@ def auth_required(func):
     async def wrapper(message: Message, *args, **kwargs):
         tg_id = message.from_user.id
         sess = get_session(tg_id)
-        if "user_id" not in sess:
+        if not try_auto_login(tg_id, sess):
             await message.answer(
                 "❌ Требуется авторизация.\nИспользуйте /login email пароль"
             )
@@ -46,7 +58,7 @@ def auth_required_cb(func):
     async def wrapper(callback: CallbackQuery, *args, **kwargs):
         tg_id = callback.from_user.id
         sess = get_session(tg_id)
-        if "user_id" not in sess:
+        if not try_auto_login(tg_id, sess):
             await callback.message.answer(
                 "❌ Требуется авторизация.\nИспользуйте /login email пароль"
             )
@@ -61,7 +73,7 @@ def auth_required_cb(func):
 async def handle_start(message: Message):
     tg_id = message.from_user.id
     sess = get_session(tg_id)
-    if "user_id" in sess:
+    if try_auto_login(tg_id, sess):
         user_info = f"Вы вошли как {hbold(sess['email'])}"
     else:
         user_info = "Используйте /login email пароль для входа"

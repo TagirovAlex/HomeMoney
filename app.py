@@ -290,6 +290,19 @@ def create_app():
             return jsonify({"status": "error", "message": "Пользователь не найден"}), 404
         return jsonify({"status": "success", "message": f"Пользователь {user.email} отклонён"})
 
+    @app.route('/api/v1/users/<int:user_id>/telegram', methods=['PUT'])
+    @require_auth
+    def update_user_telegram(user_id):
+        if request.current_user["role"] != "Admin":
+            return jsonify({"status": "error", "message": "Только для администратора"}), 403
+        data = request.get_json()
+        if not data or "telegram_id" not in data:
+            return jsonify({"status": "error", "message": "telegram_id обязателен"}), 400
+        user = user_repo.update_telegram_id(user_id, str(data["telegram_id"]))
+        if not user:
+            return jsonify({"status": "error", "message": "Пользователь не найден"}), 404
+        return jsonify({"status": "success", "message": f"Telegram ID для {user.email} обновлён"})
+
     @app.route('/api/v1/categories', methods=['GET', 'POST'])
     @require_auth
     def categories_api():

@@ -17,8 +17,8 @@
     <div class="card admin-card">
         <h3>Пользователи</h3>
         <table class="data-table">
-            <thead><tr><th>ID</th><th>Email</th><th>Роль</th><th>Статус</th></tr></thead>
-            <tbody id="users-body"><tr><td colspan="4">Загрузка...</td></tr></tbody>
+            <thead><tr><th>ID</th><th>Email</th><th>Роль</th><th>Статус</th><th>Telegram ID</th><th></th></tr></thead>
+            <tbody id="users-body"><tr><td colspan="6">Загрузка...</td></tr></tbody>
         </table>
     </div>
 
@@ -113,13 +113,24 @@
         alert(d.message); loadPending(); loadUsers();
     }
 
+    async function setTelegram(userId) {
+        var input = document.getElementById('tg-' + userId);
+        var val = input.value.trim();
+        var r = await fetch('/api/v1/users/' + userId + '/telegram', { method: 'PUT', headers: h(), body: JSON.stringify({telegram_id: val}) });
+        var d = await r.json();
+        alert(d.message); loadUsers();
+    }
+
     async function loadUsers() {
         var r = await fetch('/api/v1/users', { headers: h() });
         var d = await r.json();
         var tbody = document.getElementById('users-body');
-        if (d.status !== 'success') { tbody.innerHTML = '<tr><td colspan="4">' + d.message + '</td></tr>'; return; }
+        if (d.status !== 'success') { tbody.innerHTML = '<tr><td colspan="6">' + d.message + '</td></tr>'; return; }
         tbody.innerHTML = d.data.map(function(u) {
-            return '<tr><td>' + u.id + '</td><td>' + u.email + '</td><td>' + u.role + '</td><td>' + u.status + '</td></tr>';
+            var tg = u.telegram_id || '';
+            return '<tr><td>' + u.id + '</td><td>' + u.email + '</td><td>' + u.role + '</td><td>' + u.status +
+                '</td><td><input id="tg-' + u.id + '" type="text" value="' + tg + '" style="width:120px"></td>' +
+                '<td><button class="btn btn-secondary" onclick="setTelegram(' + u.id + ')">💾</button></td></tr>';
         }).join('');
     }
 

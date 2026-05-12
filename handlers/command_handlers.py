@@ -257,7 +257,7 @@ async def _cmd_report(tg_id: int, message: Message):
     from datetime import date
     today = date.today()
     parts = message.text.strip().split()
-    if len(parts) >= 3:
+    if len(parts) >= 3 and parts[0].startswith("/"):
         month = int(parts[1])
         year = int(parts[2])
     else:

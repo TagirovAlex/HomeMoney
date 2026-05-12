@@ -69,6 +69,10 @@
                     <label style="flex:1;min-width:120px">Пароль <input type="password" id="cfg-proxy-pass" placeholder="(необязательно)" style="width:100%"></label>
                 </div>
             </fieldset>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <button type="button" class="btn btn-secondary" onclick="checkProxy()" style="font-size:0.85rem">🔍 Проверить прокси</button>
+                <span id="proxy-check-result" style="font-size:0.85rem"></span>
+            </div>
             <label>Allowed Users (Telegram ID, запятые) <input type="text" id="cfg-bot-users" placeholder="123456,789012"></label>
             <label>Debug mode
                 <select id="cfg-debug">
@@ -214,6 +218,19 @@
             hel.innerHTML = '✅ Online — @' + (health.username || '') + ' (' + (health.first_name || '') + ')';
         } else {
             hel.innerHTML = '❌ ' + (health.error || 'недоступен');
+        }
+    }
+
+    async function checkProxy() {
+        var el = document.getElementById('proxy-check-result');
+        el.textContent = '⏳ проверка...';
+        var r = await fetch('/api/v1/admin/bot/check-proxy', { method: 'POST', headers: h() });
+        var d = await r.json();
+        var data = d.data || {};
+        if (data.ok) {
+            el.innerHTML = '✅ ' + data.proxy + ' — OK';
+        } else {
+            el.innerHTML = '❌ ' + (data.error || 'ошибка подключения');
         }
     }
 

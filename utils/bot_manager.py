@@ -85,6 +85,25 @@ def stop_bot() -> str:
         return "Ошибка при остановке: {}".format(e)
 
 
+def check_proxy() -> dict:
+    try:
+        import urllib.request, json
+        from config import Config
+        host = Config.BOT_PROXY_HOST
+        if not host:
+            return {"ok": False, "error": "Хост прокси не указан"}
+        auth = ""
+        if Config.BOT_PROXY_USERNAME and Config.BOT_PROXY_PASSWORD:
+            auth = f"{Config.BOT_PROXY_USERNAME}:{Config.BOT_PROXY_PASSWORD}@"
+        port = f":{Config.BOT_PROXY_PORT}" if Config.BOT_PROXY_PORT else ""
+        proxy_url = f"socks5://{auth}{host}{port}"
+        proxy_handler = urllib.request.ProxyHandler({"http": proxy_url, "https": proxy_url})
+        opener = urllib.request.build_opener(proxy_handler)
+        resp = opener.open("https://api.telegram.org", timeout=15)
+        return {"ok": True, "proxy": proxy_url, "status": resp.status}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
 def _check_telegram_api() -> dict:
     try:
         import urllib.request, json

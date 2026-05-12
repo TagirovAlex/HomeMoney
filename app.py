@@ -489,6 +489,15 @@ def create_app():
         st = status_bot()
         return jsonify({"status": "success", "data": st})
 
+    @app.route('/api/v1/admin/bot/check-proxy', methods=['POST'])
+    @require_auth
+    def bot_check_proxy():
+        if request.current_user["role"] != "Admin":
+            return jsonify({"status": "error", "message": "Только для администратора"}), 403
+        from utils.bot_manager import check_proxy
+        result = check_proxy()
+        return jsonify({"status": "success" if result.get("ok") else "error", "data": result})
+
     # --- Error handlers ---
 
     @app.errorhandler(403)

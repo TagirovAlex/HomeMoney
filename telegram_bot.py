@@ -23,9 +23,7 @@ async def main():
 
     proxy_url = Config.get_proxy_url()
     if proxy_url:
-        from aiohttp_socks import ProxyConnector
-        connector = ProxyConnector.from_url(proxy_url)
-        session = AiohttpSession(connector=connector)
+        session = AiohttpSession(proxy=proxy_url)
         bot = Bot(token=token, session=session)
         print(f"Бот через прокси: {proxy_url}")
     else:

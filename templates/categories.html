@@ -46,7 +46,7 @@
             var safe = JSON.stringify([c.id, c.name, c.icon || '', c.description || '', c.type]);
             return '<tr><td>' + c.id + '</td><td style="font-size:1.4rem">' + icon + '</td><td>' + c.name.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</td><td>' + typeLabel + '</td>' +
                 '<td><button class="btn btn-secondary" style="margin-right:4px" data-cat=\'' + safe + '\' onclick="editCategory(this)">✏️</button>' +
-                '<button class="btn btn-secondary" onclick="deleteCategory(' + c.id + ')">✕</button></td></tr>';
+                '<button class="btn btn-secondary" onclick="deleteCategory(' + c.id + ')">❌</button></td></tr>';
         }).join('');
     }
 

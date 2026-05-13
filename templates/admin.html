@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}HomeMoney | Админ{% endblock %}
 {% block content %}
 <div class="page-header">
@@ -157,7 +158,7 @@
             var typeLabel = c.type === 'income' ? '💰 Доход' : '💳 Расход';
             return '<tr><td>' + c.id + '</td><td style="font-size:1.4rem">' + icon + '</td><td>' + c.name + '</td><td>' + typeLabel + '</td>' +
                 '<td><button class="btn btn-secondary" style="margin-right:4px" onclick="editCat(' + c.id + ',\'' + c.name.replace(/'/g,"\\'") + '\',\'' + (c.icon||'') + '\',\'' + (c.description||'').replace(/'/g,"\\'") + '\',\'' + c.type + '\')">✏️</button>' +
-                '<button class="btn btn-secondary" onclick="deleteCategory(' + c.id + ')">✕</button></td></tr>';
+                '<button class="btn btn-secondary" onclick="deleteCategory(' + c.id + ')">❌</button></td></tr>';
         }).join('');
     }
 

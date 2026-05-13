@@ -6,8 +6,13 @@ load_dotenv()
 
 class Config:
 
-    # Секрет для JWT
-    SECRET_KEY = os.environ.get("HM_SECRET_KEY", "hm-dev-secret-key-32-bytes-min!!")
+    # Секрет для JWT — ОБЯЗАТЕЛЕН в production
+    _SECRET_KEY = os.environ.get("HM_SECRET_KEY")
+    if not _SECRET_KEY:
+        import logging
+        logging.warning("HM_SECRET_KEY не задан. Используется DEVELOPMENT-ключ! Установите HM_SECRET_KEY в .env")
+        _SECRET_KEY = "hm-dev-secret-key-32-bytes-min!!"
+    SECRET_KEY = _SECRET_KEY
 
     # База данных
     DATABASE_URL = os.environ.get("HM_DATABASE_URL", "sqlite:///./home_money.db")
@@ -38,4 +43,4 @@ class Config:
     BOT_ALLOWED_USERS = os.environ.get("HM_BOT_ALLOWED_USERS", "")
 
     # Flask
-    DEBUG = os.environ.get("HM_DEBUG", "true").lower() in ("true", "1", "yes")
+    DEBUG = os.environ.get("HM_DEBUG", "false").lower() in ("true", "1", "yes")

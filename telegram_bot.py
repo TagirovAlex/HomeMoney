@@ -24,7 +24,10 @@ async def main():
     proxy_url = Config.get_proxy_url()
     bot = create_aiogram_bot(token, proxy_url)
     if proxy_url:
-        print(f"Бот через прокси: {proxy_url}")
+        safe = proxy_url
+        if "@" in safe:
+            safe = "socks5://***:***@" + safe.split("@")[1]
+        print(f"Бот через прокси: {safe}")
     else:
         print("Бот напрямую (без прокси)")
 

@@ -76,19 +76,15 @@ def create_app():
         if existing:
             return jsonify({"status": "error", "message": "Email уже занят"}), 409
         hashed = AuthService.hash_password(data['password'])
-        role = data.get("role", "User")
         user_data = {
             "email": data['email'],
             "hashed_password": hashed,
-            "role": role,
-            "status": "active" if role == "Admin" else "pending",
+            "role": "User",
+            "status": "pending",
         }
         if data.get("telegram_id"):
             user_data["telegram_id"] = str(data["telegram_id"])
         user = user_repo.create(user_data)
-        if user.status == "active":
-            token = AuthService.create_token(user.id, user.role)
-            return jsonify({"status": "success", "token": token, "user": {"id": user.id, "email": user.email, "role": user.role}}), 201
         return jsonify({"status": "success", "message": "Регистрация выполнена. Дождитесь подтверждения администратором.", "user_id": user.id}), 201
 
     @app.route('/api/v1/login', methods=['POST'])
@@ -328,6 +324,10 @@ def create_app():
         user = user_repo.update_status(user_id, "active")
         if not user:
             return jsonify({"status": "error", "message": "Пользователь не найден"}), 404
+        data = request.get_json()
+        if data and data.get("role") in ("User", "Admin"):
+            user_repo._update_role(user_id, data["role"])
+            return jsonify({"status": "success", "message": f"Пользователь {user.email} подтверждён как {data['role']}"})
         return jsonify({"status": "success", "message": f"Пользователь {user.email} подтверждён"})
 
     @app.route('/api/v1/users/<int:user_id>/reject', methods=['POST'])
@@ -507,20 +507,37 @@ def create_app():
         from utils.env_manager import get_settings, update_settings
         if request.method == 'GET':
             s = get_settings()
+            def _mask(val: str) -> str:
+                v = val.strip()
+                if not v:
+                    return ""
+                return "********"
             return jsonify({"status": "success", "data": {
-                "HM_BOT_TOKEN": s.get("HM_BOT_TOKEN", ""),
+                "HM_BOT_TOKEN": _mask(s.get("HM_BOT_TOKEN", "")),
+                "HM_BOT_TOKEN_SET": bool(s.get("HM_BOT_TOKEN", "")),
                 "HM_BOT_PROXY_HOST": s.get("HM_BOT_PROXY_HOST", ""),
                 "HM_BOT_PROXY_PORT": s.get("HM_BOT_PROXY_PORT", ""),
                 "HM_BOT_PROXY_USERNAME": s.get("HM_BOT_PROXY_USERNAME", ""),
-                "HM_BOT_PROXY_PASSWORD": s.get("HM_BOT_PROXY_PASSWORD", ""),
+                "HM_BOT_PROXY_PASSWORD": _mask(s.get("HM_BOT_PROXY_PASSWORD", "")),
+                "HM_BOT_PROXY_PASSWORD_SET": bool(s.get("HM_BOT_PROXY_PASSWORD", "")),
                 "HM_BOT_ALLOWED_USERS": s.get("HM_BOT_ALLOWED_USERS", ""),
-                "HM_DEBUG": s.get("HM_DEBUG", "true"),
+                "HM_DEBUG": s.get("HM_DEBUG", "false"),
             }})
         data = request.get_json()
         allowed = {"HM_BOT_TOKEN", "HM_BOT_PROXY_HOST", "HM_BOT_PROXY_PORT", "HM_BOT_PROXY_USERNAME", "HM_BOT_PROXY_PASSWORD", "HM_BOT_ALLOWED_USERS", "HM_DEBUG"}
-        updates = {k: str(v) for k, v in data.items() if k in allowed}
+        updates = {}
+        current = get_settings()
+        for k in allowed:
+            if k not in data:
+                continue
+            v = str(data[k]).strip()
+            if not v:
+                continue
+            if v == "********":
+                continue
+            updates[k] = v
         if not updates:
-            return jsonify({"status": "error", "message": "Нет допустимых полей"}), 400
+            return jsonify({"status": "error", "message": "Нет изменений для сохранения"}), 400
         errors = update_settings(updates)
         if errors:
             return jsonify({"status": "error", "message": "; ".join(errors)}), 500

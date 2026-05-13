@@ -201,13 +201,17 @@
         var r = await fetch('/api/v1/admin/settings', { headers: h() });
         var d = await r.json();
         if (d.status !== 'success') return;
-        document.getElementById('cfg-bot-token').value = d.data.HM_BOT_TOKEN || '';
+        var tk = document.getElementById('cfg-bot-token');
+        tk.value = d.data.HM_BOT_TOKEN || '';
+        tk.placeholder = d.data.HM_BOT_TOKEN_SET ? '******** (задан)' : 'не задан';
         document.getElementById('cfg-proxy-host').value = d.data.HM_BOT_PROXY_HOST || '';
         document.getElementById('cfg-proxy-port').value = d.data.HM_BOT_PROXY_PORT || '';
         document.getElementById('cfg-proxy-user').value = d.data.HM_BOT_PROXY_USERNAME || '';
-        document.getElementById('cfg-proxy-pass').value = d.data.HM_BOT_PROXY_PASSWORD || '';
+        var pw = document.getElementById('cfg-proxy-pass');
+        pw.value = d.data.HM_BOT_PROXY_PASSWORD || '';
+        pw.placeholder = d.data.HM_BOT_PROXY_PASSWORD_SET ? '******** (задан)' : 'не задан';
         document.getElementById('cfg-bot-users').value = d.data.HM_BOT_ALLOWED_USERS || '';
-        document.getElementById('cfg-debug').value = d.data.HM_DEBUG || 'true';
+        document.getElementById('cfg-debug').value = d.data.HM_DEBUG || 'false';
     }
 
     async function saveBotSettings(e) {

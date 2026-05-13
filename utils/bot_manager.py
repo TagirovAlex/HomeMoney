@@ -105,7 +105,10 @@ def check_proxy() -> dict:
         return {"ok": False, "error": "Хост прокси не указан"}
     try:
         status, _ = asyncio.run(_fetch("https://api.telegram.org", 15))
-        return {"ok": True, "proxy": proxy_url, "status": status}
+        safe = proxy_url
+        if "@" in safe:
+            safe = "socks5://***:***@" + safe.split("@")[1]
+        return {"ok": True, "proxy": safe, "status": status}
     except Exception as e:
         msg = str(e).encode("utf-8", errors="replace").decode("utf-8")
         return {"ok": False, "error": msg}

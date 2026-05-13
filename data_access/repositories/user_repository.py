@@ -58,6 +58,15 @@ class SQLAlchemyUserRepository:
         with self._db() as session:
             return session.query(User).filter(User.status == "pending").all()
 
+    def _update_role(self, user_id: int, role: str) -> Optional[User]:
+        with self._db() as session:
+            user = session.query(User).filter(User.id == user_id).first()
+            if user:
+                user.role = role
+                session.commit()
+                session.refresh(user)
+            return user
+
     def update_telegram_id(self, user_id: int, telegram_id: str) -> Optional[User]:
         with self._db() as session:
             user = session.query(User).filter(User.id == user_id).first()

@@ -9,7 +9,7 @@ from data_access.repositories.budget_repository import SQLAlchemyBudgetRepositor
 from data_access.repositories.income_repository import SQLAlchemyIncomeSourceRepository
 from services.financial_service import FinancialService
 from services.auth_service import AuthService
-from models.database import Category, User
+from models.database import Category, User, Transaction
 from utils.database_session import get_db
 from datetime import date as dt_date
 
@@ -131,7 +131,7 @@ async def handle_login(message: Message):
     sess["role"] = user.role
     if user.telegram_id != str(tg_id):
         with get_db() as s:
-            u = s.query(type(user)).filter(type(user).id == user.id).first()
+            u = s.query(User).filter(User.id == user.id).first()
             if u:
                 u.telegram_id = str(tg_id)
                 s.commit()
@@ -726,13 +726,7 @@ async def cb_confirm_del_tx(callback: CallbackQuery):
     tx_id = int(callback.data.split(":")[1])
     sess = get_session(tg_id)
     try:
-        tx_repo = SQLAlchemyTransactionRepository()
-        fs = FinancialService(tx_repo, SQLAlchemyBudgetRepository())
-        fs.update_transaction(tx_id, sess["user_id"], {"deleted": True})  # Mark deleted via empty update — need a delete method
-        # Actually, there's no delete_transaction in FinancialService. Let me use the repo directly.
-        from utils.database_session import get_db
         with get_db() as s:
-            from models.database import Transaction
             tx = s.query(Transaction).filter(
                 Transaction.id == tx_id, Transaction.user_id == sess["user_id"]
             ).first()

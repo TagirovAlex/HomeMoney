@@ -43,8 +43,9 @@
         tbody.innerHTML = d.data.map(function(c) {
             var icon = c.icon || '📁';
             var typeLabel = c.type === 'income' ? '💰 Доход' : '💳 Расход';
-            return '<tr><td>' + c.id + '</td><td style="font-size:1.4rem">' + icon + '</td><td>' + c.name + '</td><td>' + typeLabel + '</td>' +
-                '<td><button class="btn btn-secondary" style="margin-right:4px" onclick="editCategory(' + c.id + ',\'' + c.name.replace(/'/g,"\\'") + '\',\'' + (c.icon||'') + '\',\'' + (c.description||'').replace(/'/g,"\\'") + '\',\'' + c.type + '\')">✏️</button>' +
+            var safe = JSON.stringify([c.id, c.name, c.icon || '', c.description || '', c.type]);
+            return '<tr><td>' + c.id + '</td><td style="font-size:1.4rem">' + icon + '</td><td>' + c.name.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</td><td>' + typeLabel + '</td>' +
+                '<td><button class="btn btn-secondary" style="margin-right:4px" data-cat=\'' + safe + '\' onclick="editCategory(this)">✏️</button>' +
                 '<button class="btn btn-secondary" onclick="deleteCategory(' + c.id + ')">✕</button></td></tr>';
         }).join('');
     }
@@ -74,12 +75,13 @@
         }
     }
 
-    function editCategory(id, name, icon, desc, type) {
-        document.getElementById('cat-edit-id').value = id;
-        document.getElementById('cat-name').value = name;
-        document.getElementById('cat-icon').value = icon;
-        document.getElementById('cat-desc').value = desc;
-        document.getElementById('cat-type').value = type || 'expense';
+    function editCategory(btn) {
+        var data = JSON.parse(btn.getAttribute('data-cat'));
+        document.getElementById('cat-edit-id').value = data[0];
+        document.getElementById('cat-name').value = data[1];
+        document.getElementById('cat-icon').value = data[2];
+        document.getElementById('cat-desc').value = data[3];
+        document.getElementById('cat-type').value = data[4] || 'expense';
         document.getElementById('cat-submit').textContent = '✏️';
     }
 

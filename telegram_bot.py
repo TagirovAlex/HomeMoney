@@ -1,5 +1,5 @@
 from aiogram import Bot, Dispatcher
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from config import Config
 from utils.proxy_session import create_aiogram_bot
 
@@ -13,6 +13,12 @@ def _parse_allowed_users(raw: str) -> set[int]:
         if part.isdigit():
             result.add(int(part))
     return result
+
+
+def _check_whitelist(event_from_user, allowed: set[int]) -> bool:
+    if not allowed:
+        return True
+    return bool(event_from_user and event_from_user.id in allowed)
 
 
 async def main():
@@ -43,8 +49,15 @@ async def main():
 
         @dp.message.middleware()
         async def whitelist_mw(handler, event: Message, data: dict):
-            if event.from_user and event.from_user.id not in allowed:
+            if not _check_whitelist(event.from_user, allowed):
                 await event.answer("Доступ запрещён. Ваш Telegram ID не авторизован.")
+                return
+            return await handler(event, data)
+
+        @dp.callback_query.middleware()
+        async def whitelist_cb_mw(handler, event: CallbackQuery, data: dict):
+            if not _check_whitelist(event.from_user, allowed):
+                await event.answer("Доступ запрещён.", show_alert=True)
                 return
             return await handler(event, data)
 

@@ -52,5 +52,8 @@ class Config:
     # Кто может писать боту (через запятую Telegram ID, пусто = все)
     BOT_ALLOWED_USERS = os.environ.get("HM_BOT_ALLOWED_USERS", "")
 
+    # Dashboard
+    DASHBOARD_TX_LIMIT = int(os.environ.get("HM_DASHBOARD_TX_LIMIT", "5"))
+
     # Flask
     DEBUG = os.environ.get("HM_DEBUG", "false").lower() in ("true", "1", "yes")

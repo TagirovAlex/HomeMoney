@@ -161,6 +161,25 @@ def create_app():
         today = date.today()
         try:
             summary = financial_service.get_monthly_summary(uid, month=today.month, year=today.year)
+            limit = int(Config.DASHBOARD_TX_LIMIT)
+            txs, _ = transaction_repo.get_filtered_for_user(uid, page=1, limit=limit)
+            from models.database import Category
+            from utils.database_session import get_db
+            with get_db() as s:
+                cats = {c.id: {"name": c.name, "icon": c.icon or "📁", "type": c.type or "expense"} for c in s.query(Category).all()}
+            recent = []
+            for t in txs:
+                cat = cats.get(t.category_id, {"name": f"ID:{t.category_id}", "icon": "📁", "type": "expense"})
+                recent.append({
+                    "id": t.id,
+                    "amount": t.amount,
+                    "category_name": cat["name"],
+                    "category_icon": cat["icon"],
+                    "type": cat["type"],
+                    "description": t.description or "",
+                    "date": t.date.isoformat() if t.date else "",
+                })
+            summary["recent_transactions"] = recent
             return jsonify({"status": "success", "data": summary})
         except Exception as e:
             return jsonify({"status": "error", "message": "Внутренняя ошибка сервера"}), 500
@@ -563,9 +582,10 @@ def create_app():
                 "HM_BOT_PROXY_PASSWORD_SET": bool(s.get("HM_BOT_PROXY_PASSWORD", "")),
                 "HM_BOT_ALLOWED_USERS": s.get("HM_BOT_ALLOWED_USERS", ""),
                 "HM_DEBUG": s.get("HM_DEBUG", "false"),
+                "HM_DASHBOARD_TX_LIMIT": s.get("HM_DASHBOARD_TX_LIMIT", "5"),
             }})
         data = request.get_json()
-        allowed = {"HM_BOT_TOKEN", "HM_BOT_PROXY_HOST", "HM_BOT_PROXY_PORT", "HM_BOT_PROXY_USERNAME", "HM_BOT_PROXY_PASSWORD", "HM_BOT_ALLOWED_USERS", "HM_DEBUG"}
+        allowed = {"HM_BOT_TOKEN", "HM_BOT_PROXY_HOST", "HM_BOT_PROXY_PORT", "HM_BOT_PROXY_USERNAME", "HM_BOT_PROXY_PASSWORD", "HM_BOT_ALLOWED_USERS", "HM_DEBUG", "HM_DASHBOARD_TX_LIMIT"}
         updates = {}
         current = get_settings()
         for k in allowed:

@@ -84,6 +84,9 @@
                 <span id="proxy-check-result" style="font-size:0.85rem"></span>
             </div>
             <label>Allowed Users (Telegram ID, запятые) <input type="text" id="cfg-bot-users" placeholder="123456,789012"></label>
+            <label>Последних транзакций на дашборде
+                <input type="number" id="cfg-dashboard-limit" min="1" max="50" style="width:80px">
+            </label>
             <label>Debug mode
                 <select id="cfg-debug">
                     <option value="true">true</option>
@@ -214,6 +217,7 @@
         pw.placeholder = d.data.HM_BOT_PROXY_PASSWORD_SET ? '******** (задан)' : 'не задан';
         document.getElementById('cfg-bot-users').value = d.data.HM_BOT_ALLOWED_USERS || '';
         document.getElementById('cfg-debug').value = d.data.HM_DEBUG || 'false';
+        document.getElementById('cfg-dashboard-limit').value = d.data.HM_DASHBOARD_TX_LIMIT || '5';
     }
 
     async function saveBotSettings(e) {
@@ -226,6 +230,7 @@
             HM_BOT_PROXY_PASSWORD: document.getElementById('cfg-proxy-pass').value,
             HM_BOT_ALLOWED_USERS: document.getElementById('cfg-bot-users').value,
             HM_DEBUG: document.getElementById('cfg-debug').value,
+            HM_DASHBOARD_TX_LIMIT: document.getElementById('cfg-dashboard-limit').value,
         };
         var r = await fetch('/api/v1/admin/settings', { method: 'PUT', headers: h(), body: JSON.stringify(body) });
         var d = await r.json();

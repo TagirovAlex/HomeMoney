@@ -31,6 +31,11 @@ def create_app():
         response.headers["X-Frame-Options"] = "DENY"
         return response
 
+    @app.context_processor
+    def inject_now():
+        from datetime import datetime
+        return {"now": datetime.now()}
+
     # --- Страницы ---
 
     @app.route('/login')

@@ -3,7 +3,7 @@
 {% block content %}
 <div class="page-header">
     <h2>Финансовая сводка</h2>
-    <span class="period-label"></span>
+    <span class="period-label">{{ now.strftime('%B %Y') }} </span>
 </div>
 <div class="summary-cards" id="summary-data">
     <div class="card">

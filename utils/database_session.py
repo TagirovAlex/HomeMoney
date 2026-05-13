@@ -71,6 +71,11 @@ def _run_migrations():
             cols = [c['name'] for c in inspector.get_columns('categories')]
             if 'type' not in cols:
                 conn.execute(text("ALTER TABLE categories ADD COLUMN type VARCHAR DEFAULT 'expense'"))
+                # Умная миграция: известные доходные категории → type='income'
+                conn.execute(text(
+                    "UPDATE categories SET type='income' WHERE "
+                    "LOWER(name) IN ('зарплата','з/п','зарпла','salary','доход','подработка','фриланс','проценты','дивиденды','кэшбэк','кешбэк','подарок')"
+                ))
         # transactions.type
         if 'transactions' in inspector.get_table_names():
             cols = [c['name'] for c in inspector.get_columns('transactions')]

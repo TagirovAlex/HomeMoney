@@ -1,6 +1,18 @@
 from typing import Optional
 
 
+def _build_proxy_url(proxy_params: Optional[dict] = None) -> str:
+    """Собирает socks5:// URL из dict параметров (для aiogram AiohttpSession)."""
+    if not proxy_params:
+        return ""
+    host = proxy_params["host"]
+    port = proxy_params["port"]
+    username = proxy_params.get("username")
+    password = proxy_params.get("password")
+    auth = f"{username}:{password}@" if username and password else ""
+    return f"socks5://{auth}{host}:{port}"
+
+
 def _build_connector(proxy_params: Optional[dict] = None):
     """Создаёт aiohttp ProxyConnector из отдельных параметров прокси."""
     if not proxy_params:
@@ -16,17 +28,15 @@ def _build_connector(proxy_params: Optional[dict] = None):
 
 
 def create_aiogram_session(proxy_params: Optional[dict] = None):
-    """Создаёт AiohttpSession для aiogram с поддержкой SOCKS5 прокси.
+    """Создаёт AiohttpSession для aiogram.
 
-    Args:
-        proxy_params: dict с ключами host, port, username, password
-                     (из Config.get_proxy_params()). Если None — без прокси.
+    aiogram 3.26 принимает только proxy URL (строку), не connector.
     """
     from aiogram.client.session.aiohttp import AiohttpSession
 
-    connector = _build_connector(proxy_params)
-    if connector:
-        return AiohttpSession(connector=connector)
+    proxy_url = _build_proxy_url(proxy_params)
+    if proxy_url:
+        return AiohttpSession(proxy=proxy_url)
     return AiohttpSession()
 
 
@@ -35,13 +45,6 @@ def create_aiogram_bot(
     proxy_params: Optional[dict] = None,
     parse_mode: str = "HTML",
 ) -> "Bot":
-    """Создаёт Bot для aiogram с поддержкой SOCKS5 прокси.
-
-    Args:
-        token: Токен Telegram-бота.
-        proxy_params: dict из Config.get_proxy_params() или None для прямого соединения.
-        parse_mode: Режим форматирования сообщений (по умолчанию HTML).
-    """
     from aiogram import Bot
     from aiogram.client.default import DefaultBotProperties
 
@@ -54,11 +57,7 @@ def create_aiogram_bot(
 
 
 def create_aiohttp_session(proxy_params: Optional[dict] = None):
-    """Создаёт aiohttp.ClientSession с SOCKS5 прокси через ProxyConnector.
-
-    Args:
-        proxy_params: dict из Config.get_proxy_params() или None для прямого соединения.
-    """
+    """Создаёт aiohttp.ClientSession с SOCKS5 прокси через ProxyConnector."""
     import aiohttp
 
     connector = _build_connector(proxy_params)

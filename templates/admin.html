@@ -6,7 +6,7 @@
 </div>
 
 <div class="admin-grid">
-    <div class="card admin-card">
+    <div class="card admin-card" style="grid-column: 1 / -1;">
         <h3>Заявки на регистрацию</h3>
         <table class="data-table">
             <thead><tr><th>ID</th><th>Email</th><th>Telegram ID</th><th></th></tr></thead>
@@ -14,7 +14,7 @@
         </table>
     </div>
 
-    <div class="card admin-card">
+    <div class="card admin-card" style="grid-column: 1 / -1;">
         <h3>Пользователи</h3>
         <table class="data-table">
             <thead><tr><th>ID</th><th>Email</th><th>Роль</th><th>Статус</th><th>Telegram ID</th><th></th></tr></thead>
@@ -137,7 +137,7 @@
         tbody.innerHTML = d.data.map(function(u) {
             var tg = u.telegram_id || '';
             return '<tr><td>' + u.id + '</td><td>' + u.email + '</td><td>' + u.role + '</td><td>' + u.status +
-                '</td><td><input id="tg-' + u.id + '" type="text" value="' + tg + '" style="width:120px"></td>' +
+                '</td><td><input id="tg-' + u.id + '" type="text" value="' + tg + '" style="width:100%;box-sizing:border-box"></td>' +
                 '<td><button class="btn btn-secondary" onclick="setTelegram(' + u.id + ')">💾</button></td></tr>';
         }).join('');
     }

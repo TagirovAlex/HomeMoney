@@ -288,6 +288,7 @@ async def tx_enter_date(message: Message):
 
 def _build_tx_keyboard(page: int, month: int, year: int, total_pages: int, txs: list):
     today = dt_date.today()
+    all_mode = month == 0
     kb = []
 
     for t in txs[:5]:
@@ -296,34 +297,43 @@ def _build_tx_keyboard(page: int, month: int, year: int, total_pages: int, txs: 
             InlineKeyboardButton(text=f"🗑 #{t['id']}", callback_data=f"tx_delete:{t['id']}"),
         ])
 
-    nav_row = []
-    prev_m = month - 1
-    prev_y = year
-    if prev_m < 1:
-        prev_m = 12; prev_y -= 1
-    next_m = month + 1
-    next_y = year
-    if next_m > 12:
-        next_m = 1; next_y += 1
-    can_go_back = year > 2020 or (year == 2020 and month > 1)
-    can_go_forward = year < today.year or (year == today.year and month < today.month)
-    if can_go_back:
-        nav_row.append(InlineKeyboardButton(
-            text=f"◀️ {prev_m}/{prev_y}", callback_data=f"tx_nav_month:{prev_m}:{prev_y}"))
-    nav_row.append(InlineKeyboardButton(text=f"📅 {month}/{year}", callback_data="tx_nav_current"))
-    if can_go_forward:
-        nav_row.append(InlineKeyboardButton(
-            text=f"{next_m}/{next_y} ▶️", callback_data=f"tx_nav_month:{next_m}:{next_y}"))
-    kb.append(nav_row)
+    if all_mode:
+        nav_row = [InlineKeyboardButton(
+            text=f"📅 К месяцу {today.month}/{today.year}",
+            callback_data=f"tx_nav_month:{today.month}:{today.year}")]
+        kb.append(nav_row)
+    else:
+        nav_row = []
+        prev_m = month - 1
+        prev_y = year
+        if prev_m < 1:
+            prev_m = 12; prev_y -= 1
+        next_m = month + 1
+        next_y = year
+        if next_m > 12:
+            next_m = 1; next_y += 1
+        can_go_back = year > 2020 or (year == 2020 and month > 1)
+        can_go_forward = year < today.year or (year == today.year and month < today.month)
+        if can_go_back:
+            nav_row.append(InlineKeyboardButton(
+                text=f"◀️ {prev_m}/{prev_y}", callback_data=f"tx_nav_month:{prev_m}:{prev_y}"))
+        nav_row.append(InlineKeyboardButton(text=f"📅 {month}/{year}", callback_data="tx_nav_current"))
+        if can_go_forward:
+            nav_row.append(InlineKeyboardButton(
+                text=f"{next_m}/{next_y} ▶️", callback_data=f"tx_nav_month:{next_m}:{next_y}"))
+        kb.append(nav_row)
+        kb.append([InlineKeyboardButton(text="📋 Все транзакции", callback_data="tx_all")])
 
     page_row = []
+    p_m = month
+    p_y = year
     if page > 1:
         page_row.append(InlineKeyboardButton(
-            text=f"◀️ {page-1}", callback_data=f"tx_page:{page-1}:{month}:{year}"))
+            text=f"◀️ {page-1}", callback_data=f"tx_page:{page-1}:{p_m}:{p_y}"))
     page_row.append(InlineKeyboardButton(text=f"📄 {page}/{total_pages}", callback_data="tx_nav_current"))
     if page < total_pages:
         page_row.append(InlineKeyboardButton(
-            text=f"{page+1} ▶️", callback_data=f"tx_page:{page+1}:{month}:{year}"))
+            text=f"{page+1} ▶️", callback_data=f"tx_page:{page+1}:{p_m}:{p_y}"))
     kb.append(page_row)
 
     kb.append([InlineKeyboardButton(text="🏠 Меню", callback_data="menu")])
@@ -332,19 +342,23 @@ def _build_tx_keyboard(page: int, month: int, year: int, total_pages: int, txs: 
 async def _render_tx_page(callback: CallbackQuery, month: int, year: int, page: int):
     tg_id = callback.from_user.id
     sess = get_session(tg_id)
+    all_mode = month == 0
+    sm = None if all_mode else month
+    sy = None if all_mode else year
     try:
         tx_repo = SQLAlchemyTransactionRepository()
         fs = FinancialService(tx_repo, SQLAlchemyBudgetRepository())
         result = fs.get_filtered_user_transactions(
-            sess["user_id"], month=month, year=year, page=page, limit=5
+            sess["user_id"], month=sm, year=sy, page=page, limit=5
         )
         txs = result.get("data", [])
         total = result.get("total", 0)
         total_pages = max(1, (total + 4) // 5)
 
         if not txs:
+            label = "Все транзакции" if all_mode else f"{month}/{year}"
             await callback.message.edit_text(
-                f"Нет транзакций за {month}/{year}.",
+                f"Нет транзакций ({label}).",
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                     [InlineKeyboardButton(text="🏠 Меню", callback_data="menu")]
                 ])
@@ -352,7 +366,8 @@ async def _render_tx_page(callback: CallbackQuery, month: int, year: int, page: 
             await callback.answer()
             return
 
-        lines = [f"{hbold(f'📋 Транзакции за {month}/{year}')} (стр. {page}/{total_pages}, всего: {total})"]
+        label = "📋 Все транзакции" if all_mode else f"📋 Транзакции за {month}/{year}"
+        lines = [f"{hbold(label)} (стр. {page}/{total_pages}, всего: {total})"]
         for t in txs:
             icon = "💰" if t.get("type") == "income" else "💳"
             cat_icon = t.get("category_icon") or "📁"
@@ -370,29 +385,28 @@ async def _render_tx_page(callback: CallbackQuery, month: int, year: int, page: 
 
 async def _cmd_tx(tg_id: int, message: Message, page: int = 1, month: int = None, year: int = None):
     sess = get_session(tg_id)
-    today = dt_date.today()
-    m = month or today.month
-    y = year or today.year
     try:
         tx_repo = SQLAlchemyTransactionRepository()
         fs = FinancialService(tx_repo, SQLAlchemyBudgetRepository())
         result = fs.get_filtered_user_transactions(
-            sess["user_id"], month=m, year=y, page=page, limit=5
+            sess["user_id"], month=month, year=year, page=page, limit=5
         )
         txs = result.get("data", [])
         total = result.get("total", 0)
         total_pages = max(1, (total + 4) // 5)
 
         if not txs:
+            label = f"{month}/{year}" if (month and year) else "Все транзакции"
             await message.answer(
-                f"Нет транзакций за {m}/{y}.",
+                f"Нет транзакций ({label}).",
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                     [InlineKeyboardButton(text="🏠 Меню", callback_data="menu")]
                 ])
             )
             return
 
-        lines = [f"{hbold(f'📋 Транзакции за {m}/{y}')} (стр. {page}/{total_pages}, всего: {total})"]
+        label = f"📋 Транзакции за {month}/{year}" if (month and year) else "📋 Все транзакции"
+        lines = [f"{hbold(label)} (стр. {page}/{total_pages}, всего: {total})"]
         for t in txs:
             icon = "💰" if t.get("type") == "income" else "💳"
             cat_icon = t.get("category_icon") or "📁"
@@ -401,7 +415,9 @@ async def _cmd_tx(tg_id: int, message: Message, page: int = 1, month: int = None
                 f"{t['amount']:.2f} RUB | {(t['date'][:10] if t['date'] else '')} | {t['description'] or '—'}"
             )
 
-        kb = _build_tx_keyboard(page, m, y, total_pages, txs)
+        display_month = month or 0
+        display_year = year or 0
+        kb = _build_tx_keyboard(page, display_month, display_year, total_pages, txs)
         await message.answer("\n".join(lines), reply_markup=kb)
     except Exception as e:
         await message.answer(f"❌ Ошибка: {e}")
@@ -409,7 +425,6 @@ async def _cmd_tx(tg_id: int, message: Message, page: int = 1, month: int = None
 @router.message(Command("tx"))
 @auth_required
 async def cmd_tx(message: Message):
-    today = dt_date.today()
     parts = message.text.strip().split()
     if len(parts) >= 3:
         try:
@@ -430,6 +445,10 @@ async def cb_tx_page(callback: CallbackQuery):
 async def cb_tx_nav_month(callback: CallbackQuery):
     _, m_s, y_s = callback.data.split(":")
     await _render_tx_page(callback, int(m_s), int(y_s), 1)
+
+@router.callback_query(lambda c: c.data == "tx_all")
+async def cb_tx_all(callback: CallbackQuery):
+    await _render_tx_page(callback, 0, 0, 1)
 
 # ─── /edittx ─────────────────────────────────────────────────────────
 

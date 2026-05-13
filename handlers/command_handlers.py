@@ -34,6 +34,9 @@ def try_auto_login(tg_id: int, sess: dict) -> bool:
             return True
     return False
 
+def not_command(msg: Message) -> bool:
+    return msg.text is None or not msg.text.startswith("/")
+
 def menu_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="➕ Добавить транзакцию", callback_data="addtx")],
@@ -208,7 +211,7 @@ async def cb_tx_select_category(callback: CallbackQuery):
     )
     await callback.answer()
 
-@router.message(lambda msg: user_sessions.get(msg.from_user.id, {}).get("step") == "enter_amount")
+@router.message(lambda msg: not_command(msg) and user_sessions.get(msg.from_user.id, {}).get("step") == "enter_amount")
 async def tx_enter_amount(message: Message):
     tg_id = message.from_user.id
     sess = get_session(tg_id)
@@ -224,7 +227,7 @@ async def tx_enter_amount(message: Message):
     sess["step"] = "enter_desc"
     await message.answer("Введите описание (или отправьте «-» для пустого):")
 
-@router.message(lambda msg: user_sessions.get(msg.from_user.id, {}).get("step") == "enter_desc")
+@router.message(lambda msg: not_command(msg) and user_sessions.get(msg.from_user.id, {}).get("step") == "enter_desc")
 async def tx_enter_desc(message: Message):
     tg_id = message.from_user.id
     sess = get_session(tg_id)
@@ -238,7 +241,7 @@ async def tx_enter_desc(message: Message):
         "Или отправьте «-» для сегодняшней даты:"
     )
 
-@router.message(lambda msg: user_sessions.get(msg.from_user.id, {}).get("step") == "enter_date")
+@router.message(lambda msg: not_command(msg) and user_sessions.get(msg.from_user.id, {}).get("step") == "enter_date")
 async def tx_enter_date(message: Message):
     tg_id = message.from_user.id
     sess = get_session(tg_id)
@@ -484,7 +487,7 @@ async def cmd_edittx(message: Message):
         "Введите новую сумму (или «-» для текущей):"
     )
 
-@router.message(lambda msg: user_sessions.get(msg.from_user.id, {}).get("step", "").startswith("edit_amount:"))
+@router.message(lambda msg: not_command(msg) and user_sessions.get(msg.from_user.id, {}).get("step", "").startswith("edit_amount:"))
 async def edit_enter_amount(message: Message):
     tg_id = message.from_user.id
     sess = get_session(tg_id)
@@ -535,7 +538,7 @@ async def cb_edit_select_category(callback: CallbackQuery):
     )
     await callback.answer()
 
-@router.message(lambda msg: user_sessions.get(msg.from_user.id, {}).get("step", "").startswith("edit_desc:"))
+@router.message(lambda msg: not_command(msg) and user_sessions.get(msg.from_user.id, {}).get("step", "").startswith("edit_desc:"))
 async def edit_enter_desc(message: Message):
     tg_id = message.from_user.id
     sess = get_session(tg_id)
@@ -550,7 +553,7 @@ async def edit_enter_desc(message: Message):
         "Введите новую дату ДД.ММ.ГГГГ (или «-» для текущей):"
     )
 
-@router.message(lambda msg: user_sessions.get(msg.from_user.id, {}).get("step", "").startswith("edit_date:"))
+@router.message(lambda msg: not_command(msg) and user_sessions.get(msg.from_user.id, {}).get("step", "").startswith("edit_date:"))
 async def edit_enter_date(message: Message):
     tg_id = message.from_user.id
     sess = get_session(tg_id)
@@ -787,7 +790,7 @@ async def cmd_addcat(message: Message):
     sess["data"] = {}
     await message.answer("Введите название новой категории:")
 
-@router.message(lambda msg: user_sessions.get(msg.from_user.id, {}).get("step") == "addcat_name")
+@router.message(lambda msg: not_command(msg) and user_sessions.get(msg.from_user.id, {}).get("step") == "addcat_name")
 async def addcat_enter_name(message: Message):
     tg_id = message.from_user.id
     sess = get_session(tg_id)
@@ -802,7 +805,7 @@ async def addcat_enter_name(message: Message):
         "Введите emoji-иконку для категории (или «-» для стандартной):"
     )
 
-@router.message(lambda msg: user_sessions.get(msg.from_user.id, {}).get("step") == "addcat_icon")
+@router.message(lambda msg: not_command(msg) and user_sessions.get(msg.from_user.id, {}).get("step") == "addcat_icon")
 async def addcat_enter_icon(message: Message):
     tg_id = message.from_user.id
     sess = get_session(tg_id)

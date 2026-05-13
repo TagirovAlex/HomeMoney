@@ -1,3 +1,4 @@
+from typing import Optional
 from data_access.repositories.transaction_repository import ITransactionRepository
 from data_access.repositories.budget_repository import IBudgetRepository
 from data_access.repositories.income_repository import IIncomeSourceRepository
@@ -184,6 +185,21 @@ class FinancialService:
         }
 
         return report
+
+    def update_transaction(self, tx_id: int, user_id: int, data: dict) -> Optional[Transaction]:
+        allowed = {"amount", "category_id", "description", "date"}
+        update = {k: v for k, v in data.items() if k in allowed}
+        if not update:
+            raise ValueError("Нет полей для обновления")
+        if "amount" in update:
+            update["amount"] = abs(float(update["amount"]))
+        if "date" in update and isinstance(update["date"], str):
+            from datetime import datetime
+            update["date"] = datetime.strptime(update["date"], "%Y-%m-%d")
+        tx = self.transaction_repo.update_transaction(tx_id, user_id, update)
+        if not tx:
+            raise ValueError("Транзакция не найдена")
+        return tx
 
     def get_user_transactions(self, user_id: int) -> list:
         from models.database import Category

@@ -7,14 +7,15 @@
 </div>
 
 <div id="add-form" class="form-card" style="display:none">
-    <h3>Новая транзакция</h3>
-    <form onsubmit="addTransaction(event)">
+    <h3 id="form-title">Новая транзакция</h3>
+    <form onsubmit="saveTransaction(event)">
         <label>Сумма <input type="number" step="0.01" id="tx-amount" required></label>
         <label>Категория <select id="tx-category" required onchange="txCategoryChanged()"></select></label>
         <div id="tx-budget-info" style="font-size:0.85rem;color:var(--color-secondary);margin:-4px 0 8px 0"></div>
         <label>Дата <input type="date" id="tx-date"></label>
         <label>Описание <input type="text" id="tx-desc"></label>
-        <button type="submit" class="btn">Сохранить</button>
+        <input type="hidden" id="tx-edit-id" value="">
+        <button type="submit" class="btn" id="tx-submit">Сохранить</button>
         <button type="button" class="btn btn-secondary" onclick="hideAddForm()">Отмена</button>
     </form>
 </div>
@@ -39,7 +40,7 @@
 
 <table class="data-table">
     <thead>
-        <tr><th>ID</th><th>Категория</th><th>Сумма</th><th>Тип</th><th>Описание</th><th>Дата</th></tr>
+        <tr><th>ID</th><th>Категория</th><th>Сумма</th><th>Тип</th><th>Описание</th><th>Дата</th><th></th></tr>
     </thead>
     <tbody id="tx-table"></tbody>
 </table>
@@ -120,11 +121,12 @@
         var r = await fetch('/api/v1/user/' + userId + '/transactions?month=' + m + '&year=' + y + '&category_id=' + cat + '&page=' + curPage + '&limit=' + pageSize, { headers: authHeaders() });
         var d = await r.json();
         var tbody = document.getElementById('tx-table');
-        if (d.status !== 'success') { tbody.innerHTML = '<tr><td colspan="6">' + d.message + '</td></tr>'; return; }
-        if (!d.data.length) { tbody.innerHTML = '<tr><td colspan="6">Нет транзакций</td></tr>'; return; }
+        if (d.status !== 'success') { tbody.innerHTML = '<tr><td colspan="7">' + d.message + '</td></tr>'; return; }
+        if (!d.data.length) { tbody.innerHTML = '<tr><td colspan="7">Нет транзакций</td></tr>'; return; }
         tbody.innerHTML = d.data.map(function(tx) {
             var typeLabel = tx.type === 'income' ? '💰 Доход' : '💳 Расход';
-            return '<tr><td>' + tx.id + '</td><td>' + (tx.category_icon || '📁') + ' ' + tx.category_name + '</td><td>' + tx.amount.toFixed(2) + '</td><td>' + typeLabel + '</td><td>' + tx.description + '</td><td>' + (tx.date ? tx.date.slice(0, 10) : '') + '</td></tr>';
+            return '<tr><td>' + tx.id + '</td><td>' + (tx.category_icon || '📁') + ' ' + tx.category_name + '</td><td>' + tx.amount.toFixed(2) + '</td><td>' + typeLabel + '</td><td>' + tx.description + '</td><td>' + (tx.date ? tx.date.slice(0, 10) : '') + '</td>' +
+                '<td><button class="btn btn-secondary" style="margin-right:4px" onclick="editTransaction(' + tx.id + ')">✏️</button></td></tr>';
         }).join('');
         totalPages = Math.ceil(d.total / d.limit) || 1;
         document.getElementById('pagination').style.display = 'block';
@@ -146,13 +148,42 @@
         loadTransactions();
     }
 
-    function showAddForm() { document.getElementById('add-form').style.display = 'block'; }
+    function showAddForm() {
+        document.getElementById('form-title').textContent = 'Новая транзакция';
+        document.getElementById('tx-edit-id').value = '';
+        document.getElementById('tx-submit').textContent = 'Сохранить';
+        document.getElementById('tx-amount').value = '';
+        document.getElementById('tx-category').value = '';
+        document.getElementById('tx-desc').value = '';
+        document.getElementById('tx-budget-info').textContent = '';
+        setDefaultDate();
+        document.getElementById('add-form').style.display = 'block';
+    }
     function hideAddForm() { document.getElementById('add-form').style.display = 'none'; }
 
-    async function addTransaction(e) {
+    async function editTransaction(txId) {
+        getUser();
+        if (!userId) return;
+        var r = await fetch('/api/v1/user/' + userId + '/transactions/' + txId, { headers: authHeaders() });
+        var d = await r.json();
+        if (d.status !== 'success') { alert(d.message); return; }
+        var tx = d.data;
+        document.getElementById('form-title').textContent = 'Редактировать транзакцию #' + txId;
+        document.getElementById('tx-edit-id').value = txId;
+        document.getElementById('tx-submit').textContent = '✏️ Обновить';
+        document.getElementById('tx-amount').value = tx.amount;
+        document.getElementById('tx-category').value = tx.category_id;
+        document.getElementById('tx-desc').value = tx.description || '';
+        document.getElementById('tx-date').value = tx.date ? tx.date.slice(0, 10) : '';
+        txCategoryChanged();
+        document.getElementById('add-form').style.display = 'block';
+    }
+
+    async function saveTransaction(e) {
         e.preventDefault();
         getUser();
         if (!userId) { alert('Ошибка авторизации'); return; }
+        var editId = document.getElementById('tx-edit-id').value;
         var body = {
             amount: parseFloat(document.getElementById('tx-amount').value),
             category_id: parseInt(document.getElementById('tx-category').value),
@@ -160,11 +191,15 @@
         };
         var dateVal = document.getElementById('tx-date').value;
         if (dateVal) body.date = dateVal;
-        var r = await fetch('/api/v1/user/' + userId + '/create_transaction', {
-            method: 'POST',
-            headers: authHeaders(),
-            body: JSON.stringify(body)
-        });
+        var url, method;
+        if (editId) {
+            url = '/api/v1/user/' + userId + '/transactions/' + editId;
+            method = 'PUT';
+        } else {
+            url = '/api/v1/user/' + userId + '/create_transaction';
+            method = 'POST';
+        }
+        var r = await fetch(url, { method: method, headers: authHeaders(), body: JSON.stringify(body) });
         var d = await r.json();
         alert(d.message || d.error);
         if (r.ok) { hideAddForm(); loadTransactions(); }

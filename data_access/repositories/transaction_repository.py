@@ -70,3 +70,15 @@ class SQLAlchemyTransactionRepository:
             total = query.count()
             query = query.order_by(Transaction.date.desc()).offset((page - 1) * limit).limit(limit)
             return query.all(), total
+
+    def update_transaction(self, tx_id: int, user_id: int, data: dict) -> Optional[Transaction]:
+        with self._db() as session:
+            tx = session.query(Transaction).filter(Transaction.id == tx_id, Transaction.user_id == user_id).first()
+            if not tx:
+                return None
+            for k, v in data.items():
+                if hasattr(tx, k):
+                    setattr(tx, k, v)
+            session.commit()
+            session.refresh(tx)
+            return tx

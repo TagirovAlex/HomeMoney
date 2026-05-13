@@ -125,6 +125,50 @@ def create_app():
         except Exception as e:
             return jsonify({"status": "error", "message": f"Ошибка: {str(e)}"}), 500
 
+    @app.route('/api/v1/user/<int:user_id>/transactions/<int:tx_id>', methods=['GET', 'PUT'])
+    @require_auth
+    def transaction_detail(user_id, tx_id):
+        if request.current_user["user_id"] != user_id and request.current_user["role"] != "Admin":
+            return jsonify({"status": "error", "message": "Доступ запрещён"}), 403
+
+        if request.method == 'GET':
+            from models.database import Transaction, Category
+            from utils.database_session import get_db
+            with get_db() as session:
+                tx = session.query(Transaction).filter(Transaction.id == tx_id, Transaction.user_id == user_id).first()
+                if not tx:
+                    return jsonify({"status": "error", "message": "Транзакция не найдена"}), 404
+                cat = session.query(Category).filter(Category.id == tx.category_id).first()
+            return jsonify({"status": "success", "data": {
+                "id": tx.id, "amount": tx.amount, "category_id": tx.category_id,
+                "category_name": cat.name if cat else "", "category_icon": cat.icon if cat else "",
+                "description": tx.description or "", "date": tx.date.isoformat() if tx.date else "",
+                "type": getattr(tx, 'type', 'expense'),
+            }})
+
+        data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "Нет данных"}), 400
+        try:
+            financial_service.update_transaction(tx_id, user_id, data)
+            return jsonify({"status": "success", "message": "Транзакция обновлена"})
+        except ValueError as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+        if request.current_user["user_id"] != user_id and request.current_user["role"] != "Admin":
+            return jsonify({"status": "error", "message": "Доступ запрещён"}), 403
+        data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "Нет данных"}), 400
+        try:
+            financial_service.update_transaction(tx_id, user_id, data)
+            return jsonify({"status": "success", "message": "Транзакция обновлена"})
+        except ValueError as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+
     @app.route('/api/v1/user/<int:user_id>/create_transaction', methods=['POST'])
     @require_auth
     def create_transaction_endpoint(user_id):

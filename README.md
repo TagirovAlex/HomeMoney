@@ -11,17 +11,16 @@
 
 ## Возможности
 
-- **Управление транзакциями** — доходы/расходы с привязкой к категориям, фильтрация по месяцу/году/категории, пагинация
-- **Бюджетирование** — месячные лимиты по категориям с контролем превышения
-- **Отчёты** — детализация расходов в разрезе категорий с бюджетом за выбранный период
-- **Источники дохода** — регулярные и разовые поступления с автогенерацией транзакций
-- **JWT-авторизация** — bcrypt + токены, роли Admin / User
-- **Подтверждение регистрации** — администратор утверждает новых пользователей
+- **Управление транзакциями** — доходы/расходы по категориям, фильтрация по месяцу/году/категории, пагинация, выбор даты, редактирование
+- **Категории с типом** — тип расход/доход задаётся один раз в категории, а не в каждой транзакции
+- **Бюджетирование** — месячные лимиты по категориям с контролем превышения, подсказка бюджета при создании транзакции
+- **Отчёты** — детализация расходов по категориям + остаток на начало/конец периода, обороты по доходам и расходам
+- **Источники дохода** — регулярные и разовые поступления с автогенерацией транзакций (daily/weekly/monthly/yearly)
+- **JWT-авторизация** — bcrypt + токены, роли Admin / User, подтверждение регистрации
 - **Telegram-бот** — команды: `/start`, `/login`, `/addtx`, `/tx`, `/report`, `/budgets`, `/incomes`; SOCKS5 прокси; whitelist; автологин по telegram_id
-- **Админ-панель** — управление пользователями, категориями, настройками бота, просмотр статуса бота, проверка прокси, бэкапы
+- **Админ-панель** — управление пользователями, категориями, настройками бота, проверка прокси, бэкапы
 - **Backup** — полная копия SQLite и JSON-экспорт
-- **Тёмная/светлая тема** — на всех страницах
-- **Mobile-first** — адаптивный дизайн
+- **Тёмная/светлая тема** — на всех страницах, Mobile-first
 
 ---
 
@@ -30,10 +29,7 @@
 ### Production на Debian 12
 
 ```bash
-# Клонирование
 git clone https://github.com/yourname/HomeMoney.git && cd HomeMoney
-
-# Интерактивная установка
 sudo bash install.sh
 ```
 
@@ -50,15 +46,9 @@ sudo bash install.sh
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-
 cp .env.example .env
-# Отредактируйте HM_SECRET_KEY, HM_BOT_TOKEN и пр.
 nano .env
-
-# Инициализация БД и создание администратора
 python seed_demo.py
-
-# Запуск
 python app.py
 ```
 
@@ -85,7 +75,6 @@ python app.py
 ## Telegram Bot
 
 ```bash
-# Убедитесь, что HM_BOT_TOKEN задан в .env
 python telegram_bot.py
 ```
 
@@ -96,9 +85,9 @@ python telegram_bot.py
 | `/start` | Главное меню с inline-кнопками |
 | `/login email пароль` | Вход в аккаунт |
 | `/logout` | Выход |
-| `/addtx` | Добавить транзакцию (пошаговый ввод) |
+| `/addtx` | Добавить транзакцию (пошагово: категория → сумма → описание; тип из категории) |
 | `/tx` | Последние 10 транзакций |
-| `/report [месяц год]` | Отчёт за месяц |
+| `/report [месяц год]` | Отчёт за месяц (доходы, расходы, остатки, детализация) |
 | `/budgets` | Мои бюджеты |
 | `/incomes` | Мои доходы |
 | `/help` | Справка |
@@ -114,7 +103,7 @@ HM_BOT_PROXY_USERNAME=user     # опционально
 HM_BOT_PROXY_PASSWORD=pass     # опционально
 ```
 
-Настройки прокси можно менять через админ-панель без редактирования `.env` вручную.
+Настройки прокси также доступны через админ-панель.
 
 ### Автологин
 
@@ -131,14 +120,16 @@ HM_BOT_PROXY_PASSWORD=pass     # опционально
 | `POST` | `/api/v1/login` | Публичный | Вход |
 | `GET` | `/api/v1/me` | Авторизован | Текущий пользователь |
 | `GET` | `/api/v1/transactions` | Авторизован | Сводка за месяц |
-| `GET` | `/api/v1/user/<id>/transactions` | Авторизован | Список транзакций (фильтр, пагинация) |
+| `GET` | `/api/v1/user/<id>/transactions` | Авторизован | Список с фильтром и пагинацией |
+| `GET` | `/api/v1/user/<id>/transactions/<tx>` | Авторизован | Детали транзакции |
 | `POST` | `/api/v1/user/<id>/create_transaction` | Авторизован | Создать транзакцию |
+| `PUT` | `/api/v1/user/<id>/transactions/<tx>` | Авторизован | Редактировать транзакцию |
 | `GET` | `/api/v1/budgets` | Авторизован | Список бюджетов |
 | `POST` | `/api/v1/budgets` | Авторизован | Создать бюджет |
 | `PUT` | `/api/v1/budgets/<id>` | Авторизован | Редактировать бюджет |
 | `DELETE` | `/api/v1/budgets/<id>` | Авторизован | Удалить бюджет |
-| `GET` | `/api/v1/reports` | Авторизован | Отчёт за месяц |
-| `GET` | `/api/v1/categories` | Авторизован | Список категорий |
+| `GET` | `/api/v1/reports` | Авторизован | Отчёт за месяц (с остатками) |
+| `GET` | `/api/v1/categories` | Авторизован | Список категорий (с типом) |
 | `POST` | `/api/v1/categories` | Авторизован | Создать категорию |
 | `PUT` | `/api/v1/categories/<id>` | Авторизован | Редактировать категорию |
 | `DELETE` | `/api/v1/categories/<id>` | Авторизован | Удалить категорию |
@@ -169,11 +160,9 @@ HM_BOT_PROXY_PASSWORD=pass     # опционально
 ```python
 from proxy_session import create_aiogram_bot, create_aiohttp_session
 
-# Telegram-бот с SOCKS5
 bot = create_aiogram_bot("TOKEN", "socks5://user:pass@127.0.0.1:1080")
 await bot.send_message(chat_id, "<b>Hello</b>")
 
-# HTTP-запрос через SOCKS5
 async with create_aiohttp_session("socks5://127.0.0.1:1080") as sess:
     async with sess.get("https://api.telegram.org") as resp:
         print(resp.status)
@@ -210,44 +199,34 @@ python -m pytest tests/ -v
 
 ```
 HomeMoney/
-├── app.py                          # Flask entrypoint + 25+ API роутов + 9 страниц
+├── app.py                          # Flask entrypoint + 30+ API роутов + 9 страниц
 ├── config.py                       # .env config + get_proxy_url()
 ├── services/
 │   ├── auth_service.py             # JWT + bcrypt + require_auth
-│   └── financial_service.py        # Бизнес-логика
+│   └── financial_service.py        # Бизнес-логика (транзакции, бюджеты, отчёты, обработка регулярных доходов)
 ├── data_access/repositories/
-│   ├── user_repository.py
-│   ├── transaction_repository.py
-│   ├── budget_repository.py
-│   └── income_repository.py
-├── models/database.py              # SQLAlchemy models
+│   ├── user_repository.py          # Пользователи (CRUD, статусы, telegram_id)
+│   ├── transaction_repository.py   # Транзакции (CRUD, фильтры, пагинация)
+│   ├── budget_repository.py        # Бюджеты (CRUD, активные за период)
+│   └── income_repository.py        # Источники дохода (CRUD, due-regular)
+├── models/database.py              # SQLAlchemy: User, Category (+icon/+type), Transaction, Budget, IncomeSource
 ├── utils/
-│   ├── database_session.py         # Lazy SQLite engine + migrations
+│   ├── database_session.py         # Lazy SQLite engine + get_db() + _run_migrations
 │   ├── backup_service.py           # Full + JSON backup
 │   ├── bot_manager.py              # PID subprocess manager
 │   ├── env_manager.py              # Read/write .env
-│   └── proxy_session.py            # 🔄 SOCKS5 proxy helper (переиспользуемый)
+│   └── proxy_session.py            # SOCKS5 proxy helper (переиспользуемый)
 ├── handlers/
-│   └── command_handlers.py         # All bot command handlers
-├── telegram_bot.py                 # Aiogram 3.x bot entrypoint
+│   └── command_handlers.py         # Все команды бота (per-user sessions, auth, wizard)
+├── telegram_bot.py                 # Aiogram 3.x bot (proxy, whitelist, webhook clean)
 ├── templates/                      # 9 HTML pages
-│   ├── base.html, login.html, index.html
-│   ├── transactions.html, incomes.html
-│   ├── budgets.html, reports.html
-│   ├── categories.html, admin.html, error.html
-├── static/css/style.css            # Dark/light theme, responsive
+├── static/css/style.css            # Dark/light theme, responsive, admin grid
 ├── tests/                          # 44 tests
 ├── seed_demo.py                    # Demo data seeder
-├── seed_default.py                 # Default categories seeder
-├── install.sh                      # Debian installer
-├── uninstall.sh                    # Debian uninstaller
-├── requirements.txt
-├── .env.example
-├── AGENTS.md
-├── DOCUMENTATION.md
-├── README.md
-├── STRUCTURE.md
-└── TODO.md
+├── seed_default.py                 # Default categories (10 expense + 2 income)
+├── install.sh / uninstall.sh       # Debian installer / uninstaller
+├── requirements.txt / .env.example
+├── DOCUMENTATION.md / README.md / STRUCTURE.md / TODO.md / AGENTS.md
 ```
 
 ---

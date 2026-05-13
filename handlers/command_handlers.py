@@ -171,6 +171,113 @@ async def handle_help(message: Message):
         "/help — Эта справка"
     )
 
+# ─── /report ─────────────────────────────────────────────────────────
+
+async def _cmd_report(tg_id: int, message: Message):
+    sess = get_session(tg_id)
+    today = dt_date.today()
+    parts = message.text.strip().split()
+    if len(parts) >= 3 and parts[0].startswith("/"):
+        month = int(parts[1])
+        year = int(parts[2])
+    else:
+        month = today.month
+        year = today.year
+    try:
+        tx_repo = SQLAlchemyTransactionRepository()
+        bg_repo = SQLAlchemyBudgetRepository()
+        fs = FinancialService(tx_repo, bg_repo)
+        report = fs.get_detailed_report(sess["user_id"], role=sess.get("role", "User"), month=month, year=year)
+        summary = report.get("summary", {})
+        total = summary.get("total_spent", 0)
+        budgeted = summary.get("total_budgeted", 0)
+        income = summary.get("total_income", 0)
+        opening = summary.get("opening_balance", 0)
+        closing = summary.get("closing_balance", 0)
+        lines = [
+            f"{hbold(f'📊 Отчёт за {month}/{year}')}",
+            f"💰 Доходы: +{income:.2f} RUB",
+            f"💳 Расходы: -{total:.2f} RUB",
+            f"📊 Бюджет: {budgeted:.2f} RUB",
+            f"Остаток на начало: {opening:.2f} RUB",
+            f"Остаток на конец: {closing:.2f} RUB",
+            ""
+        ]
+        detailed = report.get("detailed_spending", {})
+        if detailed:
+            for cat_id, item in detailed.items():
+                icon = item.get("icon", "📁") or "📁"
+                spent = item.get("spent", 0)
+                budget = item.get("budget", 0)
+                diff = budget - spent
+                sign = "+" if diff >= 0 else ""
+                lines.append(
+                    f"{icon} {item['name']}: {spent:.2f} / {budget:.2f} ({sign}{diff:.2f})"
+                )
+        await message.answer("\n".join(lines), reply_markup=menu_kb())
+    except Exception as e:
+        await message.answer(f"❌ Ошибка: {e}")
+
+@router.message(Command("report"))
+@auth_required
+async def cmd_report(message: Message):
+    await _cmd_report(message.from_user.id, message)
+
+# ─── /budgets ────────────────────────────────────────────────────────
+
+async def _cmd_budgets(tg_id: int, message: Message):
+    sess = get_session(tg_id)
+    try:
+        bg_repo = SQLAlchemyBudgetRepository()
+        budgets = bg_repo.get_all_for_user(sess["user_id"])
+        if not budgets:
+            await message.answer("Нет бюджетов. Создайте через веб-интерфейс.", reply_markup=menu_kb())
+            return
+        with get_db() as s:
+            cats = {c.id: {"name": c.name, "icon": c.icon or ""} for c in s.query(Category).all()}
+        lines = [hbold("💰 Мои бюджеты")]
+        for b in budgets:
+            info = cats.get(b.category_id, {"name": f"ID:{b.category_id}", "icon": "📁"})
+            lines.append(f"{info['icon']} {info['name']}: {b.target_amount:.2f} RUB")
+        await message.answer("\n".join(lines), reply_markup=menu_kb())
+    except Exception as e:
+        await message.answer(f"❌ Ошибка: {e}")
+
+@router.message(Command("budgets"))
+@auth_required
+async def cmd_budgets(message: Message):
+    await _cmd_budgets(message.from_user.id, message)
+
+# ─── /incomes ────────────────────────────────────────────────────────
+
+async def _cmd_incomes(tg_id: int, message: Message):
+    sess = get_session(tg_id)
+    try:
+        inc_repo = SQLAlchemyIncomeSourceRepository()
+        srcs = inc_repo.get_by_user(sess["user_id"])
+        if not srcs:
+            await message.answer("Нет доходов. Создайте через веб-интерфейс.", reply_markup=menu_kb())
+            return
+        with get_db() as s:
+            cats = {c.id: {"name": c.name, "icon": c.icon or ""} for c in s.query(Category).all()}
+        lines = [hbold("📥 Мои доходы")]
+        for src in srcs:
+            info = cats.get(src.category_id, {"name": f"ID:{src.category_id}", "icon": "📁"})
+            next_d = src.next_date.strftime("%d.%m.%Y") if src.next_date else "—"
+            active = "✅" if src.is_active else "⛔"
+            lines.append(
+                f"{active} {info['icon']} {src.name} | {src.amount:.2f} RUB | "
+                f"Кажд. {src.period} | След.: {next_d}"
+            )
+        await message.answer("\n".join(lines), reply_markup=menu_kb())
+    except Exception as e:
+        await message.answer(f"❌ Ошибка: {e}")
+
+@router.message(Command("incomes"))
+@auth_required
+async def cmd_incomes(message: Message):
+    await _cmd_incomes(message.from_user.id, message)
+
 # ─── /addtx ──────────────────────────────────────────────────────────
 
 async def _cmd_addtx(tg_id: int, message: Message):
@@ -671,113 +778,6 @@ async def cb_tx_edit(callback: CallbackQuery):
         "Введите новую сумму (или «-» для текущей):"
     )
     await callback.answer()
-
-# ─── /report ─────────────────────────────────────────────────────────
-
-async def _cmd_report(tg_id: int, message: Message):
-    sess = get_session(tg_id)
-    today = dt_date.today()
-    parts = message.text.strip().split()
-    if len(parts) >= 3 and parts[0].startswith("/"):
-        month = int(parts[1])
-        year = int(parts[2])
-    else:
-        month = today.month
-        year = today.year
-    try:
-        tx_repo = SQLAlchemyTransactionRepository()
-        bg_repo = SQLAlchemyBudgetRepository()
-        fs = FinancialService(tx_repo, bg_repo)
-        report = fs.get_detailed_report(sess["user_id"], role=sess.get("role", "User"), month=month, year=year)
-        summary = report.get("summary", {})
-        total = summary.get("total_spent", 0)
-        budgeted = summary.get("total_budgeted", 0)
-        income = summary.get("total_income", 0)
-        opening = summary.get("opening_balance", 0)
-        closing = summary.get("closing_balance", 0)
-        lines = [
-            f"{hbold(f'📊 Отчёт за {month}/{year}')}",
-            f"💰 Доходы: +{income:.2f} RUB",
-            f"💳 Расходы: -{total:.2f} RUB",
-            f"📊 Бюджет: {budgeted:.2f} RUB",
-            f"Остаток на начало: {opening:.2f} RUB",
-            f"Остаток на конец: {closing:.2f} RUB",
-            ""
-        ]
-        detailed = report.get("detailed_spending", {})
-        if detailed:
-            for cat_id, item in detailed.items():
-                icon = item.get("icon", "📁") or "📁"
-                spent = item.get("spent", 0)
-                budget = item.get("budget", 0)
-                diff = budget - spent
-                sign = "+" if diff >= 0 else ""
-                lines.append(
-                    f"{icon} {item['name']}: {spent:.2f} / {budget:.2f} ({sign}{diff:.2f})"
-                )
-        await message.answer("\n".join(lines), reply_markup=menu_kb())
-    except Exception as e:
-        await message.answer(f"❌ Ошибка: {e}")
-
-@router.message(Command("report"))
-@auth_required
-async def cmd_report(message: Message):
-    await _cmd_report(message.from_user.id, message)
-
-# ─── /budgets ────────────────────────────────────────────────────────
-
-async def _cmd_budgets(tg_id: int, message: Message):
-    sess = get_session(tg_id)
-    try:
-        bg_repo = SQLAlchemyBudgetRepository()
-        budgets = bg_repo.get_all_for_user(sess["user_id"])
-        if not budgets:
-            await message.answer("Нет бюджетов. Создайте через веб-интерфейс.", reply_markup=menu_kb())
-            return
-        with get_db() as s:
-            cats = {c.id: {"name": c.name, "icon": c.icon or ""} for c in s.query(Category).all()}
-        lines = [hbold("💰 Мои бюджеты")]
-        for b in budgets:
-            info = cats.get(b.category_id, {"name": f"ID:{b.category_id}", "icon": "📁"})
-            lines.append(f"{info['icon']} {info['name']}: {b.target_amount:.2f} RUB")
-        await message.answer("\n".join(lines), reply_markup=menu_kb())
-    except Exception as e:
-        await message.answer(f"❌ Ошибка: {e}")
-
-@router.message(Command("budgets"))
-@auth_required
-async def cmd_budgets(message: Message):
-    await _cmd_budgets(message.from_user.id, message)
-
-# ─── /incomes ────────────────────────────────────────────────────────
-
-async def _cmd_incomes(tg_id: int, message: Message):
-    sess = get_session(tg_id)
-    try:
-        inc_repo = SQLAlchemyIncomeSourceRepository()
-        srcs = inc_repo.get_by_user(sess["user_id"])
-        if not srcs:
-            await message.answer("Нет доходов. Создайте через веб-интерфейс.", reply_markup=menu_kb())
-            return
-        with get_db() as s:
-            cats = {c.id: {"name": c.name, "icon": c.icon or ""} for c in s.query(Category).all()}
-        lines = [hbold("📥 Мои доходы")]
-        for src in srcs:
-            info = cats.get(src.category_id, {"name": f"ID:{src.category_id}", "icon": "📁"})
-            next_d = src.next_date.strftime("%d.%m.%Y") if src.next_date else "—"
-            active = "✅" if src.is_active else "⛔"
-            lines.append(
-                f"{active} {info['icon']} {src.name} | {src.amount:.2f} RUB | "
-                f"Кажд. {src.period} | След.: {next_d}"
-            )
-        await message.answer("\n".join(lines), reply_markup=menu_kb())
-    except Exception as e:
-        await message.answer(f"❌ Ошибка: {e}")
-
-@router.message(Command("incomes"))
-@auth_required
-async def cmd_incomes(message: Message):
-    await _cmd_incomes(message.from_user.id, message)
 
 # ─── /addcat ─────────────────────────────────────────────────────────
 

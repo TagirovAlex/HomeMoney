@@ -44,10 +44,16 @@ class TestPublicAPI:
         assert d["status"] == "ok"
 
     def test_register(self, client):
-        r = client.post("/api/v1/register", json={"email": "new@test.com", "password": "pass"})
+        r = client.post("/api/v1/register", json={"email": "new@test.com", "password": "pass1234"})
         assert r.status_code == 201
         d = r.get_json()
         assert d["status"] == "success"
+
+    def test_register_weak_password(self, client):
+        r = client.post("/api/v1/register", json={"email": "weak@test.com", "password": "ab"})
+        assert r.status_code == 400
+        d = r.get_json()
+        assert "6 символов" in d["message"]
 
     def test_login_success(self, client):
         r = client.post("/api/v1/login", json={"email": "admin@test.com", "password": "admin"})

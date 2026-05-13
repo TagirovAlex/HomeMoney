@@ -6,3 +6,6 @@ backup_*
 !utils/backup_service.py
 venv/
 .env
+.bot.pid
+.bot.log
+instance/

@@ -25,6 +25,12 @@ def create_app():
         income_repo=income_repo,
     )
 
+    @app.after_request
+    def add_security_headers(response):
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        return response
+
     # --- Страницы ---
 
     @app.route('/login')
@@ -122,7 +128,7 @@ def create_app():
             summary = financial_service.get_monthly_summary(uid, month=today.month, year=today.year)
             return jsonify({"status": "success", "data": summary})
         except Exception as e:
-            return jsonify({"status": "error", "message": f"Ошибка: {str(e)}"}), 500
+            return jsonify({"status": "error", "message": "Внутренняя ошибка сервера"}), 500
 
     @app.route('/api/v1/user/<int:user_id>/transactions/<int:tx_id>', methods=['GET', 'PUT'])
     @require_auth
@@ -154,7 +160,7 @@ def create_app():
         except ValueError as e:
             return jsonify({"status": "error", "message": str(e)}), 400
         except Exception as e:
-            return jsonify({"status": "error", "message": str(e)}), 500
+            return jsonify({"status": "error", "message": "Внутренняя ошибка сервера"}), 500
 
     @app.route('/api/v1/user/<int:user_id>/create_transaction', methods=['POST'])
     @require_auth
@@ -176,7 +182,7 @@ def create_app():
         except ValueError as e:
             return jsonify({"status": "error", "message": str(e)}), 400
         except Exception as e:
-            return jsonify({"status": "error", "message": str(e)}), 500
+            return jsonify({"status": "error", "message": "Внутренняя ошибка сервера"}), 500
 
     @app.route('/api/v1/user/<int:user_id>/transactions', methods=['GET'])
     @require_auth
@@ -197,7 +203,7 @@ def create_app():
                             "limit": result["limit"], "month": result["month"],
                             "year": result["year"]})
         except Exception as e:
-            return jsonify({"status": "error", "message": str(e)}), 500
+            return jsonify({"status": "error", "message": "Внутренняя ошибка сервера"}), 500
 
     @app.route('/api/v1/budgets', methods=['GET'])
     @require_auth
@@ -234,7 +240,7 @@ def create_app():
             )
             return jsonify({"status": "success", "message": "Бюджет создан", "budget_id": budget.id}), 201
         except Exception as e:
-            return jsonify({"status": "error", "message": str(e)}), 500
+            return jsonify({"status": "error", "message": "Внутренняя ошибка сервера"}), 500
 
     @app.route('/api/v1/budgets/<int:budget_id>', methods=['PUT'])
     @require_auth
@@ -278,7 +284,7 @@ def create_app():
             report = financial_service.get_detailed_report(uid, role=role, month=int(month), year=int(year))
             return jsonify({"status": "success", "data": report})
         except Exception as e:
-            return jsonify({"status": "error", "message": str(e)}), 500
+            return jsonify({"status": "error", "message": "Внутренняя ошибка сервера"}), 500
 
     @app.route('/api/v1/backup', methods=['GET'])
     @require_auth

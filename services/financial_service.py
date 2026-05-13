@@ -19,6 +19,8 @@ class FinancialService:
         """Добавить транзакцию. Тип (расход/доход) определяется из категории."""
         if amount < 0 or amount > 100000:
             raise ValueError("Недопустимый диапазон суммы для транзакции.")
+        if len(description) > 500:
+            raise ValueError("Описание не может быть длиннее 500 символов")
 
         from models.database import Category
         from utils.database_session import get_db

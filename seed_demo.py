@@ -1,6 +1,10 @@
 import sys, os
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
+print("⚠️  ВНИМАНИЕ: seed_demo.py создаёт тестовые аккаунты со слабыми паролями!")
+print("⚠️  Никогда не запускайте этот скрипт на production-сервере.")
+print()
+
 from utils.database_session import init_db
 init_db()
 

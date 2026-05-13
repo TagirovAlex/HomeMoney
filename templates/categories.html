@@ -9,11 +9,11 @@
     <h3>Новая категория</h3>
     <form onsubmit="addCategory(event)">
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <input type="text" id="cat-name" placeholder="Название" required style="flex:2;min-width:140px">
+            <input type="text" id="cat-name" placeholder="Название" required style="flex:2;min-width:140px; padding:8px;">
             <input type="text" id="cat-icon" placeholder="Иконка (эмодзи)" style="max-width:80px">
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-            <input type="text" id="cat-desc" placeholder="Описание" style="flex:2;min-width:140px">
+            <input type="text" id="cat-desc" placeholder="Описание" style="flex:2;min-width:140px; padding:8px;">
             <select id="cat-type" style="flex:1;min-width:100px;padding:8px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-bg);color:var(--color-text)">
                 <option value="expense">💳 Расход</option>
                 <option value="income">💰 Доход</option>

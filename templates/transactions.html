@@ -13,12 +13,6 @@
         <label>Категория <select id="tx-category" required onchange="txCategoryChanged()"></select></label>
         <div id="tx-budget-info" style="font-size:0.85rem;color:var(--color-secondary);margin:-4px 0 8px 0"></div>
         <label>Дата <input type="date" id="tx-date"></label>
-        <label>Тип
-            <select id="tx-type">
-                <option value="expense">Расход</option>
-                <option value="income">Доход</option>
-            </select>
-        </label>
         <label>Описание <input type="text" id="tx-desc"></label>
         <button type="submit" class="btn">Сохранить</button>
         <button type="button" class="btn btn-secondary" onclick="hideAddForm()">Отмена</button>
@@ -163,7 +157,6 @@
             amount: parseFloat(document.getElementById('tx-amount').value),
             category_id: parseInt(document.getElementById('tx-category').value),
             description: document.getElementById('tx-desc').value,
-            type: document.getElementById('tx-type').value,
         };
         var dateVal = document.getElementById('tx-date').value;
         if (dateVal) body.date = dateVal;

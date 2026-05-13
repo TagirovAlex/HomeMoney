@@ -175,28 +175,11 @@ async def cb_tx_select_category(callback: CallbackQuery):
     with get_db() as s:
         cat = s.query(Category).filter(Category.id == cat_id).first()
     sess["data"]["category_name"] = cat.name if cat else f"ID:{cat_id}"
-    sess["step"] = "select_type"
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💳 Расход", callback_data="txtype:expense")],
-        [InlineKeyboardButton(text="💰 Доход", callback_data="txtype:income")],
-    ])
-    await callback.message.edit_text(
-        f"Категория: {hbold(sess['data']['category_name'])}\n"
-        "Выберите тип:",
-        reply_markup=kb,
-    )
-    await callback.answer()
-
-@router.callback_query(lambda c: c.data and c.data.startswith("txtype:"))
-async def cb_tx_select_type(callback: CallbackQuery):
-    tg_id = callback.from_user.id
-    tx_type = callback.data.split(":")[1]
-    sess = get_session(tg_id)
-    sess["data"]["type"] = tx_type
+    sess["data"]["type"] = cat.type if cat else "expense"
     sess["step"] = "enter_amount"
+    type_label = "💰 Доход" if sess["data"]["type"] == "income" else "💳 Расход"
     await callback.message.edit_text(
-        f"Категория: {hbold(sess['data']['category_name'])}\n"
-        f"Тип: {'💰 Доход' if tx_type == 'income' else '💳 Расход'}\n"
+        f"Категория: {hbold(sess['data']['category_name'])} ({type_label})\n"
         "Введите сумму числом:"
     )
     await callback.answer()
@@ -235,7 +218,6 @@ async def tx_enter_desc(message: Message):
             category_id=sess["data"]["category_id"],
             description=desc,
             date=dt_date.today(),
-            tx_type=sess["data"].get("type", "expense"),
         )
         sess["step"] = None
         type_label = "💰 Доход" if sess["data"].get("type") == "income" else "💳 Расход"

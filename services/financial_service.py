@@ -14,13 +14,16 @@ class FinancialService:
         self.budget_repo = budget_repo
         self.income_repo = income_repo
 
-    def add_transaction(self, user_id: int, amount: float, category_id: int, description: str = "", date=None, tx_type: str = "expense") -> Transaction:
-        """Добавить транзакцию (расход или доход)."""
+    def add_transaction(self, user_id: int, amount: float, category_id: int, description: str = "", date=None) -> Transaction:
+        """Добавить транзакцию. Тип (расход/доход) определяется из категории."""
         if amount < 0 or amount > 100000:
             raise ValueError("Недопустимый диапазон суммы для транзакции.")
 
-        if tx_type not in ("expense", "income"):
-            raise ValueError("type должен быть 'expense' или 'income'")
+        from models.database import Category
+        from utils.database_session import get_db
+        with get_db() as s:
+            cat = s.query(Category).filter(Category.id == category_id).first()
+            tx_type = cat.type if cat else "expense"
 
         from datetime import datetime
         transaction_data = {
@@ -128,14 +131,23 @@ class FinancialService:
             "category_spending": {}
         }
 
+        # Определяем тип категорий (expense/income)
+        from models.database import Category
+        from utils.database_session import get_db
+        with get_db() as session:
+            cat_types = {c.id: c.type for c in session.query(Category).all()}
+
+        def _is_income(t):
+            return cat_types.get(t.category_id, 'expense') == 'income'
+
         # Обороты за период
-        total_income = sum(t.amount for t in transactions if getattr(t, 'type', 'expense') == 'income')
-        total_expense = sum(t.amount for t in transactions if getattr(t, 'type', 'expense') != 'income')
+        total_income = sum(t.amount for t in transactions if _is_income(t))
+        total_expense = sum(t.amount for t in transactions if not _is_income(t))
 
         # Начальный остаток (все доходы до периода - все расходы до периода)
         opening_balance = (
-            sum(t.amount for t in prev_transactions if getattr(t, 'type', 'expense') == 'income') -
-            sum(t.amount for t in prev_transactions if getattr(t, 'type', 'expense') != 'income')
+            sum(t.amount for t in prev_transactions if _is_income(t)) -
+            sum(t.amount for t in prev_transactions if not _is_income(t))
         )
 
         closing_balance = opening_balance + total_income - total_expense
@@ -235,14 +247,13 @@ class FinancialService:
             try:
                 from datetime import datetime
                 txn_date = src.next_date or datetime.combine(date.today(), datetime.min.time())
-                self.transaction_repo.add_transaction({
-                    "user_id": user_id,
-                    "amount": abs(src.amount),
-                    "category_id": src.category_id,
-                    "description": f"[Авто] {src.name}: {src.description or src.name}",
-                    "date": txn_date,
-                    "type": "income",
-                })
+                self.add_transaction(
+                    user_id=user_id,
+                    amount=abs(src.amount),
+                    category_id=src.category_id,
+                    description=f"[Авто] {src.name}: {src.description or src.name}",
+                    date=txn_date,
+                )
                 # Рассчитываем следующую дату
                 next_d = txn_date
                 if src.period == "daily":

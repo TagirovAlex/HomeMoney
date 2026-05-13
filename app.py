@@ -140,7 +140,6 @@ def create_app():
                 int(data['category_id']),
                 data.get('description', ''),
                 date=data.get('date'),
-                tx_type=data.get('type', 'expense'),
             )
             return jsonify({"status": "success", "message": "Транзакция добавлена", "transaction_id": tx.id}), 201
         except ValueError as e:
@@ -318,12 +317,12 @@ def create_app():
         if request.method == 'GET':
             with get_db() as session:
                 cats = session.query(Category).all()
-            return jsonify({"status": "success", "data": [{"id": c.id, "name": c.name, "description": c.description or "", "icon": c.icon or ""} for c in cats]})
+            return jsonify({"status": "success", "data": [{"id": c.id, "name": c.name, "description": c.description or "", "icon": c.icon or "", "type": c.type or "expense"} for c in cats]})
         data = request.get_json()
         if not data or not data.get('name'):
             return jsonify({"status": "error", "message": "name обязателен"}), 400
         with get_db() as session:
-            cat = Category(name=data['name'], description=data.get('description', ''), icon=data.get('icon', ''))
+            cat = Category(name=data['name'], description=data.get('description', ''), icon=data.get('icon', ''), type=data.get('type', 'expense'))
             session.add(cat)
             session.commit()
             session.refresh(cat)
@@ -347,6 +346,8 @@ def create_app():
                 cat.description = data['description']
             if 'icon' in data:
                 cat.icon = data['icon']
+            if 'type' in data:
+                cat.type = data['type']
             session.commit()
         return jsonify({"status": "success", "message": "Категория обновлена"})
 

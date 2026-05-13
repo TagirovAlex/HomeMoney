@@ -8,19 +8,27 @@
 <div class="card" style="max-width:600px;margin-bottom:20px">
     <h3>Новая категория</h3>
     <form onsubmit="addCategory(event)">
-        <input type="text" id="cat-name" placeholder="Название" required>
-        <input type="text" id="cat-icon" placeholder="Иконка (эмодзи)" style="max-width:80px">
-        <input type="text" id="cat-desc" placeholder="Описание">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input type="text" id="cat-name" placeholder="Название" required style="flex:2;min-width:140px">
+            <input type="text" id="cat-icon" placeholder="Иконка (эмодзи)" style="max-width:80px">
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+            <input type="text" id="cat-desc" placeholder="Описание" style="flex:2;min-width:140px">
+            <select id="cat-type" style="flex:1;min-width:100px;padding:8px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-bg);color:var(--color-text)">
+                <option value="expense">💳 Расход</option>
+                <option value="income">💰 Доход</option>
+            </select>
+        </div>
         <input type="hidden" id="cat-edit-id" value="">
-        <button type="submit" class="btn" id="cat-submit">+</button>
+        <button type="submit" class="btn" id="cat-submit" style="margin-top:8px">+</button>
     </form>
 </div>
 
 <div class="card" style="max-width:600px">
     <h3>Все категории</h3>
     <table class="data-table">
-        <thead><tr><th>ID</th><th>Иконка</th><th>Название</th><th></th></tr></thead>
-        <tbody id="categories-body"><tr><td colspan="4">Загрузка...</td></tr></tbody>
+        <thead><tr><th>ID</th><th>Иконка</th><th>Название</th><th>Тип</th><th></th></tr></thead>
+        <tbody id="categories-body"><tr><td colspan="5">Загрузка...</td></tr></tbody>
     </table>
 </div>
 
@@ -31,11 +39,12 @@
         var r = await fetch('/api/v1/categories', { headers: h() });
         var d = await r.json();
         var tbody = document.getElementById('categories-body');
-        if (d.status !== 'success') { tbody.innerHTML = '<tr><td colspan="4">' + d.message + '</td></tr>'; return; }
+        if (d.status !== 'success') { tbody.innerHTML = '<tr><td colspan="5">' + d.message + '</td></tr>'; return; }
         tbody.innerHTML = d.data.map(function(c) {
             var icon = c.icon || '📁';
-            return '<tr><td>' + c.id + '</td><td style="font-size:1.4rem">' + icon + '</td><td>' + c.name + '</td>' +
-                '<td><button class="btn btn-secondary" style="margin-right:4px" onclick="editCategory(' + c.id + ',\'' + c.name.replace(/'/g,"\\'") + '\',\'' + (c.icon||'') + '\',\'' + (c.description||'').replace(/'/g,"\\'") + '\')">✏️</button>' +
+            var typeLabel = c.type === 'income' ? '💰 Доход' : '💳 Расход';
+            return '<tr><td>' + c.id + '</td><td style="font-size:1.4rem">' + icon + '</td><td>' + c.name + '</td><td>' + typeLabel + '</td>' +
+                '<td><button class="btn btn-secondary" style="margin-right:4px" onclick="editCategory(' + c.id + ',\'' + c.name.replace(/'/g,"\\'") + '\',\'' + (c.icon||'') + '\',\'' + (c.description||'').replace(/'/g,"\\'") + '\',\'' + c.type + '\')">✏️</button>' +
                 '<button class="btn btn-secondary" onclick="deleteCategory(' + c.id + ')">✕</button></td></tr>';
         }).join('');
     }
@@ -47,6 +56,7 @@
             name: document.getElementById('cat-name').value,
             description: document.getElementById('cat-desc').value,
             icon: document.getElementById('cat-icon').value,
+            type: document.getElementById('cat-type').value,
         };
         var url = editId ? '/api/v1/categories/' + editId : '/api/v1/categories';
         var method = editId ? 'PUT' : 'POST';
@@ -57,17 +67,19 @@
             document.getElementById('cat-name').value = '';
             document.getElementById('cat-desc').value = '';
             document.getElementById('cat-icon').value = '';
+            document.getElementById('cat-type').value = 'expense';
             document.getElementById('cat-edit-id').value = '';
             document.getElementById('cat-submit').textContent = '+';
             loadCategories();
         }
     }
 
-    function editCategory(id, name, icon, desc) {
+    function editCategory(id, name, icon, desc, type) {
         document.getElementById('cat-edit-id').value = id;
         document.getElementById('cat-name').value = name;
         document.getElementById('cat-icon').value = icon;
         document.getElementById('cat-desc').value = desc;
+        document.getElementById('cat-type').value = type || 'expense';
         document.getElementById('cat-submit').textContent = '✏️';
     }
 

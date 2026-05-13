@@ -9,16 +9,18 @@ from models.database import Category
 from utils.database_session import get_db
 
 DEFAULT_CATEGORIES = [
-    ("Продукты", "🛒"),
-    ("Кафе и рестораны", "🍽️"),
-    ("Аренда жилья", "🏠"),
-    ("Коммунальные услуги", "💡"),
-    ("Транспорт", "🚗"),
-    ("Связь и интернет", "📱"),
-    ("Развлечения", "🎬"),
-    ("Здоровье", "💊"),
-    ("Одежда", "👕"),
-    ("Прочее", "📦"),
+    ("Продукты", "🛒", "expense"),
+    ("Кафе и рестораны", "🍽️", "expense"),
+    ("Аренда жилья", "🏠", "expense"),
+    ("Коммунальные услуги", "💡", "expense"),
+    ("Транспорт", "🚗", "expense"),
+    ("Связь и интернет", "📱", "expense"),
+    ("Развлечения", "🎬", "expense"),
+    ("Здоровье", "💊", "expense"),
+    ("Одежда", "👕", "expense"),
+    ("Зарплата", "💼", "income"),
+    ("Фриланс", "💻", "income"),
+    ("Прочее", "📦", "expense"),
 ]
 
 with get_db() as s:
@@ -26,8 +28,8 @@ with get_db() as s:
     if existing > 0:
         print(f"В базе уже есть {existing} категорий. Пропускаем создание базовых.")
     else:
-        for name, icon in DEFAULT_CATEGORIES:
-            s.add(Category(name=name, icon=icon))
+        for name, icon, cat_type in DEFAULT_CATEGORIES:
+            s.add(Category(name=name, icon=icon, type=cat_type))
         s.commit()
         print(f"Создано {len(DEFAULT_CATEGORIES)} базовых категорий.")
 

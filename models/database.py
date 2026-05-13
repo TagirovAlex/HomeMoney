@@ -19,6 +19,7 @@ class Category(Base):
     name = Column(String, unique=True, nullable=False)
     description = Column(String)
     icon = Column(String, default='')
+    type = Column(String, default='expense')  # 'expense' or 'income'
 
 class Transaction(Base):
     __tablename__ = 'transactions'

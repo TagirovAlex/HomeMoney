@@ -341,11 +341,11 @@ async def cb_tx_select_category(callback: CallbackQuery):
     sess["data"]["category_name"] = cat.name if cat else f"ID:{cat_id}"
     sess["data"]["type"] = cat.type if cat else "expense"
     sess["step"] = "enter_amount"
-        type_label = "💰 Доход" if sess["data"]["type"] == "income" else "💳 Расход"
-        await callback.message.edit_text(
-            f"Категория: {hbold(_html.escape(sess['data']['category_name']))} ({type_label})\n"
-            "Введите сумму числом:"
-        )
+    type_label = "💰 Доход" if sess["data"]["type"] == "income" else "💳 Расход"
+    await callback.message.edit_text(
+        f"Категория: {hbold(_html.escape(sess['data']['category_name']))} ({type_label})\n"
+        "Введите сумму числом:"
+    )
     await callback.answer()
 
 @router.message(lambda msg: not_command(msg) and user_sessions.get(msg.from_user.id, {}).get("step") == "enter_amount")

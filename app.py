@@ -72,6 +72,9 @@ def create_app():
         data = request.get_json()
         if not data or not data.get('email') or not data.get('password'):
             return jsonify({"status": "error", "message": "email и password обязательны"}), 400
+        pw = data['password']
+        if len(pw) < 6:
+            return jsonify({"status": "error", "message": "Пароль должен быть не менее 6 символов"}), 400
         existing = user_repo.get_by_email(data['email'])
         if existing:
             return jsonify({"status": "error", "message": "Email уже занят"}), 409
@@ -142,18 +145,6 @@ def create_app():
                 "type": getattr(tx, 'type', 'expense'),
             }})
 
-        data = request.get_json()
-        if not data:
-            return jsonify({"status": "error", "message": "Нет данных"}), 400
-        try:
-            financial_service.update_transaction(tx_id, user_id, data)
-            return jsonify({"status": "success", "message": "Транзакция обновлена"})
-        except ValueError as e:
-            return jsonify({"status": "error", "message": str(e)}), 400
-        except Exception as e:
-            return jsonify({"status": "error", "message": str(e)}), 500
-        if request.current_user["user_id"] != user_id and request.current_user["role"] != "Admin":
-            return jsonify({"status": "error", "message": "Доступ запрещён"}), 403
         data = request.get_json()
         if not data:
             return jsonify({"status": "error", "message": "Нет данных"}), 400

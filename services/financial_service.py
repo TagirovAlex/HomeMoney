@@ -60,13 +60,19 @@ class FinancialService:
             start_date=start_date, 
             end_date=end_date
         )
-        total_spent = sum(t.amount for t in transactions)
+        total_income = sum(t.amount for t in transactions if t.type == "income")
+        total_spent = sum(t.amount for t in transactions if t.type == "expense")
 
         # 2. Получаем бюджеты за этот месяц для сравнения
         budgets: List[Budget] = self.budget_repo.get_active_budgets_for_user(user_id=user_id, month=month, year=year)
         total_budget = sum(b.target_amount for b in budgets)
 
-        return {"total_spent": total_spent, "total_budgeted": total_budget, "transactions_count": len(transactions)}
+        return {
+            "total_income": total_income,
+            "total_spent": total_spent,
+            "total_budgeted": total_budget,
+            "transactions_count": len(transactions),
+        }
 
     def check_budget_exceeded(self, user_id: int, category_id: int, current_month: int, current_year: int) -> bool:
         """Проверить, превышен ли бюджет по указанной категории."""

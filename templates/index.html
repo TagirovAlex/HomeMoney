@@ -7,11 +7,15 @@
 </div>
 <div class="summary-cards" id="summary-data">
     <div class="card">
-        <span class="card-label">Расходы</span>
-        <span class="card-value" id="total-spent">--</span>
+        <span class="card-label">💰 Доходы</span>
+        <span class="card-value income" id="total-income">--</span>
     </div>
     <div class="card">
-        <span class="card-label">Бюджет</span>
+        <span class="card-label">💳 Расходы</span>
+        <span class="card-value expense" id="total-spent">--</span>
+    </div>
+    <div class="card">
+        <span class="card-label">📊 Бюджет</span>
         <span class="card-value" id="total-budgeted">--</span>
     </div>
     <div class="card">
@@ -34,7 +38,8 @@
         var r = await fetch('/api/v1/transactions', { headers: authHeaders() });
         var d = await r.json();
             if (d.status === 'success') {
-                document.getElementById('total-spent').textContent = d.data.total_spent.toFixed(2) + ' RUB';
+                document.getElementById('total-income').textContent = '+' + d.data.total_income.toFixed(2) + ' RUB';
+                document.getElementById('total-spent').textContent = '-' + d.data.total_spent.toFixed(2) + ' RUB';
                 document.getElementById('total-budgeted').textContent = d.data.total_budgeted.toFixed(2) + ' RUB';
                 document.getElementById('transactions-count').textContent = d.data.transactions_count;
             }

@@ -73,6 +73,8 @@ main { flex: 1; padding: 24px 5%; max-width: 1200px; margin: 0 auto; width: 100%
 }
 .card-label { display: block; font-size: 0.85rem; color: var(--color-secondary); margin-bottom: 6px; }
 .card-value { display: block; font-size: 1.6rem; font-weight: 700; }
+.card-value.income { color: var(--color-success, #27ae60); }
+.card-value.expense { color: var(--color-danger, #e74c3c); }
 
 /* --- TABLE --- */
 .data-table {

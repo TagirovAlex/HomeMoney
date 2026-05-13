@@ -37,14 +37,22 @@ class TestFinancialService:
             service.add_transaction(1, -50, 2)
 
     def test_get_monthly_summary(self, service, mock_tx_repo, mock_budget_repo):
-        mock_tx = MagicMock()
-        mock_tx.amount = 300.0
-        mock_tx_repo.get_transactions_by_user.return_value = [mock_tx, mock_tx]
+        tx1 = MagicMock()
+        tx1.amount = 500.0
+        tx1.type = "expense"
+        tx2 = MagicMock()
+        tx2.amount = 300.0
+        tx2.type = "income"
+        tx3 = MagicMock()
+        tx3.amount = 100.0
+        tx3.type = "expense"
+        mock_tx_repo.get_transactions_by_user.return_value = [tx1, tx2, tx3]
         mock_budget_repo.get_active_budgets_for_user.return_value = []
         summary = service.get_monthly_summary(1, 5, 2024)
         assert summary["total_spent"] == 600.0
+        assert summary["total_income"] == 300.0
         assert summary["total_budgeted"] == 0.0
-        assert summary["transactions_count"] == 2
+        assert summary["transactions_count"] == 3
 
     def test_check_budget_exceeded(self, service, mock_tx_repo, mock_budget_repo):
         mock_tx = MagicMock()

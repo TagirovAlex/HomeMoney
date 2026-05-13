@@ -1,7 +1,12 @@
-import sys, os
+import sys, os, secrets, string
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-print("⚠️  ВНИМАНИЕ: seed_demo.py создаёт тестовые аккаунты со слабыми паролями!")
+alphabet = string.ascii_letters + string.digits
+ADMIN_PW = "".join(secrets.choice(alphabet) for _ in range(12))
+USER_PW = "".join(secrets.choice(alphabet) for _ in range(12))
+PENDING_PW = "".join(secrets.choice(alphabet) for _ in range(12))
+
+print("⚠️  ВНИМАНИЕ: seed_demo.py для разработки/тестирования!")
 print("⚠️  Никогда не запускайте этот скрипт на production-сервере.")
 print()
 
@@ -21,9 +26,9 @@ tx = SQLAlchemyTransactionRepository()
 bg = SQLAlchemyBudgetRepository()
 fs = FinancialService(tx, bg)
 
-u.create({"email":"admin@demo.com","hashed_password":AuthService.hash_password("admin"),"role":"Admin","status":"active"})
-u.create({"email":"ivan@demo.com","hashed_password":AuthService.hash_password("123"),"role":"User","status":"active"})
-u.create({"email":"petr@demo.com","hashed_password":AuthService.hash_password("123"),"role":"User","status":"pending"})
+u.create({"email":"admin@demo.com","hashed_password":AuthService.hash_password(ADMIN_PW),"role":"Admin","status":"active"})
+u.create({"email":"ivan@demo.com","hashed_password":AuthService.hash_password(USER_PW),"role":"User","status":"active"})
+u.create({"email":"petr@demo.com","hashed_password":AuthService.hash_password(PENDING_PW),"role":"User","status":"pending"})
 
 with get_db() as s:
     for name in ["Продукты","Аренда","Транспорт","Связь","Развлечения","Здоровье"]:
@@ -44,6 +49,6 @@ fs.create_budget(user_id=2, category_id=3, target_amount=5000)
 
 print("Demo data ready!")
 print()
-print("Admin: admin@demo.com / admin")
-print("User:  ivan@demo.com  / 123")
-print("Pending: petr@demo.com / 123 (login blocked)")
+print(f"Admin:   admin@demo.com / {ADMIN_PW}")
+print(f"User:    ivan@demo.com  / {USER_PW}")
+print(f"Pending: petr@demo.com  / {PENDING_PW} (login blocked)")

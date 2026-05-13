@@ -17,8 +17,8 @@ class FinancialService:
 
     def add_transaction(self, user_id: int, amount: float, category_id: int, description: str = "", date=None) -> Transaction:
         """Добавить транзакцию. Тип (расход/доход) определяется из категории."""
-        if amount < 0 or amount > 100000:
-            raise ValueError("Недопустимый диапазон суммы для транзакции.")
+        if amount < 0:
+            raise ValueError("Сумма должна быть положительным числом")
         if len(description) > 500:
             raise ValueError("Описание не может быть длиннее 500 символов")
 

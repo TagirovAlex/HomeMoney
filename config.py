@@ -15,7 +15,7 @@ class Config:
     SECRET_KEY = _SECRET_KEY
 
     # База данных
-    DATABASE_URL = os.environ.get("HM_DATABASE_URL", "sqlite:///./home_money.db")
+    DATABASE_URL = os.environ.get("HM_DATABASE_URL", "sqlite:///./instance/home_money.db")
 
     # Telegram Bot
     BOT_TOKEN = os.environ.get("HM_BOT_TOKEN", "")
@@ -37,7 +37,17 @@ class Config:
         port = f":{Config.BOT_PROXY_PORT}" if Config.BOT_PROXY_PORT else ""
         return f"socks5://{auth}{host}{port}"
 
-
+    @staticmethod
+    def get_proxy_params() -> dict | None:
+        host = Config.BOT_PROXY_HOST
+        if not host:
+            return None
+        return {
+            "host": host,
+            "port": int(Config.BOT_PROXY_PORT) if Config.BOT_PROXY_PORT else 1080,
+            "username": Config.BOT_PROXY_USERNAME or None,
+            "password": Config.BOT_PROXY_PASSWORD or None,
+        }
 
     # Кто может писать боту (через запятую Telegram ID, пусто = все)
     BOT_ALLOWED_USERS = os.environ.get("HM_BOT_ALLOWED_USERS", "")

@@ -53,34 +53,31 @@
 
             // --- API helper ---
             window.authHeaders = function() {
-                var t = localStorage.getItem('token');
-                return t ? { 'Authorization': 'Bearer ' + t, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+                return { 'Content-Type': 'application/json' };
             };
 
-            // --- Auth check ---
-            var token = localStorage.getItem('token');
-            var userStr = localStorage.getItem('user');
+            // --- Auth check via cookie ---
             var userEmail = document.getElementById('user-email');
             var logoutBtn = document.getElementById('logout-btn');
 
-            if (!token) {
-                window.location.href = '/login';
-                return;
-            }
-
-            if (userStr) {
-                try {
-                    var u = JSON.parse(userStr);
+            fetch('/api/v1/me', { method: 'GET', headers: { 'Content-Type': 'application/json' } })
+                .then(function(r) {
+                    if (!r.ok) { window.location.href = '/login'; return; }
+                    return r.json();
+                })
+                .then(function(d) {
+                    if (!d || d.status !== 'success') { window.location.href = '/login'; return; }
+                    var u = d.user;
                     userEmail.textContent = u.email;
                     userEmail.style.display = 'inline';
-                } catch(e) {}
-            }
+                    logoutBtn.style.display = 'inline-block';
+                })
+                .catch(function() { window.location.href = '/login'; });
 
-            logoutBtn.style.display = 'inline-block';
             logoutBtn.addEventListener('click', function() {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.href = '/login';
+                fetch('/api/v1/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+                    .then(function() { window.location.href = '/login'; })
+                    .catch(function() { window.location.href = '/login'; });
             });
 
             // Active nav link

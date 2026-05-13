@@ -26,12 +26,14 @@ class TestFinancialService:
         assert tx.id == 1
         mock_tx_repo.add_transaction.assert_called_once()
 
-    def test_add_transaction_amount_too_high(self, service):
-        with pytest.raises(ValueError, match="Недопустимый диапазон"):
-            service.add_transaction(1, 200000, 2)
+    def test_add_transaction_large_amount(self, service, mock_tx_repo):
+        mock_tx_repo.add_transaction.return_value = MagicMock(id=2)
+        tx = service.add_transaction(1, 200000, 2)
+        assert tx.id == 2
+        mock_tx_repo.add_transaction.assert_called_once()
 
     def test_add_transaction_negative_amount(self, service):
-        with pytest.raises(ValueError, match="Недопустимый диапазон"):
+        with pytest.raises(ValueError, match="положительным числом"):
             service.add_transaction(1, -50, 2)
 
     def test_get_monthly_summary(self, service, mock_tx_repo, mock_budget_repo):

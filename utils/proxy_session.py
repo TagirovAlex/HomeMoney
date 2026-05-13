@@ -1,82 +1,51 @@
-"""
-SOCKS5 Proxy Session Helper
-============================
-Утилита для создания HTTP-сессий с поддержкой SOCKS5 прокси.
-Используется для Telegram-бота (aiogram) и HTTP-запросов (aiohttp).
-
-Поддерживает:
-- aiogram AiohttpSession с SOCKS5 прокси
-- aiohttp ClientSession с SOCKS5 прокси (ProxyConnector)
-- Автоматический fallback на прямое соединение, если прокси не указан
-
-Зависимости (requirements.txt):
-    aiogram>=3.0
-    aiohttp-socks>=0.8
-
-Пример использования:
-    from utils.proxy_session import create_aiogram_bot, create_aiohttp_session
-
-    # Aiogram бот через прокси
-    bot = create_aiogram_bot(token, proxy_url="socks5://user:pass@host:1080")
-    await bot.send_message(chat_id, "Hello")
-
-    # Aiogram без прокси
-    bot = create_aiogram_bot(token)
-
-    # Aiohttp сессия через прокси (один запрос)
-    async with create_aiohttp_session(proxy_url) as session:
-        async with session.get("https://api.telegram.org") as resp:
-            print(resp.status)
-
-    # Aiohttp сессия напрямую
-    async with create_aiohttp_session() as session:
-        ...
-"""
-
 from typing import Optional
 
 
-def create_aiogram_session(proxy_url: Optional[str] = None):
+def _build_connector(proxy_params: Optional[dict] = None):
+    """Создаёт aiohttp ProxyConnector из отдельных параметров прокси."""
+    if not proxy_params:
+        return None
+    from aiohttp_socks import ProxyConnector, ProxyType
+    return ProxyConnector(
+        host=proxy_params["host"],
+        port=proxy_params["port"],
+        username=proxy_params.get("username"),
+        password=proxy_params.get("password"),
+        proxy_type=ProxyType.SOCKS5,
+    )
+
+
+def create_aiogram_session(proxy_params: Optional[dict] = None):
     """Создаёт AiohttpSession для aiogram с поддержкой SOCKS5 прокси.
 
     Args:
-        proxy_url: URL прокси вида socks5://[user:pass@]host:port
-                  Если None или пустая строка — сессия без прокси.
-
-    Returns:
-        AiohttpSession — передаётся в Bot(session=...)
+        proxy_params: dict с ключами host, port, username, password
+                     (из Config.get_proxy_params()). Если None — без прокси.
     """
     from aiogram.client.session.aiohttp import AiohttpSession
 
-    if proxy_url:
-        return AiohttpSession(proxy=proxy_url)
+    connector = _build_connector(proxy_params)
+    if connector:
+        return AiohttpSession(connector=connector)
     return AiohttpSession()
 
 
 def create_aiogram_bot(
     token: str,
-    proxy_url: Optional[str] = None,
+    proxy_params: Optional[dict] = None,
     parse_mode: str = "HTML",
 ) -> "Bot":
     """Создаёт Bot для aiogram с поддержкой SOCKS5 прокси.
 
     Args:
-        token: Токен Telegram-бота (полученный у BotFather).
-        proxy_url: URL прокси вида socks5://[user:pass@]host:port
-                  Если None или пустая строка — прямое соединение.
+        token: Токен Telegram-бота.
+        proxy_params: dict из Config.get_proxy_params() или None для прямого соединения.
         parse_mode: Режим форматирования сообщений (по умолчанию HTML).
-
-    Returns:
-        Bot из aiogram, готовый к использованию.
-
-    Пример:
-        bot = create_aiogram_bot("123:abc", "socks5://user:pass@127.0.0.1:1080")
-        await bot.send_message(chat_id, "<b>Hello</b>")
     """
     from aiogram import Bot
     from aiogram.client.default import DefaultBotProperties
 
-    session = create_aiogram_session(proxy_url)
+    session = create_aiogram_session(proxy_params)
     return Bot(
         token=token,
         session=session,
@@ -84,27 +53,15 @@ def create_aiogram_bot(
     )
 
 
-def create_aiohttp_session(proxy_url: Optional[str] = None):
+def create_aiohttp_session(proxy_params: Optional[dict] = None):
     """Создаёт aiohttp.ClientSession с SOCKS5 прокси через ProxyConnector.
 
     Args:
-        proxy_url: URL прокси вида socks5://[user:pass@]host:port
-                  Если None или пустая строка — сессия без прокси.
-
-    Returns:
-        aiohttp.ClientSession — использовать с 'async with'.
-
-    Пример:
-        async with create_aiohttp_session(proxy_url) as session:
-            async with session.get("https://example.com") as resp:
-                ...
+        proxy_params: dict из Config.get_proxy_params() или None для прямого соединения.
     """
     import aiohttp
 
-    if not proxy_url:
-        return aiohttp.ClientSession()
-
-    from aiohttp_socks import ProxyConnector
-
-    connector = ProxyConnector.from_url(proxy_url)
-    return aiohttp.ClientSession(connector=connector)
+    connector = _build_connector(proxy_params)
+    if connector:
+        return aiohttp.ClientSession(connector=connector)
+    return aiohttp.ClientSession()

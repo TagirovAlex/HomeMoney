@@ -1,3 +1,5 @@
+import html as _html
+
 from aiogram import Router
 from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.markdown import hbold
@@ -11,6 +13,7 @@ from services.financial_service import FinancialService
 from services.auth_service import AuthService
 from models.database import Category, User, Transaction
 from utils.database_session import get_db
+from utils.rate_limiter import login_limiter
 from datetime import date as dt_date
 
 router = Router()
@@ -109,26 +112,24 @@ async def handle_start(message: Message):
 
 # ─── /login ──────────────────────────────────────────────────────────
 
-@router.message(Command("login"))
-async def handle_login(message: Message):
-    tg_id = message.from_user.id
-    parts = message.text.strip().split(maxsplit=2)
-    if len(parts) < 3:
-        await message.answer("Использование: /login email пароль")
-        return
-    _, email, password = parts
+async def _do_login(message: Message, tg_id: int, email: str, password: str) -> bool:
+    if not login_limiter.is_allowed(f"bot_login:{tg_id}"):
+        await message.answer("❌ Слишком много попыток входа. Попробуйте через 60 секунд.")
+        return False
     repo = SQLAlchemyUserRepository()
     user = repo.get_by_email(email)
     if not user or not AuthService.verify_password(password, user.hashed_password):
         await message.answer("❌ Неверный email или пароль")
-        return
+        return False
     if user.status != "active":
         await message.answer("❌ Аккаунт не активирован. Дождитесь подтверждения администратором.")
-        return
+        return False
     sess = get_session(tg_id)
     sess["user_id"] = user.id
     sess["email"] = user.email
     sess["role"] = user.role
+    sess["step"] = None
+    login_limiter.reset(f"bot_login:{tg_id}")
     if user.telegram_id != str(tg_id):
         with get_db() as s:
             u = s.query(User).filter(User.id == user.id).first()
@@ -140,6 +141,35 @@ async def handle_login(message: Message):
         f"Роль: {user.role}",
         reply_markup=menu_kb()
     )
+    return True
+
+@router.message(Command("login"))
+async def handle_login(message: Message):
+    tg_id = message.from_user.id
+    parts = message.text.strip().split(maxsplit=2)
+    if len(parts) >= 3:
+        _, email, password = parts
+        await _do_login(message, tg_id, email, password)
+        return
+    if len(parts) == 2:
+        _, email = parts
+        sess = get_session(tg_id)
+        sess["data"]["login_email"] = email
+        sess["step"] = "login_password"
+        await message.answer(f"Введите пароль для {hbold(email)}:")
+        return
+    await message.answer("Использование: /login email пароль\nИли: /login email (пароль будет запрошен отдельно)")
+
+@router.message(lambda msg: not_command(msg) and user_sessions.get(msg.from_user.id, {}).get("step") == "login_password")
+async def handle_login_password(message: Message):
+    tg_id = message.from_user.id
+    sess = get_session(tg_id)
+    email = sess["data"].get("login_email", "")
+    password = message.text.strip()
+    if not password:
+        await message.answer("❌ Пароль не может быть пустым.")
+        return
+    await _do_login(message, tg_id, email, password)
 
 # ─── /logout ─────────────────────────────────────────────────────────
 
@@ -212,11 +242,11 @@ async def _cmd_report(tg_id: int, message: Message):
                 diff = budget - spent
                 sign = "+" if diff >= 0 else ""
                 lines.append(
-                    f"{icon} {item['name']}: {spent:.2f} / {budget:.2f} ({sign}{diff:.2f})"
+                    f"{icon} {_html.escape(item['name'])}: {spent:.2f} / {budget:.2f} ({sign}{diff:.2f})"
                 )
         await message.answer("\n".join(lines), reply_markup=menu_kb())
     except Exception as e:
-        await message.answer(f"❌ Ошибка: {e}")
+        await message.answer(f"❌ Ошибка: {_html.escape(str(e))}")
 
 @router.message(Command("report"))
 @auth_required
@@ -238,10 +268,10 @@ async def _cmd_budgets(tg_id: int, message: Message):
         lines = [hbold("💰 Мои бюджеты")]
         for b in budgets:
             info = cats.get(b.category_id, {"name": f"ID:{b.category_id}", "icon": "📁"})
-            lines.append(f"{info['icon']} {info['name']}: {b.target_amount:.2f} RUB")
+            lines.append(f"{info['icon']} {_html.escape(info['name'])}: {b.target_amount:.2f} RUB")
         await message.answer("\n".join(lines), reply_markup=menu_kb())
     except Exception as e:
-        await message.answer(f"❌ Ошибка: {e}")
+        await message.answer(f"❌ Ошибка: {_html.escape(str(e))}")
 
 @router.message(Command("budgets"))
 @auth_required
@@ -266,12 +296,12 @@ async def _cmd_incomes(tg_id: int, message: Message):
             next_d = src.next_date.strftime("%d.%m.%Y") if src.next_date else "—"
             active = "✅" if src.is_active else "⛔"
             lines.append(
-                f"{active} {info['icon']} {src.name} | {src.amount:.2f} RUB | "
+                f"{active} {info['icon']} {_html.escape(src.name)} | {src.amount:.2f} RUB | "
                 f"Кажд. {src.period} | След.: {next_d}"
             )
         await message.answer("\n".join(lines), reply_markup=menu_kb())
     except Exception as e:
-        await message.answer(f"❌ Ошибка: {e}")
+        await message.answer(f"❌ Ошибка: {_html.escape(str(e))}")
 
 @router.message(Command("incomes"))
 @auth_required
@@ -311,11 +341,11 @@ async def cb_tx_select_category(callback: CallbackQuery):
     sess["data"]["category_name"] = cat.name if cat else f"ID:{cat_id}"
     sess["data"]["type"] = cat.type if cat else "expense"
     sess["step"] = "enter_amount"
-    type_label = "💰 Доход" if sess["data"]["type"] == "income" else "💳 Расход"
-    await callback.message.edit_text(
-        f"Категория: {hbold(sess['data']['category_name'])} ({type_label})\n"
-        "Введите сумму числом:"
-    )
+        type_label = "💰 Доход" if sess["data"]["type"] == "income" else "💳 Расход"
+        await callback.message.edit_text(
+            f"Категория: {hbold(_html.escape(sess['data']['category_name']))} ({type_label})\n"
+            "Введите сумму числом:"
+        )
     await callback.answer()
 
 @router.message(lambda msg: not_command(msg) and user_sessions.get(msg.from_user.id, {}).get("step") == "enter_amount")
@@ -327,8 +357,8 @@ async def tx_enter_amount(message: Message):
     except ValueError:
         await message.answer("❌ Введите число, например 1500")
         return
-    if amount <= 0 or amount > 100000:
-        await message.answer("❌ Сумма должна быть от 0.01 до 100000")
+    if amount <= 0:
+        await message.answer("❌ Сумма должна быть положительным числом")
         return
     sess["data"]["amount"] = amount
     sess["step"] = "enter_desc"
@@ -380,18 +410,18 @@ async def tx_enter_date(message: Message):
         type_label = "💰 Доход" if sess["data"].get("type") == "income" else "💳 Расход"
         await message.answer(
             f"✅ Транзакция добавлена:\n"
-            f"Категория: {hbold(sess['data']['category_name'])}\n"
+            f"Категория: {hbold(_html.escape(sess['data']['category_name']))}\n"
             f"Сумма: {hbold('{:.2f}'.format(sess['data']['amount']))} RUB\n"
             f"Тип: {type_label}\n"
             f"Дата: {tx_date.strftime('%d.%m.%Y')}\n"
-            f"Описание: {sess['data']['description'] or '—'}",
+            f"Описание: {_html.escape(sess['data']['description'] or '—')}",
             reply_markup=menu_kb()
         )
     except ValueError as e:
-        await message.answer(f"❌ Ошибка: {e}")
+        await message.answer(f"❌ Ошибка: {_html.escape(str(e))}")
         sess["step"] = None
     except Exception as e:
-        await message.answer(f"❌ Ошибка: {e}")
+        await message.answer(f"❌ Ошибка: {_html.escape(str(e))}")
         sess["step"] = None
 
 # ─── /tx (pagination + month filter) ─────────────────────────────────
@@ -482,15 +512,15 @@ async def _render_tx_page(callback: CallbackQuery, month: int, year: int, page: 
             icon = "💰" if t.get("type") == "income" else "💳"
             cat_icon = t.get("category_icon") or "📁"
             lines.append(
-                f"#{t['id']} {icon} {cat_icon} {t['category_name']} | "
-                f"{t['amount']:.2f} RUB | {(t['date'][:10] if t['date'] else '')} | {t['description'] or '—'}"
+                f"#{t['id']} {icon} {cat_icon} {_html.escape(t['category_name'])} | "
+                f"{t['amount']:.2f} RUB | {(t['date'][:10] if t['date'] else '')} | {_html.escape(t['description'] or '—')}"
             )
 
         kb = _build_tx_keyboard(page, month, year, total_pages, txs)
         await callback.message.edit_text("\n".join(lines), reply_markup=kb)
         await callback.answer()
     except Exception as e:
-        await callback.message.edit_text(f"❌ Ошибка: {e}")
+        await callback.message.edit_text(f"❌ Ошибка: {_html.escape(str(e))}")
         await callback.answer()
 
 async def _cmd_tx(tg_id: int, message: Message, page: int = 1, month: int = None, year: int = None):
@@ -521,8 +551,8 @@ async def _cmd_tx(tg_id: int, message: Message, page: int = 1, month: int = None
             icon = "💰" if t.get("type") == "income" else "💳"
             cat_icon = t.get("category_icon") or "📁"
             lines.append(
-                f"#{t['id']} {icon} {cat_icon} {t['category_name']} | "
-                f"{t['amount']:.2f} RUB | {(t['date'][:10] if t['date'] else '')} | {t['description'] or '—'}"
+                f"#{t['id']} {icon} {cat_icon} {_html.escape(t['category_name'])} | "
+                f"{t['amount']:.2f} RUB | {(t['date'][:10] if t['date'] else '')} | {_html.escape(t['description'] or '—')}"
             )
 
         display_month = month or 0
@@ -530,7 +560,7 @@ async def _cmd_tx(tg_id: int, message: Message, page: int = 1, month: int = None
         kb = _build_tx_keyboard(page, display_month, display_year, total_pages, txs)
         await message.answer("\n".join(lines), reply_markup=kb)
     except Exception as e:
-        await message.answer(f"❌ Ошибка: {e}")
+        await message.answer(f"❌ Ошибка: {_html.escape(str(e))}")
 
 @router.message(Command("tx"))
 @auth_required
@@ -608,8 +638,8 @@ async def edit_enter_amount(message: Message):
         except ValueError:
             await message.answer("❌ Введите число")
             return
-        if amount <= 0 or amount > 100000:
-            await message.answer("❌ Сумма от 0.01 до 100000")
+        if amount <= 0:
+            await message.answer("❌ Сумма должна быть положительным числом")
             return
     sess["data"]["edit_amount"] = amount
     sess["step"] = f"edit_category:{tx_id}"
@@ -639,8 +669,8 @@ async def cb_edit_select_category(callback: CallbackQuery):
         cat_name = cat.name if cat else f"ID:{cat_id}"
     sess["data"]["edit_category_name"] = cat_name
     await callback.message.edit_text(
-        f"Категория: {cat_name}\n"
-        f"Текущее описание: {sess['data']['edit_original']['description'] or '—'}\n"
+        f"Категория: {_html.escape(cat_name)}\n"
+        f"Текущее описание: {_html.escape(sess['data']['edit_original']['description'] or '—')}\n"
         "Введите новое описание (или «-» для текущего):"
     )
     await callback.answer()
@@ -655,8 +685,8 @@ async def edit_enter_desc(message: Message):
     sess["data"]["edit_description"] = desc
     sess["step"] = f"edit_date:{tx_id}"
     await message.answer(
-        f"Описание: {desc or '—'}\n"
-        f"Текущая дата: {sess['data']['edit_original']['date'][:10] if sess['data']['edit_original']['date'] else '—'}\n"
+        f"Описание: {_html.escape(desc or '—')}\n"
+        f"Текущая дата: {_html.escape(sess['data']['edit_original']['date'][:10] if sess['data']['edit_original']['date'] else '—')}\n"
         "Введите новую дату ДД.ММ.ГГГГ (или «-» для текущей):"
     )
 
@@ -698,10 +728,10 @@ async def edit_enter_date(message: Message):
             reply_markup=menu_kb()
         )
     except ValueError as e:
-        await message.answer(f"❌ Ошибка: {e}")
+        await message.answer(f"❌ Ошибка: {_html.escape(str(e))}")
         sess["step"] = None
     except Exception as e:
-        await message.answer(f"❌ Ошибка: {e}")
+        await message.answer(f"❌ Ошибка: {_html.escape(str(e))}")
         sess["step"] = None
 
 # ─── Delete tx from inline button ────────────────────────────────────
@@ -737,7 +767,7 @@ async def cb_confirm_del_tx(callback: CallbackQuery):
             else:
                 await callback.message.edit_text("❌ Транзакция не найдена.")
     except Exception as e:
-        await callback.message.edit_text(f"❌ Ошибка: {e}")
+        await callback.message.edit_text(f"❌ Ошибка: {_html.escape(str(e))}")
     await callback.answer()
 
 @router.callback_query(lambda c: c.data and c.data.startswith("cancel_del_tx:"))
@@ -795,7 +825,7 @@ async def addcat_enter_name(message: Message):
     sess["data"]["cat_name"] = name
     sess["step"] = "addcat_icon"
     await message.answer(
-        f"Название: {name}\n"
+        f"Название: {_html.escape(name)}\n"
         "Введите emoji-иконку для категории (или «-» для стандартной):"
     )
 
@@ -812,8 +842,8 @@ async def addcat_enter_icon(message: Message):
         [InlineKeyboardButton(text="💰 Доход", callback_data="addcat_type:income")],
     ])
     await message.answer(
-        f"Название: {sess['data']['cat_name']}\n"
-        f"Иконка: {icon or '📁'}\n"
+        f"Название: {_html.escape(sess['data']['cat_name'])}\n"
+        f"Иконка: {_html.escape(icon or '📁')}\n"
         "Выберите тип категории:",
         reply_markup=kb
     )
@@ -827,7 +857,7 @@ async def cb_addcat_type(callback: CallbackQuery):
         with get_db() as s:
             existing = s.query(Category).filter(Category.name == sess["data"]["cat_name"]).first()
             if existing:
-                await callback.message.edit_text(f"❌ Категория «{sess['data']['cat_name']}» уже существует.")
+                await callback.message.edit_text(f"❌ Категория «{_html.escape(sess['data']['cat_name'])}» уже существует.")
                 sess["step"] = None
                 await callback.answer()
                 return
@@ -842,12 +872,12 @@ async def cb_addcat_type(callback: CallbackQuery):
         type_label = "💰 Доход" if cat_type == "income" else "💳 Расход"
         await callback.message.edit_text(
             f"✅ Категория создана:\n"
-            f"{cat.icon or '📁'} {cat.name} ({type_label})",
+            f"{cat.icon or '📁'} {_html.escape(cat.name)} ({type_label})",
             reply_markup=menu_kb()
         )
         sess["step"] = None
     except Exception as e:
-        await callback.message.edit_text(f"❌ Ошибка: {e}")
+        await callback.message.edit_text(f"❌ Ошибка: {_html.escape(str(e))}")
     await callback.answer()
 
 # ─── /delcat ─────────────────────────────────────────────────────────
@@ -880,7 +910,7 @@ async def cb_delcat_confirm(callback: CallbackQuery):
             return
         name = cat.name
     await callback.message.edit_text(
-        f"🗑 Удалить категорию «{name}»?\n"
+        f"🗑 Удалить категорию «{_html.escape(name)}»?\n"
         "Все связанные транзакции и бюджеты останутся.",
         reply_markup=confirm_kb(f"confirm_del_cat:{cat_id}", "cancel_del_cat")
     )
@@ -892,14 +922,30 @@ async def cb_confirm_del_cat(callback: CallbackQuery):
     try:
         with get_db() as s:
             cat = s.query(Category).filter(Category.id == cat_id).first()
-            if cat:
-                s.delete(cat)
-                s.commit()
-                await callback.message.edit_text(f"✅ Категория «{cat.name}» удалена.", reply_markup=menu_kb())
-            else:
+            if not cat:
                 await callback.message.edit_text("❌ Категория не найдена.")
+                await callback.answer()
+                return
+            from models.database import Transaction, Budget, IncomeSource
+            tx_count = s.query(Transaction).filter(Transaction.category_id == cat_id).count()
+            bg_count = s.query(Budget).filter(Budget.category_id == cat_id).count()
+            inc_count = s.query(IncomeSource).filter(IncomeSource.category_id == cat_id).count()
+            if tx_count > 0 or bg_count > 0 or inc_count > 0:
+                refs = []
+                if tx_count: refs.append(f"транзакции ({tx_count})")
+                if bg_count: refs.append(f"бюджеты ({bg_count})")
+                if inc_count: refs.append(f"доходы ({inc_count})")
+                await callback.message.edit_text(
+                    f"❌ Нельзя удалить категорию «{_html.escape(cat.name)}»: есть связанные записи: {', '.join(refs)}.",
+                    reply_markup=menu_kb()
+                )
+                await callback.answer()
+                return
+            s.delete(cat)
+            s.commit()
+            await callback.message.edit_text(f"✅ Категория «{_html.escape(cat.name)}» удалена.", reply_markup=menu_kb())
     except Exception as e:
-        await callback.message.edit_text(f"❌ Ошибка: {e}")
+        await callback.message.edit_text(f"❌ Ошибка: {_html.escape(str(e))}")
     await callback.answer()
 
 @router.callback_query(lambda c: c.data == "cancel_del_cat")
@@ -926,10 +972,10 @@ async def cmd_process(message: Message):
         if errors:
             lines.append(f"❌ Ошибки ({len(errors)}):")
             for e in errors:
-                lines.append(f"  • {e}")
+                lines.append(f"  • {_html.escape(e)}")
         await message.answer("\n".join(lines), reply_markup=menu_kb())
     except Exception as e:
-        await message.answer(f"❌ Ошибка: {e}")
+        await message.answer(f"❌ Ошибка: {_html.escape(str(e))}")
 
 # ─── Инлайн-кнопки меню ─────────────────────────────────────────────
 

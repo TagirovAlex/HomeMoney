@@ -27,13 +27,12 @@ async def main():
         print("ОШИБКА: HM_BOT_TOKEN не задан.")
         return
 
-    proxy_url = Config.get_proxy_url()
-    bot = create_aiogram_bot(token, proxy_url)
-    if proxy_url:
-        safe = proxy_url
-        if "@" in safe:
-            safe = "socks5://***:***@" + safe.split("@")[1]
-        print(f"Бот через прокси: {safe}")
+    proxy_params = Config.get_proxy_params()
+    bot = create_aiogram_bot(token, proxy_params)
+    if proxy_params:
+        safe_host = proxy_params["host"]
+        safe_port = proxy_params["port"]
+        print(f"Бот через прокси: socks5://***:***@{safe_host}:{safe_port}")
     else:
         print("Бот напрямую (без прокси)")
 

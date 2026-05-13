@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, make_response
 from data_access.repositories.user_repository import SQLAlchemyUserRepository
 from data_access.repositories.transaction_repository import SQLAlchemyTransactionRepository
 from data_access.repositories.budget_repository import SQLAlchemyBudgetRepository
@@ -75,6 +75,11 @@ def create_app():
 
     @app.route('/api/v1/register', methods=['POST'])
     def register():
+        from utils.rate_limiter import register_limiter
+        ip = request.remote_addr or "unknown"
+        if not register_limiter.is_allowed(f"register:{ip}"):
+            retry_after = 300
+            return jsonify({"status": "error", "message": f"Слишком много запросов. Попробуйте через {retry_after} секунд."}), 429
         data = request.get_json()
         if not data or not data.get('email') or not data.get('password'):
             return jsonify({"status": "error", "message": "email и password обязательны"}), 400
@@ -98,6 +103,11 @@ def create_app():
 
     @app.route('/api/v1/login', methods=['POST'])
     def login():
+        from utils.rate_limiter import login_limiter
+        ip = request.remote_addr or "unknown"
+        if not login_limiter.is_allowed(f"login:{ip}"):
+            retry_after = 60
+            return jsonify({"status": "error", "message": f"Слишком много запросов. Попробуйте через {retry_after} секунд."}), 429
         data = request.get_json()
         if not data or not data.get('email') or not data.get('password'):
             return jsonify({"status": "error", "message": "email и password обязательны"}), 400
@@ -109,7 +119,27 @@ def create_app():
         if user.status == "rejected":
             return jsonify({"status": "error", "message": "Аккаунт отклонён."}), 403
         token = AuthService.create_token(user.id, user.role)
-        return jsonify({"status": "success", "token": token, "user": {"id": user.id, "email": user.email, "role": user.role, "status": user.status}})
+        login_limiter.reset(f"login:{ip}")
+        response = make_response(jsonify({"status": "success", "token": token, "user": {"id": user.id, "email": user.email, "role": user.role, "status": user.status}}))
+        is_secure = not Config.DEBUG
+        response.set_cookie(
+            "auth_token", token,
+            httponly=True, secure=is_secure, samesite="Lax",
+            max_age=3600, path="/"
+        )
+        return response
+
+    @app.route('/api/v1/logout', methods=['POST'])
+    def logout():
+        from services.auth_service import _extract_token, AuthService, blacklist
+        token = _extract_token()
+        if token:
+            payload = AuthService.verify_token(token)
+            if payload:
+                blacklist.add(token, payload["exp"])
+        response = make_response(jsonify({"status": "success", "message": "Вы вышли из системы."}))
+        response.set_cookie("auth_token", "", httponly=True, max_age=0, path="/")
+        return response
 
     # --- Защищённые API ---
 
@@ -395,12 +425,21 @@ def create_app():
     @app.route('/api/v1/categories/<int:cat_id>', methods=['DELETE'])
     @require_auth
     def delete_category(cat_id):
-        from models.database import Category
+        from models.database import Category, Transaction, Budget, IncomeSource
         from utils.database_session import get_db
         with get_db() as session:
             cat = session.query(Category).filter(Category.id == cat_id).first()
             if not cat:
                 return jsonify({"status": "error", "message": "Категория не найдена"}), 404
+            tx_count = session.query(Transaction).filter(Transaction.category_id == cat_id).count()
+            bg_count = session.query(Budget).filter(Budget.category_id == cat_id).count()
+            inc_count = session.query(IncomeSource).filter(IncomeSource.category_id == cat_id).count()
+            if tx_count > 0 or bg_count > 0 or inc_count > 0:
+                refs = []
+                if tx_count: refs.append(f"транзакции ({tx_count})")
+                if bg_count: refs.append(f"бюджеты ({bg_count})")
+                if inc_count: refs.append(f"доходы ({inc_count})")
+                return jsonify({"status": "error", "message": f"Нельзя удалить категорию: есть связанные записи: {', '.join(refs)}"}), 409
             session.delete(cat)
             session.commit()
         return jsonify({"status": "success", "message": "Категория удалена"})

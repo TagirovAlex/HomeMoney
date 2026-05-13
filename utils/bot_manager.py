@@ -93,21 +93,19 @@ def stop_bot() -> str:
 
 async def _fetch(url: str, timeout: int = 15):
     import aiohttp
-    proxy_url = Config.get_proxy_url()
-    async with create_aiohttp_session(proxy_url) as sess:
+    proxy_params = Config.get_proxy_params()
+    async with create_aiohttp_session(proxy_params) as sess:
         async with sess.get(url, timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
             return resp.status, await resp.read()
 
 
 def check_proxy() -> dict:
-    proxy_url = Config.get_proxy_url()
-    if not proxy_url:
+    proxy_params = Config.get_proxy_params()
+    if not proxy_params:
         return {"ok": False, "error": "Хост прокси не указан"}
     try:
         status, _ = asyncio.run(_fetch("https://api.telegram.org", 15))
-        safe = proxy_url
-        if "@" in safe:
-            safe = "socks5://***:***@" + safe.split("@")[1]
+        safe = f"socks5://***:***@{proxy_params['host']}:{proxy_params['port']}"
         return {"ok": True, "proxy": safe, "status": status}
     except Exception as e:
         msg = str(e).encode("utf-8", errors="replace").decode("utf-8")

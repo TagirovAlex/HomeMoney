@@ -1,8 +1,7 @@
 from aiogram import Bot, Dispatcher
-from aiogram.client.default import DefaultBotProperties
-from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.types import Message
 from config import Config
+from utils.proxy_session import create_aiogram_bot
 
 
 def _parse_allowed_users(raw: str) -> set[int]:
@@ -23,12 +22,10 @@ async def main():
         return
 
     proxy_url = Config.get_proxy_url()
+    bot = create_aiogram_bot(token, proxy_url)
     if proxy_url:
-        session = AiohttpSession(proxy=proxy_url)
-        bot = Bot(token=token, session=session, default=DefaultBotProperties(parse_mode="HTML"))
         print(f"Бот через прокси: {proxy_url}")
     else:
-        bot = Bot(token=token, default=DefaultBotProperties(parse_mode="HTML"))
         print("Бот напрямую (без прокси)")
 
     allowed = _parse_allowed_users(Config.BOT_ALLOWED_USERS)

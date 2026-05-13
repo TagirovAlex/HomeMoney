@@ -10,7 +10,15 @@
     <h3>Новая транзакция</h3>
     <form onsubmit="addTransaction(event)">
         <label>Сумма <input type="number" step="0.01" id="tx-amount" required></label>
-        <label>Категория <select id="tx-category" required></select></label>
+        <label>Категория <select id="tx-category" required onchange="txCategoryChanged()"></select></label>
+        <div id="tx-budget-info" style="font-size:0.85rem;color:var(--color-secondary);margin:-4px 0 8px 0"></div>
+        <label>Дата <input type="date" id="tx-date"></label>
+        <label>Тип
+            <select id="tx-type">
+                <option value="expense">Расход</option>
+                <option value="income">Доход</option>
+            </select>
+        </label>
         <label>Описание <input type="text" id="tx-desc"></label>
         <button type="submit" class="btn">Сохранить</button>
         <button type="button" class="btn btn-secondary" onclick="hideAddForm()">Отмена</button>
@@ -37,7 +45,7 @@
 
 <table class="data-table">
     <thead>
-        <tr><th>ID</th><th>Категория</th><th>Сумма</th><th>Описание</th><th>Дата</th></tr>
+        <tr><th>ID</th><th>Категория</th><th>Сумма</th><th>Тип</th><th>Описание</th><th>Дата</th></tr>
     </thead>
     <tbody id="tx-table"></tbody>
 </table>
@@ -87,6 +95,8 @@
             d.data.map(function(c) { return '<option value="' + c.id + '">' + c.name + '</option>'; }).join('');
     }
 
+    var _budgetsData = [];
+
     async function loadCategories() {
         var r = await fetch('/api/v1/categories', { headers: authHeaders() });
         var d = await r.json();
@@ -94,6 +104,17 @@
         var sel = document.getElementById('tx-category');
         sel.innerHTML = '<option value="">-- Выберите --</option>' +
             d.data.map(function(c) { return '<option value="' + c.id + '">' + (c.icon || '') + ' ' + c.name + '</option>'; }).join('');
+        var br = await fetch('/api/v1/budgets', { headers: authHeaders() });
+        var bd = await br.json();
+        if (bd.status === 'success') _budgetsData = bd.data;
+    }
+
+    function txCategoryChanged() {
+        var catId = parseInt(document.getElementById('tx-category').value);
+        var el = document.getElementById('tx-budget-info');
+        if (!catId) { el.textContent = ''; return; }
+        var b = _budgetsData.find(function(x) { return x.category_id === catId; });
+        el.textContent = b ? 'Бюджет по этой категории: ' + b.target_amount.toFixed(2) + ' RUB' : 'Бюджет не задан';
     }
 
     async function loadTransactions() {
@@ -105,10 +126,11 @@
         var r = await fetch('/api/v1/user/' + userId + '/transactions?month=' + m + '&year=' + y + '&category_id=' + cat + '&page=' + curPage + '&limit=' + pageSize, { headers: authHeaders() });
         var d = await r.json();
         var tbody = document.getElementById('tx-table');
-        if (d.status !== 'success') { tbody.innerHTML = '<tr><td colspan="5">' + d.message + '</td></tr>'; return; }
-        if (!d.data.length) { tbody.innerHTML = '<tr><td colspan="5">Нет транзакций</td></tr>'; return; }
+        if (d.status !== 'success') { tbody.innerHTML = '<tr><td colspan="6">' + d.message + '</td></tr>'; return; }
+        if (!d.data.length) { tbody.innerHTML = '<tr><td colspan="6">Нет транзакций</td></tr>'; return; }
         tbody.innerHTML = d.data.map(function(tx) {
-            return '<tr><td>' + tx.id + '</td><td>' + (tx.category_icon || '📁') + ' ' + tx.category_name + '</td><td>' + tx.amount.toFixed(2) + '</td><td>' + tx.description + '</td><td>' + (tx.date ? tx.date.slice(0, 10) : '') + '</td></tr>';
+            var typeLabel = tx.type === 'income' ? '💰 Доход' : '💳 Расход';
+            return '<tr><td>' + tx.id + '</td><td>' + (tx.category_icon || '📁') + ' ' + tx.category_name + '</td><td>' + tx.amount.toFixed(2) + '</td><td>' + typeLabel + '</td><td>' + tx.description + '</td><td>' + (tx.date ? tx.date.slice(0, 10) : '') + '</td></tr>';
         }).join('');
         totalPages = Math.ceil(d.total / d.limit) || 1;
         document.getElementById('pagination').style.display = 'block';
@@ -137,20 +159,34 @@
         e.preventDefault();
         getUser();
         if (!userId) { alert('Ошибка авторизации'); return; }
+        var body = {
+            amount: parseFloat(document.getElementById('tx-amount').value),
+            category_id: parseInt(document.getElementById('tx-category').value),
+            description: document.getElementById('tx-desc').value,
+            type: document.getElementById('tx-type').value,
+        };
+        var dateVal = document.getElementById('tx-date').value;
+        if (dateVal) body.date = dateVal;
         var r = await fetch('/api/v1/user/' + userId + '/create_transaction', {
             method: 'POST',
             headers: authHeaders(),
-            body: JSON.stringify({
-                amount: parseFloat(document.getElementById('tx-amount').value),
-                category_id: parseInt(document.getElementById('tx-category').value),
-                description: document.getElementById('tx-desc').value
-            })
+            body: JSON.stringify(body)
         });
         var d = await r.json();
         alert(d.message || d.error);
         if (r.ok) { hideAddForm(); loadTransactions(); }
     }
 
-    window.onload = function() { initFilters(); loadCategories(); pageSize = parseInt(document.getElementById('page-size').value); loadTransactions(); };
+    function setDefaultDate() {
+        var d = new Date();
+        var ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        document.getElementById('tx-date').value = ds;
+    }
+
+    window.onload = function() {
+        initFilters(); loadCategories(); setDefaultDate();
+        pageSize = parseInt(document.getElementById('page-size').value);
+        loadTransactions();
+    };
 </script>
 {% endblock %}

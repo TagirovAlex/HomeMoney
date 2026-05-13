@@ -134,7 +134,14 @@ def create_app():
         if not data or 'amount' not in data or 'category_id' not in data:
             return jsonify({"status": "error", "message": "amount и category_id обязательны"}), 400
         try:
-            tx = financial_service.add_transaction(user_id, float(data['amount']), int(data['category_id']), data.get('description', ''))
+            tx = financial_service.add_transaction(
+                user_id,
+                float(data['amount']),
+                int(data['category_id']),
+                data.get('description', ''),
+                date=data.get('date'),
+                tx_type=data.get('type', 'expense'),
+            )
             return jsonify({"status": "success", "message": "Транзакция добавлена", "transaction_id": tx.id}), 201
         except ValueError as e:
             return jsonify({"status": "error", "message": str(e)}), 400

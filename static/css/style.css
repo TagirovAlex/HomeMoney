@@ -5,6 +5,8 @@
     --color-secondary: #6c757d;
     --color-card-bg: #f8f9fa;
     --color-border: #dee2e6;
+    --color-success: #28a745;
+    --color-danger: #dc3545;
 }
 [data-theme='dark'] {
     --color-bg: #1a1a1a;
@@ -13,6 +15,8 @@
     --color-secondary: #aaa;
     --color-card-bg: #2c2c2c;
     --color-border: #444;
+    --color-success: #2ea043;
+    --color-danger: #da3633;
 }
 
 *, *::before, *::after { box-sizing: border-box; }

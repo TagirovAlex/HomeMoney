@@ -3,6 +3,10 @@ import subprocess
 import os
 import signal
 import time
+import json
+
+from config import Config
+from utils.proxy_session import create_aiohttp_session
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BOT_SCRIPT = os.path.join(PROJECT_DIR, "telegram_bot.py")
@@ -40,7 +44,7 @@ def _process_exists(pid: int) -> bool:
 def start_bot() -> str:
     pid = _read_pid()
     if pid and _process_exists(pid):
-        return "Бот уже запущен (PID: {})".format(pid)
+        return f"Бот уже запущен (PID: {pid})"
 
     if not os.path.exists(BOT_SCRIPT):
         return "Ошибка: telegram_bot.py не найден"
@@ -57,7 +61,7 @@ def start_bot() -> str:
     time.sleep(1)
 
     if _process_exists(proc.pid):
-        return "Бот запущен (PID: {})".format(proc.pid)
+        return f"Бот запущен (PID: {proc.pid})"
     else:
         _remove_pid()
         return "Ошибка: бот не запустился. Проверьте HM_BOT_TOKEN в .env"
@@ -84,29 +88,18 @@ def stop_bot() -> str:
         return "Бот принудительно остановлен (SIGKILL)"
     except OSError as e:
         _remove_pid()
-        return "Ошибка при остановке: {}".format(e)
-
-
-def _make_session():
-    from config import Config
-    import aiohttp
-    proxy_url = Config.get_proxy_url()
-    if proxy_url:
-        from aiohttp_socks import ProxyConnector
-        connector = ProxyConnector.from_url(proxy_url)
-        return aiohttp.ClientSession(connector=connector)
-    return aiohttp.ClientSession()
+        return f"Ошибка при остановке: {e}"
 
 
 async def _fetch(url: str, timeout: int = 15):
     import aiohttp
-    async with _make_session() as sess:
+    proxy_url = Config.get_proxy_url()
+    async with create_aiohttp_session(proxy_url) as sess:
         async with sess.get(url, timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
             return resp.status, await resp.read()
 
 
 def check_proxy() -> dict:
-    from config import Config
     proxy_url = Config.get_proxy_url()
     if not proxy_url:
         return {"ok": False, "error": "Хост прокси не указан"}
@@ -119,12 +112,10 @@ def check_proxy() -> dict:
 
 
 def _check_telegram_api() -> dict:
-    from config import Config
     token = Config.BOT_TOKEN
     if not token:
         return {"reachable": False, "error": "HM_BOT_TOKEN не задан"}
     try:
-        import json
         url = f"https://api.telegram.org/bot{token}/getMe"
         status, body = asyncio.run(_fetch(url, 10))
         data = json.loads(body.decode())

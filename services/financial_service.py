@@ -14,17 +14,27 @@ class FinancialService:
         self.budget_repo = budget_repo
         self.income_repo = income_repo
 
-    def add_transaction(self, user_id: int, amount: float, category_id: int, description: str = "") -> Transaction:
-        """Реализовать бизнес-правила добавления транзакции и сохранить ее."""
+    def add_transaction(self, user_id: int, amount: float, category_id: int, description: str = "", date=None, tx_type: str = "expense") -> Transaction:
+        """Добавить транзакцию (расход или доход)."""
         if amount < 0 or amount > 100000:
             raise ValueError("Недопустимый диапазон суммы для транзакции.")
 
+        if tx_type not in ("expense", "income"):
+            raise ValueError("type должен быть 'expense' или 'income'")
+
+        from datetime import datetime
         transaction_data = {
             "user_id": user_id,
-            "amount": abs(amount), # Храним абсолютную сумму расхода
+            "amount": abs(amount),
             "category_id": category_id,
             "description": description,
+            "type": tx_type,
         }
+        if date:
+            if isinstance(date, str):
+                from datetime import datetime
+                date = datetime.strptime(date, "%Y-%m-%d")
+            transaction_data["date"] = date
         return self.transaction_repo.add_transaction(transaction_data)
 
     def get_monthly_summary(self, user_id: int, month: int, year: int) -> dict:
@@ -92,8 +102,8 @@ class FinancialService:
         return self.budget_repo.create_budget(budget_data)
 
     def get_detailed_report(self, user_id: int, role: str, month: int, year: int) -> dict:
-        """Генерирует детальный отчет по всем категориям и анализирует расходы."""
-        from datetime import date, timedelta
+        """Генерирует детальный отчет с остатками и оборотами."""
+        from datetime import date, timedelta, datetime
         start_date = date(year, month, 1)
         try:
             end_month = start_date + timedelta(days=32)
@@ -102,19 +112,35 @@ class FinancialService:
              raise ValueError(f"Некорректный месяц или год для отчета: {e}")
 
         transactions = self.transaction_repo.get_transactions_by_user(
-            user_id=user_id, 
-            start_date=start_date, 
+            user_id=user_id,
+            start_date=start_date,
             end_date=end_date
         )
 
-        report = {
-            "summary": {}, # Общая сводка (как в get_monthly_summary)
-            "category_spending": {} # Детализация расходов по категориям
-        }
-        
-        total_spent = sum(t.amount for t in transactions)
+        # Все транзакции до начала периода (для начального остатка)
+        prev_transactions = self.transaction_repo.get_transactions_by_user(
+            user_id=user_id,
+            end_date=start_date - timedelta(days=1)
+        )
 
-        # 1. Группировка и анализ расходов по категориям
+        report = {
+            "summary": {},
+            "category_spending": {}
+        }
+
+        # Обороты за период
+        total_income = sum(t.amount for t in transactions if getattr(t, 'type', 'expense') == 'income')
+        total_expense = sum(t.amount for t in transactions if getattr(t, 'type', 'expense') != 'income')
+
+        # Начальный остаток (все доходы до периода - все расходы до периода)
+        opening_balance = (
+            sum(t.amount for t in prev_transactions if getattr(t, 'type', 'expense') == 'income') -
+            sum(t.amount for t in prev_transactions if getattr(t, 'type', 'expense') != 'income')
+        )
+
+        closing_balance = opening_balance + total_income - total_expense
+
+        # Группировка расходов по категориям (только расходные транзакции)
         from models.database import Category
         from utils.database_session import get_db
         with get_db() as session:
@@ -126,13 +152,20 @@ class FinancialService:
             category_map[budget.category_id] = {"name": info["name"], "icon": info["icon"], "total_spent": 0.0, "budget": budget.target_amount}
 
         for t in transactions:
+            if getattr(t, 'type', 'expense') != 'expense':
+                continue
             if t.category_id not in category_map:
                 info = cat_info.get(t.category_id, {"name": f"ID:{t.category_id}", "icon": ""})
                 category_map[t.category_id] = {"name": info["name"], "icon": info["icon"], "total_spent": 0.0, "budget": 0.0}
             category_map[t.category_id]["total_spent"] += t.amount
 
-        # Финальная сборка отчета
-        report["summary"] = self.get_monthly_summary(user_id, month=month, year=year)
+        report["summary"] = {
+            "total_spent": round(total_expense, 2),
+            "total_budgeted": round(sum(b.target_amount for b in self.budget_repo.get_active_budgets_for_user(user_id=user_id, month=month, year=year)), 2),
+            "total_income": round(total_income, 2),
+            "opening_balance": round(opening_balance, 2),
+            "closing_balance": round(closing_balance, 2),
+        }
         report["detailed_spending"] = {
             cat_id: {"name": category_map[cat_id]["name"], "icon": category_map[cat_id]["icon"], "spent": round(category_map[cat_id]["total_spent"], 2), "budget": round(category_map[cat_id]["budget"], 2)}
             for cat_id in category_map
@@ -158,6 +191,7 @@ class FinancialService:
                 "category_icon": cat["icon"],
                 "description": t.description or "",
                 "date": t.date.isoformat() if t.date else "",
+                "type": getattr(t, 'type', 'expense'),
             })
         return result
 
@@ -185,6 +219,7 @@ class FinancialService:
                 "category_icon": cat["icon"],
                 "description": t.description or "",
                 "date": t.date.isoformat() if t.date else "",
+                "type": getattr(t, 'type', 'expense'),
             })
         return {"data": result, "total": total, "page": page, "limit": limit,
                 "month": m, "year": y}
@@ -206,6 +241,7 @@ class FinancialService:
                     "category_id": src.category_id,
                     "description": f"[Авто] {src.name}: {src.description or src.name}",
                     "date": txn_date,
+                    "type": "income",
                 })
                 # Рассчитываем следующую дату
                 next_d = txn_date

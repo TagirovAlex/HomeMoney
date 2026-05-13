@@ -66,4 +66,9 @@ def _run_migrations():
             ]:
                 if col_def[0] not in cols:
                     conn.execute(text(col_def[1]))
+        # transactions.type
+        if 'transactions' in inspector.get_table_names():
+            cols = [c['name'] for c in inspector.get_columns('transactions')]
+            if 'type' not in cols:
+                conn.execute(text("ALTER TABLE transactions ADD COLUMN type VARCHAR DEFAULT 'expense'"))
         conn.commit()

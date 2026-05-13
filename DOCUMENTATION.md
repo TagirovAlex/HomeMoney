@@ -27,13 +27,14 @@ sudo bash install.sh
 2. Генерацию `.env` со случайным `HM_SECRET_KEY`
 3. Создание администратора (email/пароль запрашиваются)
 4. Выбор режима: разработка или продакшен (nginx + systemd)
+5. В prod-режиме: настройка reverse-proxy, опционально Let's Encrypt SSL
 
 ### Ручная
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-pip install flask sqlalchemy aiogram bcrypt pyjwt python-dotenv aiohttp-socks gunicorn
+pip install -r requirements.txt
 
 cp .env.example .env
 # Отредактируйте секреты
@@ -123,9 +124,6 @@ server {
     ssl_certificate     /path/to/your/cert.pem;
     ssl_certificate_key /path/to/your/key.pem;
 
-    # Опционально: ssl_client_certificate для цепочки
-    # ssl_trusted_certificate /path/to/ca-cert.pem;
-
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
 
@@ -168,15 +166,60 @@ certbot --nginx -d homemoney.example.com
 
 ## Telegram Bot
 
+### Запуск
+
 ```bash
-export HM_BOT_TOKEN="your:bot:token"
+# Убедитесь, что HM_BOT_TOKEN и (опционально) HM_BOT_PROXY_HOST заданы в .env
 python telegram_bot.py
 ```
 
-Бот поддерживает:
-- **SOCKS5/SOCKS4/HTTP прокси** — задаётся в `HM_BOT_PROXY_URL`
+### Возможности
+
+- **SOCKS5 прокси** — настройка через `.env`: `HM_BOT_PROXY_HOST`, `HM_BOT_PROXY_PORT`, `HM_BOT_PROXY_USERNAME`, `HM_BOT_PROXY_PASSWORD`
 - **Whitelist** — `HM_BOT_ALLOWED_USERS` (Telegram ID через запятую, пусто = все)
-- **Пошаговый ввод** — выбор категории → сумма → описание
+- **Автологин** — если `telegram_id` пользователя сохранён в БД, бот не требует `/login`
+- **Пошаговый ввод транзакций** — inline-кнопка → выбор категории → сумма → описание
+
+### Управление из админ-панели
+
+- `/admin` → карточка **Telegram Bot**: запуск/остановка, статус онлайн (`getMe`), проверка прокси
+- Настройки бота и прокси сохраняются в `.env` через админ-панель
+
+---
+
+## SOCKS5 Proxy Session Helper
+
+Модуль `utils/proxy_session.py` предоставляет переиспользуемые функции для создания HTTP-сессий с поддержкой SOCKS5 прокси. Может использоваться в других проектах независимо от HomeMoney.
+
+### Функции
+
+| Функция | Назначение |
+|---|---|
+| `create_aiogram_session(proxy_url)` | Создаёт `AiohttpSession` для aiogram |
+| `create_aiogram_bot(token, proxy_url, parse_mode)` | Создаёт `Bot` с прокси и HTML-форматированием |
+| `create_aiohttp_session(proxy_url)` | Создаёт `aiohttp.ClientSession` с прокси |
+
+### Пример использования в другом проекте
+
+```python
+from proxy_session import create_aiogram_bot, create_aiohttp_session
+
+# Telegram-бот с SOCKS5
+bot = create_aiogram_bot("TOKEN", "socks5://user:pass@127.0.0.1:1080")
+await bot.send_message(chat_id, "<b>Hello</b>")
+
+# HTTP-запрос через SOCKS5
+async with create_aiohttp_session("socks5://127.0.0.1:1080") as sess:
+    async with sess.get("https://api.telegram.org") as resp:
+        print(resp.status)
+```
+
+### Зависимости для копирования в другой проект
+
+```
+aiogram>=3.0
+aiohttp-socks>=0.8
+```
 
 ---
 
@@ -200,7 +243,7 @@ curl -H "Authorization: Bearer <token>" /api/v1/backup?type=json
 python -m pytest tests/ -v
 ```
 
-Покрытие: 31 тест (unit + integration auth, financial service, API endpoints).
+Покрытие: 44 теста (unit + integration: auth, financial service, CRUD, фильтры, пагинация, RBAC).
 
 ---
 

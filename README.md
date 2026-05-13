@@ -3,22 +3,23 @@
 [![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)](https://python.org)
 [![Flask](https://img.shields.io/badge/Flask-3.x-black?logo=flask)](https://flask.palletsprojects.com/)
 [![aiogram](https://img.shields.io/badge/aiogram-3.x-blue?logo=telegram)](https://docs.aiogram.dev/)
-[![Tests](https://img.shields.io/badge/tests-31%20passed-green)]()
+[![Tests](https://img.shields.io/badge/tests-44%20passed-green)]()
 
-Веб-приложение для учёта личных финансов с веб-интерфейсом и Telegram-ботом. Реализована полноценная JWT-авторизация, ролевая модель (Admin/User), управление бюджетами, отчёты и резервное копирование.
+Веб-приложение для учёта личных финансов с веб-интерфейсом и Telegram-ботом. Реализована полноценная JWT-авторизация, ролевая модель (Admin/User), управление бюджетами, отчёты, регулярные доходы и резервное копирование.
 
 ---
 
 ## Возможности
 
-- **Управление транзакциями** — доходы/расходы с привязкой к категориям
+- **Управление транзакциями** — доходы/расходы с привязкой к категориям, фильтрация по месяцу/году/категории, пагинация
 - **Бюджетирование** — месячные лимиты по категориям с контролем превышения
-- **Отчёты** — детализация расходов в разрезе категорий за выбранный период
-- **Источники дохода** — учёт регулярных и разовых поступлений
+- **Отчёты** — детализация расходов в разрезе категорий с бюджетом за выбранный период
+- **Источники дохода** — регулярные и разовые поступления с автогенерацией транзакций
 - **JWT-авторизация** — bcrypt + токены, роли Admin / User
 - **Подтверждение регистрации** — администратор утверждает новых пользователей
-- **Telegram-бот** — ввод транзакций через диалог (aiogram 3.x, SOCKS5/SOCKS4/HTTP proxy, whitelist)
-- **Backup** — полная копия SQLite и JSON-экспорт через админ-панель
+- **Telegram-бот** — команды: `/start`, `/login`, `/addtx`, `/tx`, `/report`, `/budgets`, `/incomes`; SOCKS5 прокси; whitelist; автологин по telegram_id
+- **Админ-панель** — управление пользователями, категориями, настройками бота, просмотр статуса бота, проверка прокси, бэкапы
+- **Backup** — полная копия SQLite и JSON-экспорт
 - **Тёмная/светлая тема** — на всех страницах
 - **Mobile-first** — адаптивный дизайн
 
@@ -48,7 +49,7 @@ sudo bash install.sh
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-pip install flask sqlalchemy aiogram bcrypt pyjwt python-dotenv aiohttp-socks gunicorn
+pip install -r requirements.txt
 
 cp .env.example .env
 # Отредактируйте HM_SECRET_KEY, HM_BOT_TOKEN и пр.
@@ -73,84 +74,11 @@ python app.py
 | `HM_DATABASE_URL` | Путь к SQLite | `sqlite:///./home_money.db` |
 | `HM_DEBUG` | Режим отладки Flask | `true` |
 | `HM_BOT_TOKEN` | Токен Telegram-бота | `""` (бот отключён) |
-| `HM_BOT_PROXY_URL` | SOCKS/HTTP прокси для бота | `""` |
+| `HM_BOT_PROXY_HOST` | Хост SOCKS5 прокси | `""` |
+| `HM_BOT_PROXY_PORT` | Порт SOCKS5 прокси | `""` |
+| `HM_BOT_PROXY_USERNAME` | Логин SOCKS5 прокси | `""` |
+| `HM_BOT_PROXY_PASSWORD` | Пароль SOCKS5 прокси | `""` |
 | `HM_BOT_ALLOWED_USERS` | Whitelist Telegram ID (через запятую) | `""` (все) |
-
----
-
-## Production: nginx + systemd
-
-### Автоматическая установка
-
-При запуске `install.sh` выберите режим **2) Продакшен**. Скрипт:
-- Установит `nginx`
-- Настроит `gunicorn` с systemd-сервисом (`homemoney.service`)
-- Создаст nginx reverse-proxy (`127.0.0.1:8000 → 80`)
-- По запросу настроит SSL через Let's Encrypt
-
-### Ручная настройка
-
-**systemd-сервис** (`/etc/systemd/system/homemoney.service`):
-```ini
-[Unit]
-Description=HomeMoney Financial API
-After=network.target
-
-[Service]
-Type=simple
-User=www-data
-Group=www-data
-WorkingDirectory=/opt/HomeMoney
-Environment=PATH=/opt/HomeMoney/venv/bin
-ExecStart=/opt/HomeMoney/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 app:create_app()
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-systemctl daemon-reload && systemctl enable --now homemoney
-```
-
-### Свой SSL-сертификат
-
-Если у вас есть собственный SSL-сертификат, отредактируйте `/etc/nginx/sites-available/homemoney`:
-
-```nginx
-server {
-    listen 443 ssl http2;
-    server_name homemoney.example.com;
-
-    ssl_certificate     /path/to/your/cert.pem;
-    ssl_certificate_key /path/to/your/key.pem;
-
-    location /static/ {
-        alias /opt/HomeMoney/static/;
-        expires 30d;
-        add_header Cache-Control "public, immutable";
-    }
-
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-
-server {
-    listen 80;
-    server_name homemoney.example.com;
-    return 301 https://$host$request_uri;
-}
-```
-
-```bash
-nginx -t && systemctl reload nginx
-```
 
 ---
 
@@ -161,21 +89,36 @@ nginx -t && systemctl reload nginx
 python telegram_bot.py
 ```
 
-Бот поддерживает:
-- SOCKS5/SOCKS4/HTTP прокси (`HM_BOT_PROXY_URL`)
-- Whitelist пользователей (`HM_BOT_ALLOWED_USERS`)
-- Пошаговый ввод транзакций (выбор категории → сумма → описание)
+### Команды
 
----
+| Команда | Описание |
+|---|---|
+| `/start` | Главное меню с inline-кнопками |
+| `/login email пароль` | Вход в аккаунт |
+| `/logout` | Выход |
+| `/addtx` | Добавить транзакцию (пошаговый ввод) |
+| `/tx` | Последние 10 транзакций |
+| `/report [месяц год]` | Отчёт за месяц |
+| `/budgets` | Мои бюджеты |
+| `/incomes` | Мои доходы |
+| `/help` | Справка |
 
-## Тестирование
+### SOCKS5 прокси
 
-```bash
-pip install pytest
-python -m pytest tests/ -v
+Если Telegram заблокирован в вашем регионе, задайте SOCKS5 прокси в `.env`:
+
+```
+HM_BOT_PROXY_HOST=127.0.0.1
+HM_BOT_PROXY_PORT=1080
+HM_BOT_PROXY_USERNAME=user     # опционально
+HM_BOT_PROXY_PASSWORD=pass     # опционально
 ```
 
-Сейчас **31 тест**: unit-тесты AuthService и FinancialService + интеграционные тесты всех API-эндпоинтов.
+Настройки прокси можно менять через админ-панель без редактирования `.env` вручную.
+
+### Автологин
+
+Если в админ-панели привязан `telegram_id` к пользователю, бот автоматически выполнит вход без `/login`.
 
 ---
 
@@ -188,50 +131,66 @@ python -m pytest tests/ -v
 | `POST` | `/api/v1/login` | Публичный | Вход |
 | `GET` | `/api/v1/me` | Авторизован | Текущий пользователь |
 | `GET` | `/api/v1/transactions` | Авторизован | Сводка за месяц |
-| `GET` | `/api/v1/user/<id>/transactions` | Авторизован | Список транзакций |
+| `GET` | `/api/v1/user/<id>/transactions` | Авторизован | Список транзакций (фильтр, пагинация) |
 | `POST` | `/api/v1/user/<id>/create_transaction` | Авторизован | Создать транзакцию |
 | `GET` | `/api/v1/budgets` | Авторизован | Список бюджетов |
 | `POST` | `/api/v1/budgets` | Авторизован | Создать бюджет |
+| `PUT` | `/api/v1/budgets/<id>` | Авторизован | Редактировать бюджет |
+| `DELETE` | `/api/v1/budgets/<id>` | Авторизован | Удалить бюджет |
 | `GET` | `/api/v1/reports` | Авторизован | Отчёт за месяц |
 | `GET` | `/api/v1/categories` | Авторизован | Список категорий |
 | `POST` | `/api/v1/categories` | Авторизован | Создать категорию |
+| `PUT` | `/api/v1/categories/<id>` | Авторизован | Редактировать категорию |
+| `DELETE` | `/api/v1/categories/<id>` | Авторизован | Удалить категорию |
 | `GET` | `/api/v1/incomes` | Авторизован | Список доходов |
 | `POST` | `/api/v1/incomes` | Авторизован | Создать доход |
+| `PUT` | `/api/v1/incomes/<id>` | Авторизован | Редактировать доход |
 | `DELETE` | `/api/v1/incomes/<id>` | Авторизован | Удалить доход |
+| `POST` | `/api/v1/incomes/process` | Авторизован | Создать транзакции по регулярным доходам |
 | `GET` | `/api/v1/users` | Admin | Все пользователи |
 | `GET` | `/api/v1/users/pending` | Admin | Ожидающие подтверждения |
 | `POST` | `/api/v1/users/<id>/approve` | Admin | Подтвердить пользователя |
 | `POST` | `/api/v1/users/<id>/reject` | Admin | Отклонить пользователя |
+| `PUT` | `/api/v1/users/<id>/telegram` | Admin | Привязать Telegram ID |
 | `GET` | `/api/v1/backup` | Admin | Создать бэкап |
+| `GET` | `/api/v1/admin/settings` | Admin | Настройки `.env` |
+| `PUT` | `/api/v1/admin/settings` | Admin | Сохранить настройки `.env` |
+| `POST` | `/api/v1/admin/bot/start` | Admin | Запустить бота |
+| `POST` | `/api/v1/admin/bot/stop` | Admin | Остановить бота |
+| `GET` | `/api/v1/admin/bot/status` | Admin | Статус бота |
+| `POST` | `/api/v1/admin/bot/check-proxy` | Admin | Проверить прокси |
 
 ---
 
-## Структура проекта
+## SOCKS5 Proxy Session Helper
 
+Модуль `utils/proxy_session.py` можно скопировать в любой Python-проект для работы с Telegram API через SOCKS5 прокси.
+
+```python
+from proxy_session import create_aiogram_bot, create_aiohttp_session
+
+# Telegram-бот с SOCKS5
+bot = create_aiogram_bot("TOKEN", "socks5://user:pass@127.0.0.1:1080")
+await bot.send_message(chat_id, "<b>Hello</b>")
+
+# HTTP-запрос через SOCKS5
+async with create_aiohttp_session("socks5://127.0.0.1:1080") as sess:
+    async with sess.get("https://api.telegram.org") as resp:
+        print(resp.status)
 ```
-HomeMoney/
-├── app.py                          # Flask entrypoint + routes
-├── config.py                       # .env config
-├── services/
-│   ├── auth_service.py             # JWT + bcrypt
-│   └── financial_service.py        # Business logic
-├── data_access/repositories/
-│   ├── user_repository.py
-│   ├── transaction_repository.py
-│   ├── budget_repository.py
-│   └── income_repository.py
-├── models/database.py              # SQLAlchemy models
-├── utils/
-│   ├── database_session.py         # Lazy SQLite engine
-│   └── backup_service.py           # Full + JSON backup
-├── telegram_bot.py                 # Aiogram 3.x bot
-├── templates/                      # 8 HTML pages
-├── static/css/style.css            # Dark/light theme
-├── tests/                          # 31 tests
-├── seed_demo.py                    # Demo data seeder
-├── install.sh                      # Debian installer
-└── uninstall.sh                    # Debian uninstaller
+
+Зависимости: `aiogram>=3.0`, `aiohttp-socks>=0.8`.
+
+---
+
+## Тестирование
+
+```bash
+pip install pytest
+python -m pytest tests/ -v
 ```
+
+**44 теста**: unit-тесты AuthService и FinancialService + интеграционные тесты всех API-эндпоинтов, страниц, CRUD, фильтров, пагинации, RBAC.
 
 ---
 
@@ -244,6 +203,52 @@ HomeMoney/
 | `petr@demo.com` | `123` | User | pending |
 
 Запустите `python seed_demo.py` для наполнения демо-данными.
+
+---
+
+## Структура проекта
+
+```
+HomeMoney/
+├── app.py                          # Flask entrypoint + 25+ API роутов + 9 страниц
+├── config.py                       # .env config + get_proxy_url()
+├── services/
+│   ├── auth_service.py             # JWT + bcrypt + require_auth
+│   └── financial_service.py        # Бизнес-логика
+├── data_access/repositories/
+│   ├── user_repository.py
+│   ├── transaction_repository.py
+│   ├── budget_repository.py
+│   └── income_repository.py
+├── models/database.py              # SQLAlchemy models
+├── utils/
+│   ├── database_session.py         # Lazy SQLite engine + migrations
+│   ├── backup_service.py           # Full + JSON backup
+│   ├── bot_manager.py              # PID subprocess manager
+│   ├── env_manager.py              # Read/write .env
+│   └── proxy_session.py            # 🔄 SOCKS5 proxy helper (переиспользуемый)
+├── handlers/
+│   └── command_handlers.py         # All bot command handlers
+├── telegram_bot.py                 # Aiogram 3.x bot entrypoint
+├── templates/                      # 9 HTML pages
+│   ├── base.html, login.html, index.html
+│   ├── transactions.html, incomes.html
+│   ├── budgets.html, reports.html
+│   ├── categories.html, admin.html, error.html
+├── static/css/style.css            # Dark/light theme, responsive
+├── tests/                          # 44 tests
+├── seed_demo.py                    # Demo data seeder
+├── seed_default.py                 # Default categories seeder
+├── install.sh                      # Debian installer
+├── uninstall.sh                    # Debian uninstaller
+├── requirements.txt
+├── .env.example
+├── AGENTS.md
+├── DOCUMENTATION.md
+├── README.md
+├── STRUCTURE.md
+└── TODO.md
+```
 
 ---
 

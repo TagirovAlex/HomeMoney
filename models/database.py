@@ -28,6 +28,7 @@ class Transaction(Base):
     amount = Column(Float, nullable=False)
     description = Column(String)
     date = Column(DateTime, default=datetime.utcnow)
+    type = Column(String, default='expense')  # 'expense' or 'income'
 
 class Budget(Base):
     __tablename__ = 'budgets'

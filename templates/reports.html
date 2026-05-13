@@ -15,8 +15,9 @@
 </div>
 
 <div class="summary-cards" id="report-summary"></div>
+<div class="summary-cards" id="report-balance" style="margin-top:12px"></div>
 <div class="section">
-    <h3>Детализация по категориям</h3>
+    <h3>Детализация расходов по категориям</h3>
     <table class="data-table">
         <thead><tr><th>Категория</th><th>Потрачено</th><th>Бюджет</th><th>Остаток</th></tr></thead>
         <tbody id="report-table"></tbody>
@@ -31,15 +32,19 @@
         var r = await fetch('/api/v1/reports?month=' + m + '&year=' + y, { headers: authHeaders() });
         var d = await r.json();
         if (d.status !== 'success') { alert(d.message); return; }
-        var data = d.data;
+        var s = d.data.summary;
         document.getElementById('report-summary').innerHTML =
-            '<div class="card"><span class="card-label">Всего</span><span class="card-value">' + data.summary.total_spent.toFixed(2) + ' RUB</span></div>' +
-            '<div class="card"><span class="card-label">Бюджет</span><span class="card-value">' + data.summary.total_budgeted.toFixed(2) + ' RUB</span></div>';
+            '<div class="card"><span class="card-label">💰 Доходы</span><span class="card-value" style="color:var(--color-success)">+' + (s.total_income || 0).toFixed(2) + ' RUB</span></div>' +
+            '<div class="card"><span class="card-label">💳 Расходы</span><span class="card-value" style="color:var(--color-danger)">-' + s.total_spent.toFixed(2) + ' RUB</span></div>' +
+            '<div class="card"><span class="card-label">📊 Бюджет</span><span class="card-value">' + s.total_budgeted.toFixed(2) + ' RUB</span></div>';
+        document.getElementById('report-balance').innerHTML =
+            '<div class="card"><span class="card-label">Остаток на начало</span><span class="card-value">' + (s.opening_balance || 0).toFixed(2) + ' RUB</span></div>' +
+            '<div class="card"><span class="card-label">Остаток на конец</span><span class="card-value">' + (s.closing_balance || 0).toFixed(2) + ' RUB</span></div>';
         var tbody = document.getElementById('report-table');
-        var keys = Object.keys(data.detailed_spending || {});
-        if (keys.length === 0) { tbody.innerHTML = '<tr><td colspan="4">Нет данных за выбранный период.</td></tr>'; return; }
+        var keys = Object.keys(d.data.detailed_spending || {});
+        if (keys.length === 0) { tbody.innerHTML = '<tr><td colspan="4">Нет расходов за выбранный период.</td></tr>'; return; }
         tbody.innerHTML = keys.map(function(k) {
-            var item = data.detailed_spending[k];
+            var item = d.data.detailed_spending[k];
             var rem = (item.budget - item.spent).toFixed(2);
             var icon = item.icon || '📁';
             return '<tr><td>' + icon + ' ' + item.name + '</td><td>' + item.spent.toFixed(2) + '</td><td>' + item.budget.toFixed(2) + '</td><td>' + rem + '</td></tr>';

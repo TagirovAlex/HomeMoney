@@ -7,6 +7,15 @@
 
 <div class="admin-grid">
     <div class="card admin-card" style="grid-column: 1 / -1;">
+        <h3>Telegram Bot</h3>
+        <p>Статус процесса: <strong id="bot-status-text">проверка...</strong></p>
+        <p>API: <strong id="bot-health-text">проверка...</strong></p>
+        <p><button class="btn" onclick="botStart()">▶️ Запустить</button>
+        <button class="btn btn-secondary" onclick="botStop()">⏹ Остановить</button></p>
+        <pre id="bot-result" class="backup-output"></pre>
+    </div>
+	
+    <div class="card admin-card" style="grid-column: 1 / -1;">
         <h3>Заявки на регистрацию</h3>
         <table class="data-table">
             <thead><tr><th>ID</th><th>Email</th><th>Telegram ID</th><th></th></tr></thead>
@@ -53,14 +62,7 @@
         <pre id="backup-result" class="backup-output"></pre>
     </div>
 
-    <div class="card admin-card" style="grid-column: 1 / -1;">
-        <h3>Telegram Bot</h3>
-        <p>Статус процесса: <strong id="bot-status-text">проверка...</strong></p>
-        <p>API: <strong id="bot-health-text">проверка...</strong></p>
-        <p><button class="btn" onclick="botStart()">▶️ Запустить</button>
-        <button class="btn btn-secondary" onclick="botStop()">⏹ Остановить</button></p>
-        <pre id="bot-result" class="backup-output"></pre>
-    </div>
+
 
     <div class="card admin-card" style="grid-column: 1 / -1;">
         <h3>Настройки Telegram бота</h3>

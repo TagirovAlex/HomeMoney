@@ -40,7 +40,13 @@
 
 <table class="data-table">
     <thead>
-        <tr><th>ID</th><th>Категория</th><th>Сумма</th><th>Тип</th><th>Описание</th><th>Дата</th><th></th></tr>
+        <tr><th onclick="setSort('id')" style="cursor:pointer">ID<span id="s-id"></span></th>
+            <th onclick="setSort('category_name')" style="cursor:pointer">Категория<span id="s-category_name"></span></th>
+            <th onclick="setSort('amount')" style="cursor:pointer">Сумма<span id="s-amount"></span></th>
+            <th onclick="setSort('type')" style="cursor:pointer">Тип<span id="s-type"></span></th>
+            <th onclick="setSort('description')" style="cursor:pointer">Описание<span id="s-description"></span></th>
+            <th onclick="setSort('date')" style="cursor:pointer">Дата<span id="s-date"></span></th>
+            <th></th></tr>
     </thead>
     <tbody id="tx-table"></tbody>
 </table>
@@ -62,6 +68,30 @@
 
 <script>
     var userId = null, curPage = 1, totalPages = 1, pageSize = 20;
+    var sortBy = 'id', sortDir = 'desc';
+
+    function setSort(col) {
+        if (sortBy === col) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; }
+        else { sortBy = col; sortDir = 'desc'; }
+        loadTransactions();
+    }
+
+    function sortData(data) {
+        return data.slice().sort(function(a, b) {
+            var va = a[sortBy], vb = b[sortBy];
+            if (typeof va === 'string') { va = va.toLowerCase(); vb = (vb || '').toLowerCase(); }
+            if (va == null) va = '';
+            if (vb == null) vb = '';
+            if (va < vb) return sortDir === 'asc' ? -1 : 1;
+            if (va > vb) return sortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+
+    function sortIcon(col) {
+        if (sortBy !== col) return '';
+        return sortDir === 'asc' ? ' ▲' : ' ▼';
+    }
 
     function getUser() {
         try { var u = JSON.parse(localStorage.getItem('user')); userId = u.id; } catch(e) { userId = null; }
@@ -123,11 +153,15 @@
         var tbody = document.getElementById('tx-table');
         if (d.status !== 'success') { tbody.innerHTML = '<tr><td colspan="7">' + d.message + '</td></tr>'; return; }
         if (!d.data.length) { tbody.innerHTML = '<tr><td colspan="7">Нет транзакций</td></tr>'; return; }
-        tbody.innerHTML = d.data.map(function(tx) {
+        var sorted = sortData(d.data);
+        tbody.innerHTML = sorted.map(function(tx) {
             var typeLabel = tx.type === 'income' ? '💰 Доход' : '💳 Расход';
             return '<tr><td>' + tx.id + '</td><td>' + (tx.category_icon || '📁') + ' ' + tx.category_name + '</td><td>' + tx.amount.toFixed(2) + '</td><td>' + typeLabel + '</td><td>' + tx.description + '</td><td>' + (tx.date ? tx.date.slice(0, 10) : '') + '</td>' +
                 '<td><button class="btn btn-secondary" style="margin-right:4px" onclick="editTransaction(' + tx.id + ')">✏️</button></td></tr>';
         }).join('');
+        ['id','category_name','amount','type','description','date'].forEach(function(c) {
+            document.getElementById('s-' + c).textContent = sortIcon(c);
+        });
         totalPages = Math.ceil(d.total / d.limit) || 1;
         document.getElementById('pagination').style.display = 'block';
         document.getElementById('page-info').textContent = curPage + ' / ' + totalPages;

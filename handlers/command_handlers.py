@@ -158,7 +158,7 @@ async def handle_help(message: Message):
         "/logout — Выйти\n"
         "/addtx — Добавить транзакцию\n"
         "/tx [месяц год] — Транзакции с фильтром и пагинацией\n"
-        "/edittx <id> — Редактировать транзакцию\n"
+        "/edittx [id] — Редактировать транзакцию\n"
         "/report [месяц год] — Отчёт\n"
         "/budgets — Мои бюджеты\n"
         "/incomes — Мои доходы\n"
@@ -458,7 +458,7 @@ async def cmd_edittx(message: Message):
     tg_id = message.from_user.id
     parts = message.text.strip().split()
     if len(parts) < 2:
-        await message.answer("Использование: /edittx <id_транзакции>")
+        await message.answer("Использование: /edittx [id_транзакции]")
         return
     try:
         tx_id = int(parts[1])

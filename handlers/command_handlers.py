@@ -63,7 +63,7 @@ def auth_required(func):
                 "❌ Требуется авторизация.\nИспользуйте /login email пароль"
             )
             return
-        return await func(message, *args, **kwargs)
+        return await func(message)
     return wrapper
 
 def auth_required_cb(func):
@@ -76,7 +76,7 @@ def auth_required_cb(func):
             )
             await callback.answer()
             return
-        return await func(callback, *args, **kwargs)
+        return await func(callback)
     return wrapper
 
 async def _ensure_auth(callback: CallbackQuery) -> int | None:

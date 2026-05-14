@@ -53,3 +53,13 @@ class IncomeSource(Base):
     day_of_period = Column(Integer, default=1)
     next_date = Column(DateTime, nullable=True)
     is_active = Column(Boolean, default=True)
+
+class Saving(Base):
+    __tablename__ = 'savings'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, nullable=False)
+    name = Column(String, nullable=False)
+    amount = Column(Float, default=0.0)
+    type = Column(String, default='deposit')  # deposit, stocks, bonds, cash, other
+    description = Column(String, default='')
+    created_at = Column(DateTime, default=datetime.utcnow)

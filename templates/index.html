@@ -22,6 +22,10 @@
         <span class="card-label">Транзакций</span>
         <span class="card-value" id="transactions-count">--</span>
     </div>
+    <div class="card">
+        <span class="card-label">🏦 Накопления</span>
+        <span class="card-value" id="total-savings">--</span>
+    </div>
 </div>
 <div class="section">
     <h3>Последние транзакции</h3>
@@ -42,6 +46,7 @@
                 document.getElementById('total-spent').textContent = '-' + d.data.total_spent.toFixed(2) + ' RUB';
                 document.getElementById('total-budgeted').textContent = d.data.total_budgeted.toFixed(2) + ' RUB';
                 document.getElementById('transactions-count').textContent = d.data.transactions_count;
+                document.getElementById('total-savings').textContent = d.data.total_savings.toFixed(2) + ' RUB';
                 var tbody = document.getElementById('transactions-list');
                 tbody.innerHTML = (d.data.recent_transactions || []).map(function(t) {
                     var icon = t.type === 'income' ? '💰' : '💳';

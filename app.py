@@ -3,6 +3,7 @@ from data_access.repositories.user_repository import SQLAlchemyUserRepository
 from data_access.repositories.transaction_repository import SQLAlchemyTransactionRepository
 from data_access.repositories.budget_repository import SQLAlchemyBudgetRepository
 from data_access.repositories.income_repository import SQLAlchemyIncomeSourceRepository
+from data_access.repositories.saving_repository import SavingRepository
 from services.financial_service import FinancialService
 from services.auth_service import AuthService, require_auth
 from config import Config
@@ -18,6 +19,7 @@ def create_app():
     transaction_repo = SQLAlchemyTransactionRepository()
     budget_repo = SQLAlchemyBudgetRepository()
     income_repo = SQLAlchemyIncomeSourceRepository()
+    saving_repo = SavingRepository()
 
     financial_service = FinancialService(
         transaction_repo=transaction_repo,
@@ -71,6 +73,10 @@ def create_app():
     @app.route('/categories')
     def categories_page():
         return render_template('categories.html')
+
+    @app.route('/savings')
+    def savings_page():
+        return render_template('savings.html')
 
     # --- Публичные API ---
 
@@ -180,6 +186,8 @@ def create_app():
                     "date": t.date.isoformat() if t.date else "",
                 })
             summary["recent_transactions"] = recent
+            items = saving_repo.get_by_user(uid)
+            summary["total_savings"] = sum(s.amount for s in items)
             return jsonify({"status": "success", "data": summary})
         except Exception as e:
             return jsonify({"status": "error", "message": "Внутренняя ошибка сервера"}), 500
@@ -558,6 +566,67 @@ def create_app():
         uid = request.current_user["user_id"]
         result = financial_service.process_regular_payments(uid)
         return jsonify({"status": "success", "data": result})
+
+    @app.route('/api/v1/savings', methods=['GET'])
+    @require_auth
+    def list_savings():
+        uid = request.current_user["user_id"]
+        items = saving_repo.get_by_user(uid)
+        return jsonify({"status": "success", "data": [{
+            "id": s.id, "name": s.name, "amount": s.amount,
+            "type": s.type, "description": s.description or "",
+            "created_at": s.created_at.isoformat() if s.created_at else "",
+        } for s in items]})
+
+    @app.route('/api/v1/savings', methods=['POST'])
+    @require_auth
+    def create_saving():
+        data = request.get_json()
+        if not data or not data.get('name'):
+            return jsonify({"status": "error", "message": "name обязателен"}), 400
+        allowed_types = {"deposit", "stocks", "bonds", "cash", "other"}
+        stype = data.get('type', 'deposit')
+        if stype not in allowed_types:
+            return jsonify({"status": "error", "message": f"Недопустимый тип. Допустимые: {', '.join(sorted(allowed_types))}"}), 400
+        rec = {
+            "user_id": request.current_user["user_id"],
+            "name": data['name'],
+            "amount": float(data.get('amount', 0)),
+            "type": stype,
+            "description": data.get('description', ''),
+        }
+        obj = saving_repo.create(rec)
+        return jsonify({"status": "success", "saving_id": obj.id}), 201
+
+    @app.route('/api/v1/savings/<int:saving_id>', methods=['PUT'])
+    @require_auth
+    def update_saving(saving_id):
+        data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "Нет данных"}), 400
+        allowed_types = {"deposit", "stocks", "bonds", "cash", "other"}
+        allowed = {"name", "amount", "type", "description"}
+        update = {}
+        for k in allowed:
+            if k in data:
+                v = data[k]
+                if k == "amount": v = float(v)
+                if k == "type":
+                    if v not in allowed_types:
+                        return jsonify({"status": "error", "message": f"Недопустимый тип. Допустимые: {', '.join(sorted(allowed_types))}"}), 400
+                update[k] = v
+        obj = saving_repo.update(saving_id, request.current_user["user_id"], update)
+        if not obj:
+            return jsonify({"status": "error", "message": "Накопление не найдено"}), 404
+        return jsonify({"status": "success", "message": "Накопление обновлено"})
+
+    @app.route('/api/v1/savings/<int:saving_id>', methods=['DELETE'])
+    @require_auth
+    def delete_saving(saving_id):
+        ok = saving_repo.delete(saving_id, request.current_user["user_id"])
+        if not ok:
+            return jsonify({"status": "error", "message": "Накопление не найдено"}), 404
+        return jsonify({"status": "success", "message": "Накопление удалено"})
 
     @app.route('/api/v1/admin/settings', methods=['GET', 'PUT'])
     @require_auth

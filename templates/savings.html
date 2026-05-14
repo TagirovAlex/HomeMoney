@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}HomeMoney | Накопления{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Накопления</h2>
+    <button class="btn" onclick="showAddForm()">+ Добавить</button>
+</div>
+
+<div id="add-form" class="form-card" style="display:none">
+    <h3 id="form-title">Новое накопление</h3>
+    <form onsubmit="saveSaving(event)">
+        <input type="hidden" id="saving-id" value="">
+        <label>Название <input type="text" id="saving-name" required></label>
+        <label>Сумма <input type="number" step="0.01" id="saving-amount" value="0" required></label>
+        <label>Тип
+            <select id="saving-type">
+                <option value="deposit">🏦 Депозит</option>
+                <option value="stocks">📈 Акции</option>
+                <option value="bonds">📜 Облигации</option>
+                <option value="cash">💵 Наличные</option>
+                <option value="other">📦 Другое</option>
+            </select>
+        </label>
+        <label>Описание <input type="text" id="saving-desc"></label>
+        <button type="submit" class="btn" id="form-submit">Сохранить</button>
+        <button type="button" class="btn btn-secondary" onclick="hideAddForm()">Отмена</button>
+    </form>
+</div>
+
+<div id="savings-list" class="summary-cards"></div>
+
+<script>
+    async function loadSavings() {
+        var r = await fetch('/api/v1/savings', { headers: authHeaders() });
+        var d = await r.json();
+        var container = document.getElementById('savings-list');
+        if (d.status !== 'success' || !d.data.length) {
+            container.innerHTML = '<p>Нет накоплений. Добавьте первое.</p>';
+            return;
+        }
+        var icons = { deposit: '🏦', stocks: '📈', bonds: '📜', cash: '💵', other: '📦' };
+        container.innerHTML = d.data.map(function(s) {
+            var icon = icons[s.type] || '📦';
+            var typeLabel = { deposit: 'Депозит', stocks: 'Акции', bonds: 'Облигации', cash: 'Наличные', other: 'Другое' }[s.type] || s.type;
+            return '<div class="card" style="text-align:left">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center">' +
+                '<div><span class="card-label">' + icon + ' ' + s.name + '</span><br>' +
+                '<span style="font-size:0.8rem;color:var(--text-secondary)">' + typeLabel + '</span><br>' +
+                '<span class="card-value" style="font-size:1.2rem">' + s.amount.toFixed(2) + ' RUB</span>' +
+                (s.description ? '<br><span style="font-size:0.8rem">' + s.description + '</span>' : '') +
+                '</div>' +
+                '<div><button class="btn btn-secondary" style="margin-right:4px" onclick="editSaving(' + s.id + ')">✏️</button>' +
+                '<button class="btn btn-secondary" onclick="deleteSaving(' + s.id + ')">❌</button></div>' +
+                '</div></div>';
+        }).join('');
+    }
+
+    function showAddForm() {
+        document.getElementById('form-title').textContent = 'Новое накопление';
+        document.getElementById('form-submit').textContent = 'Сохранить';
+        document.getElementById('saving-id').value = '';
+        document.getElementById('saving-name').value = '';
+        document.getElementById('saving-amount').value = '0';
+        document.getElementById('saving-type').value = 'deposit';
+        document.getElementById('saving-desc').value = '';
+        document.getElementById('add-form').style.display = 'block';
+    }
+
+    function hideAddForm() {
+        document.getElementById('add-form').style.display = 'none';
+    }
+
+    async function saveSaving(e) {
+        e.preventDefault();
+        var id = document.getElementById('saving-id').value;
+        var body = {
+            name: document.getElementById('saving-name').value,
+            amount: parseFloat(document.getElementById('saving-amount').value) || 0,
+            type: document.getElementById('saving-type').value,
+            description: document.getElementById('saving-desc').value,
+        };
+        var url = id ? '/api/v1/savings/' + id : '/api/v1/savings';
+        var method = id ? 'PUT' : 'POST';
+        var r = await fetch(url, { method: method, headers: authHeaders(), body: JSON.stringify(body) });
+        var d = await r.json();
+        alert(d.message || d.error);
+        if (r.ok) { hideAddForm(); loadSavings(); }
+    }
+
+    async function editSaving(id) {
+        var r = await fetch('/api/v1/savings', { headers: authHeaders() });
+        var d = await r.json();
+        if (d.status !== 'success') return;
+        var src = null;
+        d.data.forEach(function(s) { if (s.id === id) src = s; });
+        if (!src) return;
+        document.getElementById('form-title').textContent = 'Редактировать: ' + src.name;
+        document.getElementById('form-submit').textContent = 'Обновить';
+        document.getElementById('saving-id').value = src.id;
+        document.getElementById('saving-name').value = src.name;
+        document.getElementById('saving-amount').value = src.amount;
+        document.getElementById('saving-type').value = src.type || 'deposit';
+        document.getElementById('saving-desc').value = src.description || '';
+        document.getElementById('add-form').style.display = 'block';
+    }
+
+    async function deleteSaving(id) {
+        if (!confirm('Удалить это накопление?')) return;
+        var r = await fetch('/api/v1/savings/' + id, { method: 'DELETE', headers: authHeaders() });
+        var d = await r.json();
+        alert(d.message); loadSavings();
+    }
+
+    window.onload = loadSavings;
+</script>
+{% endblock %}

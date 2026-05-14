@@ -204,10 +204,19 @@ class FinancialService:
         if "date" in update and isinstance(update["date"], str):
             from datetime import datetime
             update["date"] = datetime.strptime(update["date"], "%Y-%m-%d")
+        if "category_id" in update:
+            from models.database import Category
+            from utils.database_session import get_db
+            with get_db() as s:
+                cat = s.query(Category).filter(Category.id == update["category_id"]).first()
+                update["type"] = cat.type if cat else "expense"
         tx = self.transaction_repo.update_transaction(tx_id, user_id, update)
         if not tx:
             raise ValueError("Транзакция не найдена")
         return tx
+
+    def delete_transaction(self, tx_id: int, user_id: int) -> bool:
+        return self.transaction_repo.delete_transaction(tx_id, user_id)
 
     def get_user_transactions(self, user_id: int) -> list:
         from models.database import Category

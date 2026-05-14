@@ -157,7 +157,8 @@
         tbody.innerHTML = sorted.map(function(tx) {
             var typeLabel = tx.type === 'income' ? '💰 Доход' : '💳 Расход';
             return '<tr><td>' + tx.id + '</td><td>' + (tx.category_icon || '📁') + ' ' + tx.category_name + '</td><td>' + fmt(tx.amount) + '</td><td>' + typeLabel + '</td><td>' + tx.description + '</td><td>' + (tx.date ? tx.date.slice(0, 10) : '') + '</td>' +
-                '<td><button class="btn btn-secondary" style="margin-right:4px" onclick="editTransaction(' + tx.id + ')">✏️</button></td></tr>';
+                '<td><button class="btn btn-secondary" style="margin-right:4px" onclick="editTransaction(' + tx.id + ')">✏️</button>' +
+                '<button class="btn btn-secondary" onclick="deleteTransaction(' + tx.id + ')">❌</button></td></tr>';
         }).join('');
         ['id','category_name','amount','type','description','date'].forEach(function(c) {
             document.getElementById('s-' + c).textContent = sortIcon(c);
@@ -243,6 +244,16 @@
         var d = new Date();
         var ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
         document.getElementById('tx-date').value = ds;
+    }
+
+    async function deleteTransaction(txId) {
+        if (!confirm('Удалить транзакцию #' + txId + '?')) return;
+        getUser();
+        if (!userId) return;
+        var r = await fetch('/api/v1/user/' + userId + '/transactions/' + txId, { method: 'DELETE', headers: authHeaders() });
+        var d = await r.json();
+        alert(d.message);
+        if (r.ok) loadTransactions();
     }
 
     window.onload = function() {

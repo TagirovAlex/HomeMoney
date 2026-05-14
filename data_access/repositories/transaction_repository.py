@@ -82,3 +82,12 @@ class SQLAlchemyTransactionRepository:
             session.commit()
             session.refresh(tx)
             return tx
+
+    def delete_transaction(self, tx_id: int, user_id: int) -> bool:
+        with self._db() as session:
+            tx = session.query(Transaction).filter(Transaction.id == tx_id, Transaction.user_id == user_id).first()
+            if not tx:
+                return False
+            session.delete(tx)
+            session.commit()
+            return True

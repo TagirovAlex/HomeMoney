@@ -344,6 +344,18 @@ def create_app():
             return jsonify({"status": "error", "message": "Параметры month и year обязательны"}), 400
         try:
             report = financial_service.get_detailed_report(uid, role=role, month=int(month), year=int(year))
+            items = saving_repo.get_by_user(uid)
+            type_labels = {"deposit": "Депозит", "stocks": "Акции", "bonds": "Облигации", "cash": "Наличные", "other": "Другое"}
+            savings_data = []
+            total_savings = 0.0
+            for s in items:
+                total_savings += s.amount
+                savings_data.append({
+                    "id": s.id, "name": s.name, "amount": s.amount,
+                    "type": s.type, "type_label": type_labels.get(s.type, s.type),
+                    "description": s.description or "",
+                })
+            report["savings"] = {"total": round(total_savings, 2), "items": savings_data}
             return jsonify({"status": "success", "data": report})
         except Exception as e:
             return jsonify({"status": "error", "message": "Внутренняя ошибка сервера"}), 500

@@ -16,6 +16,7 @@
 
 <div class="summary-cards" id="report-summary"></div>
 <div class="summary-cards" id="report-balance" style="margin-top:12px"></div>
+<div class="summary-cards" id="report-savings" style="margin-top:12px"></div>
 <div class="section">
     <h3>Детализация расходов по категориям</h3>
     <table class="data-table">
@@ -25,6 +26,8 @@
 </div>
 
 <script>
+    var typeIcons = { deposit: '🏦', stocks: '📈', bonds: '📜', cash: '💵', other: '📦' };
+
     async function loadReport(e) {
         if (e) e.preventDefault();
         var m = document.getElementById('r-month').value;
@@ -40,6 +43,19 @@
         document.getElementById('report-balance').innerHTML =
             '<div class="card"><span class="card-label">Остаток на начало</span><span class="card-value">' + (s.opening_balance || 0).toFixed(2) + ' RUB</span></div>' +
             '<div class="card"><span class="card-label">Остаток на конец</span><span class="card-value">' + (s.closing_balance || 0).toFixed(2) + ' RUB</span></div>';
+        var sv = d.data.savings;
+        if (sv && sv.items && sv.items.length) {
+            document.getElementById('report-savings').innerHTML =
+                '<div class="card" style="grid-column:1/-1;text-align:left">' +
+                '<span class="card-label">🏦 Накопления (всего: ' + sv.total.toFixed(2) + ' RUB)</span><br>' +
+                sv.items.map(function(x) {
+                    var ic = typeIcons[x.type] || '📦';
+                    return '<span style="display:inline-block;margin:4px 12px 4px 0">' + ic + ' ' + x.name + ': <strong>' + x.amount.toFixed(2) + ' RUB</strong> (' + x.type_label + ')</span><br>';
+                }).join('') +
+                '</div>';
+        } else {
+            document.getElementById('report-savings').innerHTML = '';
+        }
         var tbody = document.getElementById('report-table');
         var keys = Object.keys(d.data.detailed_spending || {});
         if (keys.length === 0) { tbody.innerHTML = '<tr><td colspan="4">Нет расходов за выбранный период.</td></tr>'; return; }

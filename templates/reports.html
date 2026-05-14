@@ -37,20 +37,20 @@
         if (d.status !== 'success') { alert(d.message); return; }
         var s = d.data.summary;
         document.getElementById('report-summary').innerHTML =
-            '<div class="card"><span class="card-label">💰 Доходы</span><span class="card-value" style="color:var(--color-success)">+' + (s.total_income || 0).toFixed(2) + ' RUB</span></div>' +
-            '<div class="card"><span class="card-label">💳 Расходы</span><span class="card-value" style="color:var(--color-danger)">-' + s.total_spent.toFixed(2) + ' RUB</span></div>' +
-            '<div class="card"><span class="card-label">📊 Бюджет</span><span class="card-value">' + s.total_budgeted.toFixed(2) + ' RUB</span></div>';
+            '<div class="card"><span class="card-label">💰 Доходы</span><span class="card-value" style="color:var(--color-success)">+' + fmt(s.total_income || 0) + ' RUB</span></div>' +
+            '<div class="card"><span class="card-label">💳 Расходы</span><span class="card-value" style="color:var(--color-danger)">-' + fmt(s.total_spent) + ' RUB</span></div>' +
+            '<div class="card"><span class="card-label">📊 Бюджет</span><span class="card-value">' + fmt(s.total_budgeted) + ' RUB</span></div>';
         document.getElementById('report-balance').innerHTML =
-            '<div class="card"><span class="card-label">Остаток на начало</span><span class="card-value">' + (s.opening_balance || 0).toFixed(2) + ' RUB</span></div>' +
-            '<div class="card"><span class="card-label">Остаток на конец</span><span class="card-value">' + (s.closing_balance || 0).toFixed(2) + ' RUB</span></div>';
+            '<div class="card"><span class="card-label">Остаток на начало</span><span class="card-value">' + fmt(s.opening_balance || 0) + ' RUB</span></div>' +
+            '<div class="card"><span class="card-label">Остаток на конец</span><span class="card-value">' + fmt(s.closing_balance || 0) + ' RUB</span></div>';
         var sv = d.data.savings;
         if (sv && sv.items && sv.items.length) {
             document.getElementById('report-savings').innerHTML =
                 '<div class="card" style="grid-column:1/-1;text-align:left">' +
-                '<span class="card-label">🏦 Накопления (всего: ' + sv.total.toFixed(2) + ' RUB)</span><br>' +
+                '<span class="card-label">🏦 Накопления (всего: ' + fmt(sv.total) + ' RUB)</span><br>' +
                 sv.items.map(function(x) {
                     var ic = typeIcons[x.type] || '📦';
-                    return '<span style="display:inline-block;margin:4px 12px 4px 0">' + ic + ' ' + x.name + ': <strong>' + x.amount.toFixed(2) + ' RUB</strong> (' + x.type_label + ')</span><br>';
+                    return '<span style="display:inline-block;margin:4px 12px 4px 0">' + ic + ' ' + x.name + ': <strong>' + fmt(x.amount) + ' RUB</strong> (' + x.type_label + ')</span><br>';
                 }).join('') +
                 '</div>';
         } else {
@@ -61,9 +61,9 @@
         if (keys.length === 0) { tbody.innerHTML = '<tr><td colspan="4">Нет расходов за выбранный период.</td></tr>'; return; }
         tbody.innerHTML = keys.map(function(k) {
             var item = d.data.detailed_spending[k];
-            var rem = (item.budget - item.spent).toFixed(2);
+            var rem = fmt(item.budget - item.spent);
             var icon = item.icon || '📁';
-            return '<tr><td>' + icon + ' ' + item.name + '</td><td>' + item.spent.toFixed(2) + '</td><td>' + item.budget.toFixed(2) + '</td><td>' + rem + '</td></tr>';
+            return '<tr><td>' + icon + ' ' + item.name + '</td><td>' + fmt(item.spent) + '</td><td>' + fmt(item.budget) + '</td><td>' + rem + '</td></tr>';
         }).join('');
     }
     window.onload = loadReport;

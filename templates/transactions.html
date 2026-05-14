@@ -139,7 +139,7 @@
         var el = document.getElementById('tx-budget-info');
         if (!catId) { el.textContent = ''; return; }
         var b = _budgetsData.find(function(x) { return x.category_id === catId; });
-        el.textContent = b ? 'Бюджет по этой категории: ' + b.target_amount.toFixed(2) + ' RUB' : 'Бюджет не задан';
+        el.textContent = b ? 'Бюджет по этой категории: ' + fmt(b.target_amount) + ' RUB' : 'Бюджет не задан';
     }
 
     async function loadTransactions() {
@@ -156,7 +156,7 @@
         var sorted = sortData(d.data);
         tbody.innerHTML = sorted.map(function(tx) {
             var typeLabel = tx.type === 'income' ? '💰 Доход' : '💳 Расход';
-            return '<tr><td>' + tx.id + '</td><td>' + (tx.category_icon || '📁') + ' ' + tx.category_name + '</td><td>' + tx.amount.toFixed(2) + '</td><td>' + typeLabel + '</td><td>' + tx.description + '</td><td>' + (tx.date ? tx.date.slice(0, 10) : '') + '</td>' +
+            return '<tr><td>' + tx.id + '</td><td>' + (tx.category_icon || '📁') + ' ' + tx.category_name + '</td><td>' + fmt(tx.amount) + '</td><td>' + typeLabel + '</td><td>' + tx.description + '</td><td>' + (tx.date ? tx.date.slice(0, 10) : '') + '</td>' +
                 '<td><button class="btn btn-secondary" style="margin-right:4px" onclick="editTransaction(' + tx.id + ')">✏️</button></td></tr>';
         }).join('');
         ['id','category_name','amount','type','description','date'].forEach(function(c) {

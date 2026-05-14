@@ -46,7 +46,7 @@
                 '<div style="display:flex;justify-content:space-between;align-items:center">' +
                 '<div><span class="card-label">' + icon + ' ' + s.name + '</span><br>' +
                 '<span style="font-size:0.8rem;color:var(--text-secondary)">' + typeLabel + '</span><br>' +
-                '<span class="card-value" style="font-size:1.2rem">' + s.amount.toFixed(2) + ' RUB</span>' +
+                '<span class="card-value" style="font-size:1.2rem">' + fmt(s.amount) + ' RUB</span>' +
                 (s.description ? '<br><span style="font-size:0.8rem">' + s.description + '</span>' : '') +
                 '</div>' +
                 '<div><button class="btn btn-secondary" style="margin-right:4px" onclick="editSaving(' + s.id + ')">✏️</button>' +

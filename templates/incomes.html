@@ -61,7 +61,7 @@
         }
         container.innerHTML = d.data.map(function(s) {
             var label = (s.is_regular ? '🔄 ' : '📌 ') + s.name;
-            var info = (s.amount ? s.amount.toFixed(2) + ' RUB' : '') + (s.is_regular && s.next_date ? ' (след: ' + s.next_date.slice(0,10) + ')' : '');
+            var info = (s.amount ? fmt(s.amount) + ' RUB' : '') + (s.is_regular && s.next_date ? ' (след: ' + s.next_date.slice(0,10) + ')' : '');
             return '<div class="card" style="text-align:left">' +
                 '<div style="display:flex;justify-content:space-between;align-items:center">' +
                 '<div><span class="card-label">' + label + '</span><br><span class="card-value" style="font-size:1.2rem">' + info + '</span></div>' +

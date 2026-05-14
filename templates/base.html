@@ -52,6 +52,9 @@
             });
             initTheme();
 
+            // --- format sum ---
+            window.fmt = function(n) { return (n || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+
             // --- API helper ---
             window.authHeaders = function() {
                 return { 'Content-Type': 'application/json' };

@@ -223,8 +223,19 @@ def create_app():
         if not data:
             return jsonify({"status": "error", "message": "Нет данных"}), 400
         try:
-            financial_service.update_transaction(tx_id, user_id, data)
-            return jsonify({"status": "success", "message": "Транзакция обновлена"})
+            updated = financial_service.update_transaction(tx_id, user_id, data)
+            from models.database import Transaction as TxModel, Category as CatModel
+            from utils.database_session import get_db as _gdb
+            with _gdb() as _s:
+                _tx = _s.query(TxModel).filter(TxModel.id == tx_id, TxModel.user_id == user_id).first()
+                _saved_date = str(_tx.date) if _tx else 'NOT FOUND'
+            import logging as _lg
+            _lg.getLogger('report').info('PUT tx_id=%s user_id=%s data_received=%s saved_date=%s',
+                tx_id, user_id, str(data), _saved_date)
+            return jsonify({
+                "status": "success", "message": "Транзакция обновлена",
+                "debug": {"received": str(data), "saved_date": _saved_date}
+            })
         except ValueError as e:
             return jsonify({"status": "error", "message": str(e)}), 400
         except Exception as e:

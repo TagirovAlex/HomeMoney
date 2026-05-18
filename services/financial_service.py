@@ -139,13 +139,6 @@ class FinancialService:
             end_date=start_date  # < start_date — все до первого дня месяца
         )
 
-        import logging
-        logging.getLogger('report').info(
-            'get_detailed_report uid=%s month=%s year=%s: range=[%s, %s], '
-            'txs_found=%s (period), prev_found=%s (before)',
-            user_id, month, year, start_date, end_date,
-            len(transactions), len(prev_transactions))
-
         report = {
             "summary": {},
             "category_spending": {}

@@ -35,8 +35,6 @@
         var url = '/api/v1/reports?month=' + m + '&year=' + y + '&_=' + Date.now();
         var r = await fetch(url, { headers: authHeaders() });
         var d = await r.json();
-        console.log('REPORT URL:', url);
-        console.log('REPORT RESPONSE:', JSON.parse(JSON.stringify(d)));
         if (d.status !== 'success') { alert(d.message); return; }
         var s = d.data.summary;
         document.getElementById('report-summary').innerHTML =

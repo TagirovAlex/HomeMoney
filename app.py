@@ -223,19 +223,8 @@ def create_app():
         if not data:
             return jsonify({"status": "error", "message": "Нет данных"}), 400
         try:
-            updated = financial_service.update_transaction(tx_id, user_id, data)
-            from models.database import Transaction as TxModel, Category as CatModel
-            from utils.database_session import get_db as _gdb
-            with _gdb() as _s:
-                _tx = _s.query(TxModel).filter(TxModel.id == tx_id, TxModel.user_id == user_id).first()
-                _saved_date = str(_tx.date) if _tx else 'NOT FOUND'
-            import logging as _lg
-            _lg.getLogger('report').info('PUT tx_id=%s user_id=%s data_received=%s saved_date=%s',
-                tx_id, user_id, str(data), _saved_date)
-            return jsonify({
-                "status": "success", "message": "Транзакция обновлена",
-                "debug": {"received": str(data), "saved_date": _saved_date}
-            })
+            financial_service.update_transaction(tx_id, user_id, data)
+            return jsonify({"status": "success", "message": "Транзакция обновлена"})
         except ValueError as e:
             return jsonify({"status": "error", "message": str(e)}), 400
         except Exception as e:
@@ -360,15 +349,7 @@ def create_app():
         if not month or not year:
             return jsonify({"status": "error", "message": "Параметры month и year обязательны"}), 400
         try:
-            import logging
-            logging.basicConfig(level=logging.INFO)
-            logger = logging.getLogger('report')
             report = financial_service.get_detailed_report(uid, role=role, month=int(month), year=int(year))
-            logger.info('REPORT month=%s year=%s uid=%s: txs_in_range=%s total_spent=%s total_income=%s',
-                        month, year, uid,
-                        sum(len(v) for v in report.get('detailed_spending', {}).values()) if isinstance(report.get('detailed_spending'), dict) else '?',
-                        report.get('summary', {}).get('total_spent'),
-                        report.get('summary', {}).get('total_income'))
             items = saving_repo.get_by_user(uid)
             type_labels = {"deposit": "Депозит", "stocks": "Акции", "bonds": "Облигации", "cash": "Наличные", "other": "Другое"}
             savings_data = []
@@ -386,55 +367,6 @@ def create_app():
             return resp
         except Exception as e:
             return jsonify({"status": "error", "message": "Внутренняя ошибка сервера"}), 500
-
-    @app.route('/api/v1/debug_report', methods=['GET'])
-    @require_auth
-    def debug_report_api():
-        uid = request.current_user["user_id"]
-        month = request.args.get('month', type=int)
-        year = request.args.get('year', type=int)
-        from models.database import Transaction, Category
-        from utils.database_session import get_db
-        from datetime import date, timedelta
-        result = {"user_id": uid, "month": month, "year": year}
-        with get_db() as s:
-            cats = {c.id: {"name": c.name, "type": c.type} for c in s.query(Category).all()}
-            if month and year:
-                start = date(year, month, 1)
-                end_month = start + timedelta(days=32)
-                end = end_month.replace(day=1) - timedelta(days=1)
-                result["query_range"] = {"start": str(start), "end": str(end)}
-                txs = s.query(Transaction).filter(
-                    Transaction.user_id == uid,
-                    Transaction.date >= start,
-                    Transaction.date <= end
-                ).all()
-                result["txs_found"] = len(txs)
-                result["txs"] = []
-                for t in txs:
-                    cat = cats.get(t.category_id, {"name": "?DELETED?", "type": "?"})
-                    result["txs"].append({
-                        "id": t.id, "amount": t.amount,
-                        "category_id": t.category_id,
-                        "category_name": cat["name"],
-                        "category_type": cat["type"],
-                        "tx_type": t.type,
-                        "date": str(t.date),
-                        "date_repr": repr(t.date),
-                    })
-            all_txs = s.query(Transaction).filter(Transaction.user_id == uid).order_by(Transaction.date).all()
-            result["all_user_transactions"] = []
-            for t in all_txs:
-                cat = cats.get(t.category_id, {"name": "?DELETED?", "type": "?"})
-                result["all_user_transactions"].append({
-                    "id": t.id, "amount": t.amount,
-                    "category_id": t.category_id,
-                    "date": str(t.date),
-                    "date_repr": repr(t.date),
-                    "tx_type": t.type,
-                    "cat_type": cat["type"],
-                })
-        return jsonify({"status": "success", "data": result})
 
     @app.route('/api/v1/backup', methods=['GET'])
     @require_auth

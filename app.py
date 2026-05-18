@@ -376,6 +376,55 @@ def create_app():
         except Exception as e:
             return jsonify({"status": "error", "message": "Внутренняя ошибка сервера"}), 500
 
+    @app.route('/api/v1/debug_report', methods=['GET'])
+    @require_auth
+    def debug_report_api():
+        uid = request.current_user["user_id"]
+        month = request.args.get('month', type=int)
+        year = request.args.get('year', type=int)
+        from models.database import Transaction, Category
+        from utils.database_session import get_db
+        from datetime import date, timedelta
+        result = {"user_id": uid, "month": month, "year": year}
+        with get_db() as s:
+            cats = {c.id: {"name": c.name, "type": c.type} for c in s.query(Category).all()}
+            if month and year:
+                start = date(year, month, 1)
+                end_month = start + timedelta(days=32)
+                end = end_month.replace(day=1) - timedelta(days=1)
+                result["query_range"] = {"start": str(start), "end": str(end)}
+                txs = s.query(Transaction).filter(
+                    Transaction.user_id == uid,
+                    Transaction.date >= start,
+                    Transaction.date <= end
+                ).all()
+                result["txs_found"] = len(txs)
+                result["txs"] = []
+                for t in txs:
+                    cat = cats.get(t.category_id, {"name": "?DELETED?", "type": "?"})
+                    result["txs"].append({
+                        "id": t.id, "amount": t.amount,
+                        "category_id": t.category_id,
+                        "category_name": cat["name"],
+                        "category_type": cat["type"],
+                        "tx_type": t.type,
+                        "date": str(t.date),
+                        "date_repr": repr(t.date),
+                    })
+            all_txs = s.query(Transaction).filter(Transaction.user_id == uid).order_by(Transaction.date).all()
+            result["all_user_transactions"] = []
+            for t in all_txs:
+                cat = cats.get(t.category_id, {"name": "?DELETED?", "type": "?"})
+                result["all_user_transactions"].append({
+                    "id": t.id, "amount": t.amount,
+                    "category_id": t.category_id,
+                    "date": str(t.date),
+                    "date_repr": repr(t.date),
+                    "tx_type": t.type,
+                    "cat_type": cat["type"],
+                })
+        return jsonify({"status": "success", "data": result})
+
     @app.route('/api/v1/backup', methods=['GET'])
     @require_auth
     def backup_api():

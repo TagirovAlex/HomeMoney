@@ -45,11 +45,11 @@ class FinancialService:
 
     def get_monthly_summary(self, user_id: int, month: int, year: int) -> dict:
         """Получить сводку расходов/доходов за месяц (бюджет, фактические расходы)."""
-        from datetime import date, timedelta
+        from datetime import date, timedelta, datetime
         start_date = date(year, month, 1)
         try:
             end_month = start_date + timedelta(days=32)
-            end_date = (end_month.replace(day=1) - timedelta(days=1)) # Последний день месяца
+            end_date = end_month.replace(day=1)  # Первый день следующего месяца
         except ValueError as e:
              raise ValueError(f"Некорректный месяц или год для расчетов: {e}")
 
@@ -84,7 +84,7 @@ class FinancialService:
         start_date = date(current_year, current_month, 1)
         try:
             end_month = start_date + timedelta(days=32)
-            end_date = (end_month.replace(day=1) - timedelta(days=1))
+            end_date = end_month.replace(day=1)  # Первый день следующего месяца
         except ValueError as e:
              raise ValueError(f"Некорректный месяц или год для расчетов бюджета: {e}")
 
@@ -123,7 +123,7 @@ class FinancialService:
         start_date = date(year, month, 1)
         try:
             end_month = start_date + timedelta(days=32)
-            end_date = (end_month.replace(day=1) - timedelta(days=1))
+            end_date = end_month.replace(day=1)  # Первый день следующего месяца
         except ValueError as e:
              raise ValueError(f"Некорректный месяц или год для отчета: {e}")
 
@@ -136,7 +136,7 @@ class FinancialService:
         # Все транзакции до начала периода (для начального остатка)
         prev_transactions = self.transaction_repo.get_transactions_by_user(
             user_id=user_id,
-            end_date=start_date - timedelta(days=1)
+            end_date=start_date  # < start_date — все до первого дня месяца
         )
 
         import logging

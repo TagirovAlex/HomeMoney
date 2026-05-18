@@ -38,7 +38,7 @@ class SQLAlchemyTransactionRepository:
             if start_date:
                 query = query.filter(Transaction.date >= start_date)
             if end_date:
-                query = query.filter(Transaction.date <= end_date)
+                query = query.filter(Transaction.date < end_date)
             return query.all()
 
     def add_transaction(self, transaction_data: dict) -> Transaction:

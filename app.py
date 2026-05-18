@@ -362,7 +362,9 @@ def create_app():
                     "description": s.description or "",
                 })
             report["savings"] = {"total": round(total_savings, 2), "items": savings_data}
-            return jsonify({"status": "success", "data": report})
+            resp = make_response(jsonify({"status": "success", "data": report}))
+            resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            return resp
         except Exception as e:
             return jsonify({"status": "error", "message": "Внутренняя ошибка сервера"}), 500
 

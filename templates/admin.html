@@ -100,10 +100,10 @@
 </div>
 
 <script>
-    var h = authHeaders;
+
 
     async function loadPending() {
-        var r = await fetch('/api/v1/users/pending', { headers: h() });
+        var r = await fetch('/api/v1/users/pending', { headers: authHeaders() });
         var d = await r.json();
         var tbody = document.getElementById('pending-body');
         if (d.status !== 'success' || !d.data.length) { tbody.innerHTML = '<tr><td colspan="4">Нет заявок.</td></tr>'; return; }
@@ -135,7 +135,7 @@
     }
 
     async function loadUsers() {
-        var r = await fetch('/api/v1/users', { headers: h() });
+        var r = await fetch('/api/v1/users', { headers: authHeaders() });
         var d = await r.json();
         var tbody = document.getElementById('users-body');
         if (d.status !== 'success') { tbody.innerHTML = '<tr><td colspan="6">' + d.message + '</td></tr>'; return; }
@@ -148,7 +148,7 @@
     }
 
     async function loadCategories() {
-        var r = await fetch('/api/v1/categories', { headers: h() });
+        var r = await fetch('/api/v1/categories', { headers: authHeaders() });
         var d = await r.json();
         var tbody = document.getElementById('categories-body');
         if (d.status !== 'success') { tbody.innerHTML = '<tr><td colspan="4">' + d.message + '</td></tr>'; return; }
@@ -203,7 +203,7 @@
     }
 
     async function loadSettings() {
-        var r = await fetch('/api/v1/admin/settings', { headers: h() });
+        var r = await fetch('/api/v1/admin/settings', { headers: authHeaders() });
         var d = await r.json();
         if (d.status !== 'success') return;
         var tk = document.getElementById('cfg-bot-token');
@@ -238,7 +238,7 @@
     }
 
     async function loadBotStatus() {
-        var r = await fetch('/api/v1/admin/bot/status', { headers: h() });
+        var r = await fetch('/api/v1/admin/bot/status', { headers: authHeaders() });
         var d = await r.json();
         var el = document.getElementById('bot-status-text');
         if (d.status === 'success' && d.data.running) {
@@ -289,7 +289,7 @@
     async function backup(type) {
         var out = document.getElementById('backup-result');
         out.textContent = 'Создание бэкапа...';
-        var r = await fetch('/api/v1/backup?type=' + type, { headers: h() });
+        var r = await fetch('/api/v1/backup?type=' + type, { headers: authHeaders() });
         var d = await r.json();
         out.textContent = d.message;
     }

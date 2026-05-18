@@ -60,8 +60,12 @@ class FinancialService:
             start_date=start_date, 
             end_date=end_date
         )
-        total_income = sum(t.amount for t in transactions if t.type == "income")
-        total_spent = sum(t.amount for t in transactions if t.type == "expense")
+        from models.database import Category
+        from utils.database_session import get_db
+        with get_db() as s:
+            cat_types = {c.id: c.type for c in s.query(Category).all()}
+        total_income = sum(t.amount for t in transactions if cat_types.get(t.category_id, getattr(t, 'type', 'expense')) == 'income')
+        total_spent = sum(t.amount for t in transactions if cat_types.get(t.category_id, getattr(t, 'type', 'expense')) == 'expense')
 
         # 2. Получаем бюджеты за этот месяц для сравнения
         budgets: List[Budget] = self.budget_repo.get_active_budgets_for_user(user_id=user_id, month=month, year=year)

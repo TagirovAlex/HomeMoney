@@ -33,10 +33,8 @@
 </div>
 
 <script>
-    var h = authHeaders;
-
     async function loadCategories() {
-        var r = await fetch('/api/v1/categories', { headers: h() });
+        var r = await fetch('/api/v1/categories', { headers: authHeaders() });
         var d = await r.json();
         var tbody = document.getElementById('categories-body');
         if (d.status !== 'success') { tbody.innerHTML = '<tr><td colspan="5">' + d.message + '</td></tr>'; return; }
@@ -61,7 +59,7 @@
         };
         var url = editId ? '/api/v1/categories/' + editId : '/api/v1/categories';
         var method = editId ? 'PUT' : 'POST';
-        var r = await fetch(url, { method: method, headers: h(), body: JSON.stringify(body) });
+        var r = await fetch(url, { method: method, headers: authHeaders(), body: JSON.stringify(body) });
         var d = await r.json();
         alert(d.message || JSON.stringify(d));
         if (r.ok) {
@@ -87,7 +85,7 @@
 
     async function deleteCategory(id) {
         if (!confirm('Удалить категорию?')) return;
-        var r = await fetch('/api/v1/categories/' + id, { method: 'DELETE', headers: h() });
+        var r = await fetch('/api/v1/categories/' + id, { method: 'DELETE', headers: authHeaders() });
         var d = await r.json();
         alert(d.message); loadCategories();
     }

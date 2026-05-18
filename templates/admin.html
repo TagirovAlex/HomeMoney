@@ -115,13 +115,13 @@
     }
 
     async function approve(id) {
-        var r = await fetch('/api/v1/users/' + id + '/approve', { method: 'POST', headers: h() });
+        var r = await fetch('/api/v1/users/' + id + '/approve', { method: 'POST', headers: authHeaders() });
         var d = await r.json();
         alert(d.message); loadPending(); loadUsers();
     }
 
     async function reject(id) {
-        var r = await fetch('/api/v1/users/' + id + '/reject', { method: 'POST', headers: h() });
+        var r = await fetch('/api/v1/users/' + id + '/reject', { method: 'POST', headers: authHeaders() });
         var d = await r.json();
         alert(d.message); loadPending(); loadUsers();
     }
@@ -129,7 +129,7 @@
     async function setTelegram(userId) {
         var input = document.getElementById('tg-' + userId);
         var val = input.value.trim();
-        var r = await fetch('/api/v1/users/' + userId + '/telegram', { method: 'PUT', headers: h(), body: JSON.stringify({telegram_id: val}) });
+        var r = await fetch('/api/v1/users/' + userId + '/telegram', { method: 'PUT', headers: authHeaders(), body: JSON.stringify({telegram_id: val}) });
         var d = await r.json();
         alert(d.message); loadUsers();
     }
@@ -172,7 +172,7 @@
         };
         var url = editId ? '/api/v1/categories/' + editId : '/api/v1/categories';
         var method = editId ? 'PUT' : 'POST';
-        var r = await fetch(url, { method: method, headers: h(), body: JSON.stringify(body) });
+        var r = await fetch(url, { method: method, headers: authHeaders(), body: JSON.stringify(body) });
         var d = await r.json();
         alert(d.message || JSON.stringify(d));
         if (r.ok) {
@@ -197,7 +197,7 @@
 
     async function deleteCategory(id) {
         if (!confirm('Удалить категорию?')) return;
-        var r = await fetch('/api/v1/categories/' + id, { method: 'DELETE', headers: h() });
+        var r = await fetch('/api/v1/categories/' + id, { method: 'DELETE', headers: authHeaders() });
         var d = await r.json();
         alert(d.message); loadCategories();
     }
@@ -232,7 +232,7 @@
             HM_DEBUG: document.getElementById('cfg-debug').value,
             HM_DASHBOARD_TX_LIMIT: document.getElementById('cfg-dashboard-limit').value,
         };
-        var r = await fetch('/api/v1/admin/settings', { method: 'PUT', headers: h(), body: JSON.stringify(body) });
+        var r = await fetch('/api/v1/admin/settings', { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) });
         var d = await r.json();
         document.getElementById('settings-result').textContent = d.message || JSON.stringify(d);
     }
@@ -258,7 +258,7 @@
     async function checkProxy() {
         var el = document.getElementById('proxy-check-result');
         el.textContent = '⏳ проверка...';
-        var r = await fetch('/api/v1/admin/bot/check-proxy', { method: 'POST', headers: h() });
+        var r = await fetch('/api/v1/admin/bot/check-proxy', { method: 'POST', headers: authHeaders() });
         var d = await r.json();
         var data = d.data || {};
         if (data.ok) {
@@ -271,7 +271,7 @@
     async function botStart() {
         var out = document.getElementById('bot-result');
         out.textContent = 'Запуск...';
-        var r = await fetch('/api/v1/admin/bot/start', { method: 'POST', headers: h() });
+        var r = await fetch('/api/v1/admin/bot/start', { method: 'POST', headers: authHeaders() });
         var d = await r.json();
         out.textContent = d.message;
         loadBotStatus();
@@ -280,7 +280,7 @@
     async function botStop() {
         var out = document.getElementById('bot-result');
         out.textContent = 'Остановка...';
-        var r = await fetch('/api/v1/admin/bot/stop', { method: 'POST', headers: h() });
+        var r = await fetch('/api/v1/admin/bot/stop', { method: 'POST', headers: authHeaders() });
         var d = await r.json();
         out.textContent = d.message;
         loadBotStatus();

@@ -100,7 +100,7 @@
 </div>
 
 <script>
-    var h = function() { return { 'Authorization': 'Bearer ' + localStorage.getItem('token'), 'Content-Type': 'application/json' }; };
+    var h = authHeaders;
 
     async function loadPending() {
         var r = await fetch('/api/v1/users/pending', { headers: h() });

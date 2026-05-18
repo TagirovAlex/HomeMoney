@@ -32,7 +32,7 @@
         if (e) e.preventDefault();
         var m = document.getElementById('r-month').value;
         var y = document.getElementById('r-year').value;
-        var r = await fetch('/api/v1/reports?month=' + m + '&year=' + y, { headers: authHeaders() });
+        var r = await fetch('/api/v1/reports?month=' + m + '&year=' + y + '&_=' + Date.now(), { headers: authHeaders() });
         var d = await r.json();
         if (d.status !== 'success') { alert(d.message); return; }
         var s = d.data.summary;

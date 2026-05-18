@@ -33,7 +33,7 @@
 </div>
 
 <script>
-    var h = function() { return { 'Authorization': 'Bearer ' + localStorage.getItem('token'), 'Content-Type': 'application/json' }; };
+    var h = authHeaders;
 
     async function loadCategories() {
         var r = await fetch('/api/v1/categories', { headers: h() });

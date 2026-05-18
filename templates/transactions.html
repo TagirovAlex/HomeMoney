@@ -234,8 +234,10 @@
             url = '/api/v1/user/' + userId + '/create_transaction';
             method = 'POST';
         }
+        console.log(method, url, JSON.stringify(body));
         var r = await fetch(url, { method: method, headers: authHeaders(), body: JSON.stringify(body) });
         var d = await r.json();
+        console.log('Response:', JSON.stringify(d));
         alert(d.message || d.error);
         if (r.ok) { hideAddForm(); loadTransactions(); }
     }

@@ -349,7 +349,15 @@ def create_app():
         if not month or not year:
             return jsonify({"status": "error", "message": "Параметры month и year обязательны"}), 400
         try:
+            import logging
+            logging.basicConfig(level=logging.INFO)
+            logger = logging.getLogger('report')
             report = financial_service.get_detailed_report(uid, role=role, month=int(month), year=int(year))
+            logger.info('REPORT month=%s year=%s uid=%s: txs_in_range=%s total_spent=%s total_income=%s',
+                        month, year, uid,
+                        sum(len(v) for v in report.get('detailed_spending', {}).values()) if isinstance(report.get('detailed_spending'), dict) else '?',
+                        report.get('summary', {}).get('total_spent'),
+                        report.get('summary', {}).get('total_income'))
             items = saving_repo.get_by_user(uid)
             type_labels = {"deposit": "Депозит", "stocks": "Акции", "bonds": "Облигации", "cash": "Наличные", "other": "Другое"}
             savings_data = []

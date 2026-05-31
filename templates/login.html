@@ -12,7 +12,7 @@
             <h1 class="auth-logo">HomeMoney</h1>
             <div id="auth-form">
                 <h2 id="auth-title">Вход</h2>
-                <div id="auth-error" class="auth-error hidden"></div>
+                <div id="auth-error" class="auth-error" style="display:none"></div>
                 <form onsubmit="return handleAuth(event)">
                     <label>Email <input type="email" id="auth-email" required></label>
                     <label>Пароль <input type="password" id="auth-password" required></label>
@@ -34,7 +34,7 @@
             document.getElementById('auth-submit').textContent = isLogin ? 'Войти' : 'Зарегистрироваться';
             document.getElementById('auth-switch-text').textContent = isLogin ? 'Нет аккаунта?' : 'Уже есть аккаунт?';
             document.getElementById('auth-switch-link').textContent = isLogin ? 'Зарегистрироваться' : 'Войти';
-            document.getElementById('auth-error').classList.add('hidden');
+            document.getElementById('auth-error').style.display = 'none';
         }
 
         async function handleAuth(e) {
@@ -55,11 +55,11 @@
                     window.location.href = '/';
                 } else {
                     errEl.textContent = d.message;
-                    errEl.classList.remove('hidden');
+                    errEl.style.display = 'block';
                 }
             } catch(e) {
                 errEl.textContent = 'Ошибка соединения';
-                errEl.classList.remove('hidden');
+                errEl.style.display = 'block';
             }
             return false;
         }

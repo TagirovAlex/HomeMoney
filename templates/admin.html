@@ -6,7 +6,7 @@
 </div>
 
 <div class="admin-grid">
-    <div class="card admin-card card-full">
+    <div class="card admin-card" style="grid-column: 1 / -1;">
         <h3>Telegram Bot</h3>
         <p>Статус процесса: <strong id="bot-status-text">проверка...</strong></p>
         <p>API: <strong id="bot-health-text">проверка...</strong></p>
@@ -15,7 +15,7 @@
         <pre id="bot-result" class="backup-output"></pre>
     </div>
 	
-    <div class="card admin-card card-full">
+    <div class="card admin-card" style="grid-column: 1 / -1;">
         <h3>Заявки на регистрацию</h3>
         <table class="data-table">
             <thead><tr><th>ID</th><th>Email</th><th>Telegram ID</th><th></th></tr></thead>
@@ -23,7 +23,7 @@
         </table>
     </div>
 
-    <div class="card admin-card card-full">
+    <div class="card admin-card" style="grid-column: 1 / -1;">
         <h3>Пользователи</h3>
         <table class="data-table">
             <thead><tr><th>ID</th><th>Email</th><th>Роль</th><th>Статус</th><th>Telegram ID</th><th></th></tr></thead>
@@ -31,22 +31,22 @@
         </table>
     </div>
 
-    <div class="card admin-card card-full">
+    <div class="card admin-card" style="grid-column: 1 / -1;">
         <h3>Категории</h3>
         <form onsubmit="addCat(event)">
-            <div class="form-row">
-                <input type="text" id="cat-name" placeholder="Название" required class="flex-2">
-                <input type="text" id="cat-icon" placeholder="Иконка (эмодзи)" class="max-w-70">
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <input type="text" id="cat-name" placeholder="Название" required style="flex:2;min-width:130px">
+                <input type="text" id="cat-icon" placeholder="Иконка (эмодзи)" style="max-width:70px">
             </div>
-            <div class="form-row">
-                <input type="text" id="cat-desc" placeholder="Описание" class="flex-2">
-                <select id="cat-type" class="flex-1">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+                <input type="text" id="cat-desc" placeholder="Описание" style="flex:2;min-width:130px">
+                <select id="cat-type" style="flex:1;min-width:90px">
                     <option value="expense">💳 Расход</option>
                     <option value="income">💰 Доход</option>
                 </select>
             </div>
             <input type="hidden" id="cat-edit-id" value="">
-            <button type="submit" class="btn" id="cat-submit">+</button>
+            <button type="submit" class="btn" id="cat-submit" style="margin-top:6px">+</button>
         </form>
         <table class="data-table">
             <thead><tr><th>ID</th><th>Иконка</th><th>Название</th><th>Тип</th><th></th></tr></thead>
@@ -54,7 +54,7 @@
         </table>
     </div>
 
-    <div class="card admin-card card-full">
+    <div class="card admin-card" style="grid-column: 1 / -1;">
         <h3>Бэкапы</h3>
         <p>Создать копию базы данных.</p>
         <button class="btn" onclick="backup('full')">SQLite</button>
@@ -64,28 +64,28 @@
 
 
 
-    <div class="card admin-card card-full">
+    <div class="card admin-card" style="grid-column: 1 / -1;">
         <h3>Настройки Telegram бота</h3>
-        <form onsubmit="saveBotSettings(event)" class="settings-form">
+        <form onsubmit="saveBotSettings(event)" style="max-width:600px">
             <label>Bot Token <input type="text" id="cfg-bot-token" placeholder="HM_BOT_TOKEN"></label>
-            <fieldset class="settings-fieldset">
-                <legend class="settings-legend">Прокси (SOCKS5)</legend>
-                <div class="settings-proxy-row">
-                    <label class="flex-2">Хост <input type="text" id="cfg-proxy-host" placeholder="127.0.0.1" class="input-wide"></label>
-                    <label class="flex-1">Порт <input type="text" id="cfg-proxy-port" placeholder="1080" class="input-wide"></label>
+            <fieldset style="border:1px solid var(--color-border);border-radius:6px;padding:12px;margin:8px 0">
+                <legend style="font-size:0.85rem;color:var(--color-secondary)">Прокси (SOCKS5)</legend>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <label style="flex:2;min-width:140px">Хост <input type="text" id="cfg-proxy-host" placeholder="127.0.0.1" style="width:100%"></label>
+                    <label style="flex:1;min-width:70px">Порт <input type="text" id="cfg-proxy-port" placeholder="1080" style="width:100%"></label>
                 </div>
-                <div class="settings-proxy-row">
-                    <label class="flex-1">Логин <input type="text" id="cfg-proxy-user" placeholder="(необязательно)" class="input-wide"></label>
-                    <label class="flex-1">Пароль <input type="password" id="cfg-proxy-pass" placeholder="(необязательно)" class="input-wide"></label>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+                    <label style="flex:1;min-width:120px">Логин <input type="text" id="cfg-proxy-user" placeholder="(необязательно)" style="width:100%"></label>
+                    <label style="flex:1;min-width:120px">Пароль <input type="password" id="cfg-proxy-pass" placeholder="(необязательно)" style="width:100%"></label>
                 </div>
             </fieldset>
-            <div class="settings-check-row">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="checkProxy()">🔍 Проверить прокси</button>
-                <span id="proxy-check-result" class="settings-check-result"></span>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <button type="button" class="btn btn-secondary" onclick="checkProxy()" style="font-size:0.85rem">🔍 Проверить прокси</button>
+                <span id="proxy-check-result" style="font-size:0.85rem"></span>
             </div>
             <label>Allowed Users (Telegram ID, запятые) <input type="text" id="cfg-bot-users" placeholder="123456,789012"></label>
             <label>Последних транзакций на дашборде
-                <input type="number" id="cfg-dashboard-limit" min="1" max="50" class="input-sm">
+                <input type="number" id="cfg-dashboard-limit" min="1" max="50" style="width:80px">
             </label>
             <label>Debug mode
                 <select id="cfg-debug">
@@ -142,7 +142,7 @@
         tbody.innerHTML = d.data.map(function(u) {
             var tg = u.telegram_id || '';
             return '<tr><td>' + u.id + '</td><td>' + u.email + '</td><td>' + u.role + '</td><td>' + u.status +
-                '</td><td><input id="tg-' + u.id + '" type="text" value="' + tg + '" class="input-wide"></td>' +
+                '</td><td><input id="tg-' + u.id + '" type="text" value="' + tg + '" style="width:100%;box-sizing:border-box"></td>' +
                 '<td><button class="btn btn-secondary" onclick="setTelegram(' + u.id + ')">💾</button></td></tr>';
         }).join('');
     }
@@ -155,8 +155,8 @@
         tbody.innerHTML = d.data.map(function(c) {
             var icon = c.icon || '📁';
             var typeLabel = c.type === 'income' ? '💰 Доход' : '💳 Расход';
-            return '<tr><td>' + c.id + '</td><td class="cell-icon">' + icon + '</td><td>' + c.name + '</td><td>' + typeLabel + '</td>' +
-                '<td><button class="btn btn-secondary btn-icon" onclick="editCat(' + c.id + ',\'' + c.name.replace(/'/g,"\\'") + '\',\'' + (c.icon||'') + '\',\'' + (c.description||'').replace(/'/g,"\\'") + '\',\'' + c.type + '\')">✏️</button>' +
+            return '<tr><td>' + c.id + '</td><td style="font-size:1.4rem">' + icon + '</td><td>' + c.name + '</td><td>' + typeLabel + '</td>' +
+                '<td><button class="btn btn-secondary" style="margin-right:4px" onclick="editCat(' + c.id + ',\'' + c.name.replace(/'/g,"\\'") + '\',\'' + (c.icon||'') + '\',\'' + (c.description||'').replace(/'/g,"\\'") + '\',\'' + c.type + '\')">✏️</button>' +
                 '<button class="btn btn-secondary" onclick="deleteCategory(' + c.id + ')">❌</button></td></tr>';
         }).join('');
     }

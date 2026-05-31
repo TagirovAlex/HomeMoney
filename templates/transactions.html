@@ -6,12 +6,12 @@
     <button class="btn" onclick="showAddForm()">+ Добавить</button>
 </div>
 
-<div id="add-form" class="form-card hidden" style="display:none">
+<div id="add-form" class="form-card" style="display:none">
     <h3 id="form-title">Новая транзакция</h3>
     <form onsubmit="saveTransaction(event)">
         <label>Сумма <input type="number" step="0.01" id="tx-amount" required></label>
         <label>Категория <select id="tx-category" required onchange="txCategoryChanged()"></select></label>
-        <div id="tx-budget-info" class="text-secondary" style="margin:-4px 0 8px 0"></div>
+        <div id="tx-budget-info" style="font-size:0.85rem;color:var(--color-secondary);margin:-4px 0 8px 0"></div>
         <label>Дата <input type="date" id="tx-date"></label>
         <label>Описание <input type="text" id="tx-desc"></label>
         <input type="hidden" id="tx-edit-id" value="">
@@ -20,15 +20,15 @@
     </form>
 </div>
 
-<div class="filter-bar flex-between">
-    <div class="filter-bar-presets">
+<div class="filter-bar" style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px">
+    <div style="display:flex;flex-wrap:wrap;gap:4px">
         <button type="button" class="btn" onclick="setPreset('month', -1)">Прошлый месяц</button>
         <button type="button" class="btn" onclick="setPreset('month', 0)">Текущий месяц</button>
         <button type="button" class="btn" onclick="setPreset('quarter', 0)">Квартал</button>
         <button type="button" class="btn" onclick="setPreset('year', 0)">Год</button>
         <button type="button" class="btn" onclick="setPreset('custom')">Произвольно</button>
     </div>
-    <div class="filter-bar-controls">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
         <label>Начало <input type="date" id="f-start"></label>
         <label>Конец <input type="date" id="f-end"></label>
         <label>Категория <select id="f-category"><option value="">Все</option></select></label>
@@ -36,28 +36,26 @@
     </div>
 </div>
 
-<div class="table-responsive">
 <table class="data-table">
     <thead>
-        <tr><th onclick="setSort('id')" class="sortable">ID<span id="s-id"></span></th>
-            <th onclick="setSort('category_name')" class="sortable">Категория<span id="s-category_name"></span></th>
-            <th onclick="setSort('amount')" class="sortable">Сумма<span id="s-amount"></span></th>
-            <th onclick="setSort('type')" class="sortable">Тип<span id="s-type"></span></th>
-            <th onclick="setSort('description')" class="sortable">Описание<span id="s-description"></span></th>
-            <th onclick="setSort('date')" class="sortable">Дата<span id="s-date"></span></th>
+        <tr><th onclick="setSort('id')" style="cursor:pointer">ID<span id="s-id"></span></th>
+            <th onclick="setSort('category_name')" style="cursor:pointer">Категория<span id="s-category_name"></span></th>
+            <th onclick="setSort('amount')" style="cursor:pointer">Сумма<span id="s-amount"></span></th>
+            <th onclick="setSort('type')" style="cursor:pointer">Тип<span id="s-type"></span></th>
+            <th onclick="setSort('description')" style="cursor:pointer">Описание<span id="s-description"></span></th>
+            <th onclick="setSort('date')" style="cursor:pointer">Дата<span id="s-date"></span></th>
             <th></th></tr>
     </thead>
     <tbody id="tx-table"></tbody>
 </table>
-</div>
 
-<div class="pagination hidden" id="pagination" style="display:none">
+<div class="pagination" id="pagination" style="display:none">
     <button class="btn btn-secondary" id="prev-page" onclick="goPage(-1)">← Назад</button>
     <span id="page-info" style="margin:0 12px"></span>
     <button class="btn btn-secondary" id="next-page" onclick="goPage(1)">Вперед →</button>
-    <label class="ml-auto text-secondary">
+    <label style="margin-left:auto;font-size:0.85rem;color:var(--color-secondary)">
         Показать
-        <select id="page-size" onchange="changeLimit()">
+        <select id="page-size" onchange="changeLimit()" style="padding:4px 8px;border:1px solid var(--color-border);border-radius:4px;background:var(--color-bg);color:var(--color-text)">
             <option value="10">10</option>
             <option value="20" selected>20</option>
             <option value="50">50</option>
@@ -178,14 +176,14 @@
         tbody.innerHTML = sorted.map(function(tx) {
             var typeLabel = tx.type === 'income' ? '💰 Доход' : '💳 Расход';
             return '<tr><td>' + tx.id + '</td><td>' + (tx.category_icon || '📁') + ' ' + tx.category_name + '</td><td>' + fmt(tx.amount) + '</td><td>' + typeLabel + '</td><td>' + tx.description + '</td><td>' + (tx.date ? tx.date.slice(0, 10) : '') + '</td>' +
-                '<td><button class="btn btn-secondary btn-icon" onclick="editTransaction(' + tx.id + ')">✏️</button>' +
+                '<td><button class="btn btn-secondary" style="margin-right:4px" onclick="editTransaction(' + tx.id + ')">✏️</button>' +
                 '<button class="btn btn-secondary" onclick="deleteTransaction(' + tx.id + ')">❌</button></td></tr>';
         }).join('');
         ['id','category_name','amount','type','description','date'].forEach(function(c) {
             document.getElementById('s-' + c).textContent = sortIcon(c);
         });
         totalPages = Math.ceil(d.total / d.limit) || 1;
-        document.getElementById('pagination').classList.remove('hidden');
+        document.getElementById('pagination').style.display = 'block';
         document.getElementById('page-info').textContent = curPage + ' / ' + totalPages;
         document.getElementById('prev-page').disabled = curPage <= 1;
         document.getElementById('next-page').disabled = curPage >= totalPages;
@@ -213,9 +211,9 @@
         document.getElementById('tx-desc').value = '';
         document.getElementById('tx-budget-info').textContent = '';
         setDefaultDate();
-        document.getElementById('add-form').classList.remove('hidden');
+        document.getElementById('add-form').style.display = 'block';
     }
-    function hideAddForm() { document.getElementById('add-form').classList.add('hidden'); }
+    function hideAddForm() { document.getElementById('add-form').style.display = 'none'; }
 
     async function editTransaction(txId) {
         getUser();
@@ -232,7 +230,7 @@
         document.getElementById('tx-desc').value = tx.description || '';
         document.getElementById('tx-date').value = tx.date ? tx.date.slice(0, 10) : '';
         txCategoryChanged();
-        document.getElementById('add-form').classList.remove('hidden');
+        document.getElementById('add-form').style.display = 'block';
     }
 
     async function saveTransaction(e) {

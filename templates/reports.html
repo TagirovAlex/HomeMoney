@@ -4,7 +4,7 @@
 <div class="page-header">
     <h2>Отчёты</h2>
     <form class="period-form" onsubmit="loadReport(event)">
-        <div class="flex-end" style="gap:8px;flex-wrap:wrap">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">
             <div>
                 <button type="button" class="btn" onclick="setPreset('month', -1)">Прошлый месяц</button>
                 <button type="button" class="btn" onclick="setPreset('month', 0)">Текущий месяц</button>
@@ -13,7 +13,7 @@
                 <button type="button" class="btn" onclick="setPreset('custom')">Произвольно</button>
             </div>
         </div>
-        <div id="date-range-group" class="flex-end mt-8" style="gap:8px;flex-wrap:wrap">
+        <div id="date-range-group" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;align-items:flex-end">
             <label>Начало <input type="date" id="r-start"></label>
             <label>Конец <input type="date" id="r-end"></label>
             <label>Категория <select id="r-category"><option value="">Все</option></select></label>
@@ -24,25 +24,21 @@
 </div>
 
 <div class="summary-cards" id="report-summary"></div>
-<div class="summary-cards mt-12" id="report-balance"></div>
-<div class="summary-cards mt-12" id="report-savings"></div>
+<div class="summary-cards" id="report-balance" style="margin-top:12px"></div>
+<div class="summary-cards" id="report-savings" style="margin-top:12px"></div>
 <div class="section" id="category-detail-section">
     <h3>Детализация расходов по категориям</h3>
-    <div class="table-responsive">
     <table class="data-table">
         <thead><tr><th>Категория</th><th>Потрачено</th><th>Бюджет</th><th>Остаток</th></tr></thead>
         <tbody id="report-table"></tbody>
     </table>
-    </div>
 </div>
-<div class="section hidden" id="tx-list-section" style="display:none">
+<div class="section" id="tx-list-section" style="display:none">
     <h3>Все транзакции за период <span id="tx-list-title"></span></h3>
-    <div class="table-responsive">
     <table class="data-table">
         <thead><tr><th>ID</th><th>Категория</th><th>Сумма</th><th>Описание</th><th>Дата</th><th>Тип</th></tr></thead>
         <tbody id="tx-list-table"></tbody>
     </table>
-    </div>
 </div>
 
 <script>
@@ -111,8 +107,8 @@
 
         var s = d.data.summary;
         document.getElementById('report-summary').innerHTML =
-            '<div class="card"><span class="card-label">💰 Доходы</span><span class="card-value income">+' + fmt(s.total_income || 0) + ' RUB</span></div>' +
-            '<div class="card"><span class="card-label">💳 Расходы</span><span class="card-value expense">-' + fmt(s.total_spent) + ' RUB</span></div>' +
+            '<div class="card"><span class="card-label">💰 Доходы</span><span class="card-value" style="color:var(--color-success)">+' + fmt(s.total_income || 0) + ' RUB</span></div>' +
+            '<div class="card"><span class="card-label">💳 Расходы</span><span class="card-value" style="color:var(--color-danger)">-' + fmt(s.total_spent) + ' RUB</span></div>' +
             '<div class="card"><span class="card-label">📊 Бюджет</span><span class="card-value">' + fmt(s.total_budgeted) + ' RUB</span></div>';
         document.getElementById('report-balance').innerHTML =
             '<div class="card"><span class="card-label">Остаток на начало</span><span class="card-value">' + fmt(s.opening_balance || 0) + ' RUB</span></div>' +
@@ -120,11 +116,11 @@
         var sv = d.data.savings;
         if (sv && sv.items && sv.items.length) {
             document.getElementById('report-savings').innerHTML =
-                '<div class="card card-savings">' +
+                '<div class="card" style="grid-column:1/-1;text-align:left">' +
                 '<span class="card-label">🏦 Накопления (всего: ' + fmt(sv.total) + ' RUB)</span><br>' +
                 sv.items.map(function(x) {
                     var ic = typeIcons[x.type] || '📦';
-                    return '<span class="text-secondary" style="display:inline-block;margin:4px 12px 4px 0">' + ic + ' ' + x.name + ': <strong>' + fmt(x.amount) + ' RUB</strong> (' + x.type_label + ')</span><br>';
+                    return '<span style="display:inline-block;margin:4px 12px 4px 0">' + ic + ' ' + x.name + ': <strong>' + fmt(x.amount) + ' RUB</strong> (' + x.type_label + ')</span><br>';
                 }).join('') +
                 '</div>';
         } else {
@@ -134,9 +130,9 @@
         var catSelected = document.getElementById('r-category').value;
         var catDetailSection = document.getElementById('category-detail-section');
         if (catSelected) {
-            catDetailSection.classList.add('hidden');
+            catDetailSection.style.display = 'none';
         } else {
-            catDetailSection.classList.remove('hidden');
+            catDetailSection.style.display = '';
             var tbody = document.getElementById('report-table');
             var keys = Object.keys(d.data.detailed_spending || {});
             if (keys.length === 0) {
@@ -157,14 +153,14 @@
         var txSection = document.getElementById('tx-list-section');
         var txBody = document.getElementById('tx-list-table');
         if (txs.length) {
-            txSection.classList.remove('hidden');
+            txSection.style.display = 'block';
             document.getElementById('tx-list-title').textContent = '(' + txs.length + ' шт., всего: ' + fmt(txs.reduce(function(a,t){return a+t.amount;},0)) + ' RUB)';
             txBody.innerHTML = txs.map(function(t) {
                 var tl = t.type === 'income' ? '💰 Доход' : '💳 Расход';
                 return '<tr><td>' + t.id + '</td><td>' + (t.category_icon || '📁') + ' ' + t.category_name + '</td><td>' + fmt(t.amount) + '</td><td>' + t.description + '</td><td>' + (t.date ? t.date.slice(0,10) : '') + '</td><td>' + tl + '</td></tr>';
             }).join('');
         } else {
-            txSection.classList.add('hidden');
+            txSection.style.display = 'none';
         }
     }
 
@@ -176,8 +172,8 @@
             return;
         }
         var txs = catData.transactions;
-        var html = '<div class="card card-detail">' +
-            '<div class="flex-between mb-8">' +
+        var html = '<div class="card" style="grid-column:1/-1;padding:12px">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
             '<strong>' + (catData.icon || '📁') + ' ' + catName + '</strong>' +
             '<span>Всего: ' + fmt(catData.spent) + ' RUB</span>' +
             '<button class="btn btn-secondary" onclick="document.getElementById(\'cat-detail\').innerHTML=\'\';this.parentElement.parentElement.remove()">✕</button>' +
@@ -191,6 +187,7 @@
         if (!container) {
             container = document.createElement('div');
             container.id = 'cat-detail';
+            container.style.cssText = 'margin-top:12px';
             document.querySelector('.section').after(container);
         }
         container.innerHTML = html;

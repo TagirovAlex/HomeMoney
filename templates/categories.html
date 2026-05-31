@@ -8,30 +8,28 @@
 <div class="card" style="max-width:800px;margin-bottom:20px">
     <h3>Новая категория</h3>
     <form onsubmit="addCategory(event)">
-        <div class="form-row">
-            <input type="text" id="cat-name" placeholder="Название" required class="flex-2">
-            <input type="text" id="cat-icon" placeholder="Иконка (эмодзи)" class="max-w-70">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input type="text" id="cat-name" placeholder="Название" required style="flex:2;min-width:140px; padding:8px;">
+            <input type="text" id="cat-icon" placeholder="Иконка (эмодзи)" style="max-width:80px">
         </div>
-        <div class="form-row">
-            <input type="text" id="cat-desc" placeholder="Описание" class="flex-2">
-            <select id="cat-type" class="flex-1">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+            <input type="text" id="cat-desc" placeholder="Описание" style="flex:2;min-width:140px; padding:8px;">
+            <select id="cat-type" style="flex:1;min-width:100px;padding:8px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-bg);color:var(--color-text)">
                 <option value="expense">💳 Расход</option>
                 <option value="income">💰 Доход</option>
             </select>
         </div>
         <input type="hidden" id="cat-edit-id" value="">
-        <button type="submit" class="btn" id="cat-submit">+</button>
+        <button type="submit" class="btn" id="cat-submit" style="margin-top:8px">+</button>
     </form>
 </div>
 
 <div class="card" style="max-width:800px">
     <h3>Все категории</h3>
-    <div class="table-responsive">
     <table class="data-table">
         <thead><tr><th>ID</th><th>Иконка</th><th>Название</th><th>Тип</th><th></th></tr></thead>
         <tbody id="categories-body"><tr><td colspan="5">Загрузка...</td></tr></tbody>
     </table>
-    </div>
 </div>
 
 <script>
@@ -44,8 +42,8 @@
             var icon = c.icon || '📁';
             var typeLabel = c.type === 'income' ? '💰 Доход' : '💳 Расход';
             var safe = JSON.stringify([c.id, c.name, c.icon || '', c.description || '', c.type]);
-            return '<tr><td>' + c.id + '</td><td class="cell-icon">' + icon + '</td><td>' + c.name.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</td><td>' + typeLabel + '</td>' +
-                '<td><button class="btn btn-secondary btn-icon" data-cat=\'' + safe + '\' onclick="editCategory(this)">✏️</button>' +
+            return '<tr><td>' + c.id + '</td><td style="font-size:1.4rem">' + icon + '</td><td>' + c.name.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</td><td>' + typeLabel + '</td>' +
+                '<td><button class="btn btn-secondary" style="margin-right:4px" data-cat=\'' + safe + '\' onclick="editCategory(this)">✏️</button>' +
                 '<button class="btn btn-secondary" onclick="deleteCategory(' + c.id + ')">❌</button></td></tr>';
         }).join('');
     }

@@ -9,7 +9,7 @@
     </div>
 </div>
 
-<div id="add-form" class="form-card hidden" style="display:none">
+<div id="add-form" class="form-card" style="display:none">
     <h3 id="form-title">Новый источник дохода</h3>
     <form onsubmit="saveIncome(event)">
         <input type="hidden" id="inc-id" value="">
@@ -38,7 +38,7 @@
 
 <div id="incomes-list" class="summary-cards"></div>
 
-<div id="process-result" class="hidden mt-12 card"></div>
+<div id="process-result" style="display:none; margin-top: 16px;" class="card"></div>
 
 <script>
     async function loadCategories() {
@@ -62,18 +62,18 @@
         container.innerHTML = d.data.map(function(s) {
             var label = (s.is_regular ? '🔄 ' : '📌 ') + s.name;
             var info = (s.amount ? fmt(s.amount) + ' RUB' : '') + (s.is_regular && s.next_date ? ' (след: ' + s.next_date.slice(0,10) + ')' : '');
-            return '<div class="card card-left">' +
-                '<div class="flex-between">' +
-                '<div><span class="card-label">' + label + '</span><br><span class="card-value card-value-sm">' + info + '</span></div>' +
-                '<div><button class="btn btn-secondary btn-icon" onclick="editIncome(' + s.id + ')">✏️</button>' +
+            return '<div class="card" style="text-align:left">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center">' +
+                '<div><span class="card-label">' + label + '</span><br><span class="card-value" style="font-size:1.2rem">' + info + '</span></div>' +
+                '<div><button class="btn btn-secondary" style="margin-right:4px" onclick="editIncome(' + s.id + ')">✏️</button>' +
                 '<button class="btn btn-secondary" onclick="deleteIncome(' + s.id + ')">❌</button></div>' +
                 '</div></div>';
         }).join('');
     }
 
     function toggleRegular() {
-        document.getElementById('regular-fields').classList.toggle('hidden',
-            !document.getElementById('inc-regular').checked);
+        document.getElementById('regular-fields').style.display =
+            document.getElementById('inc-regular').checked ? 'block' : 'none';
     }
 
     function showAddForm() {
@@ -87,11 +87,11 @@
         document.getElementById('inc-period').value = 'monthly';
         document.getElementById('inc-day').value = '1';
         toggleRegular();
-        document.getElementById('add-form').classList.remove('hidden');
+        document.getElementById('add-form').style.display = 'block';
     }
 
     function hideAddForm() {
-        document.getElementById('add-form').classList.add('hidden');
+        document.getElementById('add-form').style.display = 'none';
     }
 
     async function saveIncome(e) {
@@ -132,7 +132,7 @@
         document.getElementById('inc-day').value = src.day_of_period || 1;
         document.getElementById('inc-category').value = src.category_id;
         toggleRegular();
-        document.getElementById('add-form').classList.remove('hidden');
+        document.getElementById('add-form').style.display = 'block';
     }
 
     async function deleteIncome(id) {
@@ -158,8 +158,8 @@
         } else {
             el.textContent = '❌ ' + (d.message || 'Ошибка');
         }
-        el.classList.remove('hidden');
-        setTimeout(function() { el.classList.add('hidden'); }, 5000);
+        el.style.display = 'block';
+        setTimeout(function() { el.style.display = 'none'; }, 5000);
         loadIncomes();
     }
 

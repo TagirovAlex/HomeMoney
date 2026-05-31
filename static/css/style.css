@@ -252,11 +252,13 @@ main { flex: 1; padding: 24px 5%; max-width: 1200px; margin: 0 auto; width: 100%
 .cell-icon { font-size: 1.4rem; }
 
 /* --- MOBILE --- */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
+    header { flex-wrap: wrap; gap: 0; }
     #nav-toggle { display: inline-flex; }
-    nav { display: none; flex-direction: column; width: 100%; gap: 4px; }
+    nav { display: none; flex-direction: column; width: 100%; gap: 4px; margin-top: 8px; }
     nav.nav-open { display: flex; }
-    .header-left { flex-direction: column; align-items: flex-start; gap: 8px; width: 100%; }
+    .header-left { order: 2; flex-direction: column; align-items: flex-start; gap: 8px; width: 100%; }
+    .header-right { order: 1; margin-left: auto; }
     main { padding: 16px 4%; }
     header { padding: 8px 4%; }
     .page-header { flex-direction: column; align-items: flex-start; }
@@ -279,7 +281,7 @@ main { flex: 1; padding: 24px 5%; max-width: 1200px; margin: 0 auto; width: 100%
     .auth-card { padding: 24px; }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 640px) {
     .card-value { font-size: 1.2rem; }
     .page-header h2 { font-size: 1.1rem; }
     .card { padding: 12px; }

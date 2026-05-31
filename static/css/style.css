@@ -290,3 +290,38 @@ main { flex: 1; padding: 24px 5%; max-width: 1200px; margin: 0 auto; width: 100%
     .error-card { padding: 24px 16px; }
     .error-code { font-size: 3rem; }
 }
+
+/* --- MOBILE JS FALLBACK (for devices ignoring @media viewport) --- */
+.mobile header { flex-wrap: wrap; gap: 0; }
+.mobile #nav-toggle { display: inline-flex; }
+.mobile nav { display: none; flex-direction: column; width: 100%; gap: 4px; margin-top: 8px; }
+.mobile nav.nav-open { display: flex; }
+.mobile .header-left { order: 2; flex-direction: column; align-items: flex-start; gap: 8px; width: 100%; }
+.mobile .header-right { order: 1; margin-left: auto; }
+.mobile main { padding: 16px 4%; }
+.mobile header { padding: 8px 4%; }
+.mobile .page-header { flex-direction: column; align-items: flex-start; }
+.mobile .page-header h2 { font-size: 1.25rem; }
+.mobile .summary-cards { flex-direction: column; }
+.mobile .card { padding: 16px; }
+.mobile .card-value { font-size: 1.4rem; }
+.mobile .filter-bar { flex-wrap: wrap; flex-direction: column; align-items: stretch; }
+.mobile .filter-bar-presets { justify-content: center; }
+.mobile .filter-bar label { white-space: normal; }
+.mobile .filter-bar select, .mobile .filter-bar input { width: 100%; }
+.mobile .data-table th, .mobile .data-table td { padding: 6px 8px; font-size: 0.85rem; }
+.mobile .form-card { padding: 16px; }
+.mobile .form-card form { max-width: 100%; }
+.mobile .pagination { justify-content: center; }
+.mobile .settings-proxy-row { flex-direction: column; }
+.mobile .settings-proxy-row label { min-width: 100%; }
+.mobile .error-card { padding: 40px 24px; }
+.mobile .error-code { font-size: 4rem; }
+.mobile .auth-card { padding: 24px; }
+.mobile .card-value { font-size: 1.2rem; }
+.mobile .page-header h2 { font-size: 1.1rem; }
+.mobile .card { padding: 12px; }
+.mobile .btn, .mobile button { padding: 8px 12px; }
+.mobile .data-table th, .mobile .data-table td { padding: 4px 6px; font-size: 0.8rem; }
+.mobile .error-card { padding: 24px 16px; }
+.mobile .error-code { font-size: 3rem; }

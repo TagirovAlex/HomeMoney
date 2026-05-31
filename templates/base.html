@@ -85,6 +85,11 @@
                     .catch(function() { window.location.href = '/login'; });
             });
 
+            // Mobile class fallback (for devices ignoring @media)
+            var html = document.documentElement;
+            function checkMobile() { html.classList.toggle('mobile', window.innerWidth < 1024); }
+            checkMobile(); window.addEventListener('resize', checkMobile);
+
             // Mobile nav toggle
             document.getElementById('nav-toggle').addEventListener('click', function() {
                 document.getElementById('main-nav').classList.toggle('nav-open');

@@ -66,7 +66,21 @@ HomeMoney/
 │
 ├── static/
 │   ├── css/
-│   │   └── style.css              # Единый CSS (светлая/тёмная тема, responsive, админ-сетка)
+│   │   └── style.css              # Единый CSS (светлая/тёмная тема, responsive, админ-сетка,
+│   │                              #   mobile nav hamburger, card-таблицы, JS-фоллбэк .mobile)
+│   ├── js/
+│   │   ├── main.js                # Общий JS: theme, fmt, authHeaders, auth check, logout, mobile nav
+│   │   └── pages/
+│   │       ├── dashboard.js       # Дашборд (сводка + последние транзакции)
+│   │       ├── transactions.js    # Транзакции (CRUD, фильтры, пагинация, сортировка)
+│   │       ├── reports.js         # Отчёты (периоды, детализация, сводки)
+│   │       ├── categories.js      # Категории (CRUD)
+│   │       ├── savings.js         # Накопления (CRUD)
+│   │       ├── incomes.js         # Доходы (CRUD, регулярные)
+│   │       ├── budgets.js         # Бюджеты (CRUD)
+│   │       ├── admin.js           # Админка (пользователи, категории, бот, бэкапы)
+│   │       ├── login.js           # Логин/регистрация
+│   │       └── error.js           # Заглушка (тема из main.js)
 │   ├── logo.jpg                   # Логотип
 │   └── favicon.ico                # Иконка
 │

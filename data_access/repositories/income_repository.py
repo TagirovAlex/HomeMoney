@@ -29,7 +29,7 @@ class IIncomeSourceRepository(ABC):
     def get_due_regular(self, user_id: int) -> List[IncomeSource]:
         pass
 
-class SQLAlchemyIncomeSourceRepository:
+class SQLAlchemyIncomeSourceRepository(IIncomeSourceRepository):
     def __init__(self):
         self._db = get_db
 

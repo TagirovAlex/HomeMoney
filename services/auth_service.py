@@ -44,10 +44,13 @@ class TokenBlacklist:
 blacklist = TokenBlacklist()
 
 # Автоматическая чистка каждые 5 минут
-_cleanup_timer = threading.Thread(target=lambda: (
-    setattr(_cleanup_timer, '_running', True),
-    None
-) or None, daemon=True)
+def _run_cleanup():
+    while True:
+        time.sleep(300)
+        blacklist.cleanup()
+
+_cleanup_thread = threading.Thread(target=_run_cleanup, daemon=True)
+_cleanup_thread.start()
 
 
 class AuthService:

@@ -573,7 +573,8 @@ async def cmd_tx(message: Message):
             await _cmd_tx(message.from_user.id, message, month=m, year=y)
             return
         except ValueError:
-            pass
+            await message.answer("Неверный формат. Используй: /tx ММ ГГГГ (например: /tx 05 2026)")
+            return
     await _cmd_tx(message.from_user.id, message)
 
 @router.callback_query(lambda c: c.data and c.data.startswith("tx_page:"))

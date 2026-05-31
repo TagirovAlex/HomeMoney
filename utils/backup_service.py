@@ -1,8 +1,6 @@
 import os, shutil, json
 from datetime import datetime
-from utils.database_session import _get_engine, _get_session_local
-engine = _get_engine()
-SessionLocal = _get_session_local()
+from utils.database_session import get_db
 from models.database import Base
 
 class BackupService:
@@ -20,12 +18,11 @@ class BackupService:
                 shutil.copy2(self.db_path, backup_file)
             elif backup_type == "json":
                 backup_file += ".json"
-                session = SessionLocal()
-                data = {}
-                for table in Base.metadata.sorted_tables:
-                    rows = session.query(table).all()
-                    data[table.name] = [{c.name: getattr(row, c.name) for c in table.columns} for row in rows]
-                session.close()
+                with get_db() as session:
+                    data = {}
+                    for table in Base.metadata.sorted_tables:
+                        rows = session.query(table).all()
+                        data[table.name] = [{c.name: getattr(row, c.name) for c in table.columns} for row in rows]
                 with open(backup_file, "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=2, ensure_ascii=False, default=str)
             else:

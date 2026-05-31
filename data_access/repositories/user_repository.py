@@ -14,7 +14,7 @@ class IUserRepository(ABC):
     def get_all(self, current_user_id: int, role: str) -> List[User]:
         pass
 
-class SQLAlchemyUserRepository:
+class SQLAlchemyUserRepository(IUserRepository):
     """Рабочий репозиторий пользователей с использованием SQLAlchemy."""
 
     def __init__(self):

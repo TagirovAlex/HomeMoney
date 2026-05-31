@@ -14,7 +14,7 @@ class IBudgetRepository(ABC):
     def create_budget(self, budget_data: dict) -> Budget:
         pass
 
-class SQLAlchemyBudgetRepository:
+class SQLAlchemyBudgetRepository(IBudgetRepository):
     """Рабочий репозиторий бюджетов с использованием SQLAlchemy."""
 
     def __init__(self):

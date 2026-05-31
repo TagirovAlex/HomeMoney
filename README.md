@@ -236,7 +236,8 @@ HomeMoney/
 ├── telegram_bot.py                 # Aiogram 3.x bot (proxy, whitelist, webhook clean)
 ├── templates/                      # 10 HTML pages (включая savings.html)
 ├── static/
-│   ├── css/style.css               # Dark/light theme, responsive, admin grid
+│   ├── css/style.css               # Dark/light theme, responsive (mobile: hamburger menu,
+│   │                               #   card tables, single-column admin grid, unified filters)
 │   ├── logo.jpg                    # Логотип
 │   └── favicon.ico
 ├── tests/                          # 45 tests

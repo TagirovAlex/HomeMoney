@@ -20,26 +20,7 @@
             </div>
         </main>
     </div>
-    <script>
-        (function() {
-            var btn = document.getElementById('theme-toggle');
-            var html = document.documentElement;
-            function init() {
-                var t = localStorage.getItem('theme');
-                if (t) { html.setAttribute('data-theme', t); btn.textContent = t === 'dark' ? '☀️' : '🌙'; }
-                else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    localStorage.setItem('theme', 'dark'); html.setAttribute('data-theme', 'dark'); btn.textContent = '☀️';
-                }
-            }
-            btn.addEventListener('click', function() {
-                var cur = html.getAttribute('data-theme') || 'light';
-                var next = cur === 'light' ? 'dark' : 'light';
-                html.setAttribute('data-theme', next);
-                localStorage.setItem('theme', next);
-                btn.textContent = next === 'dark' ? '☀️' : '🌙';
-            });
-            init();
-        })();
-    </script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/pages/error.js') }}"></script>
 </body>
 </html>

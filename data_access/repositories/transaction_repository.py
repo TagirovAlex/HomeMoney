@@ -24,7 +24,7 @@ class ITransactionRepository(ABC):
     def get_filtered_for_user(self, user_id: int, month: int = None, year: int = None, category_id: int = None, page: int = 1, limit: int = 50) -> Tuple[List[Transaction], int]:
         pass
 
-class SQLAlchemyTransactionRepository:
+class SQLAlchemyTransactionRepository(ITransactionRepository):
     """Рабочий репозиторий транзакций с использованием SQLAlchemy."""
 
     def __init__(self):

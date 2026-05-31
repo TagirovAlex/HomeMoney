@@ -1,78 +1,71 @@
-// =========================================
-// main.js - Основной скрипт клиентской логики
-// =========================================
-
-/**
- * 1. Логика переключения темы (Dark/Light Mode)
- */
-document.addEventListener('DOMContentLoaded', () => {
-    const toggleButton = document.getElementById('theme-toggle');
-    const htmlElement = document.documentElement;
-    
-    function initializeTheme() {
-        // Поиск в localStorage, затем проверка системных настроек ОС
-        let storedTheme = localStorage.getItem('theme');
-        if (storedTheme) {
-            htmlElement.setAttribute('data-theme', storedTheme);
-            updateToggleIcon(storedTheme);
-        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            // Автоматическое определение темы по ОС
-            localStorage.setItem('theme', 'dark');
-            htmlElement.setAttribute('data-theme', 'dark');
-            updateToggleIcon('dark');
-        } else {
-             // По умолчанию - светлая тема
-            htmlElement.setAttribute('data-theme', 'light');
-            updateToggleIcon('light');
+(function() {
+    var btn = document.getElementById('theme-toggle');
+    var html = document.documentElement;
+    function initTheme() {
+        var t = localStorage.getItem('theme');
+        if (t) { html.setAttribute('data-theme', t); if (btn) btn.textContent = t === 'dark' ? '☀️' : '🌙'; }
+        else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            localStorage.setItem('theme', 'dark'); html.setAttribute('data-theme', 'dark'); if (btn) btn.textContent = '☀️';
         }
     }
+    if (btn) {
+        btn.addEventListener('click', function() {
+            var cur = html.getAttribute('data-theme') || 'light';
+            var next = cur === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            btn.textContent = next === 'dark' ? '☀️' : '🌙';
+        });
+    }
+    initTheme();
 
-    function updateToggleIcon(theme) {
-        toggleButton.textContent = theme === 'dark' ? '☀️' : '🌙';
+    window.fmt = function(n) { return (n || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+
+    window.authHeaders = function() {
+        return { 'Content-Type': 'application/json' };
+    };
+
+    var userEmail = document.getElementById('user-email');
+    var logoutBtn = document.getElementById('logout-btn');
+
+    if (userEmail && logoutBtn) {
+        fetch('/api/v1/me', { method: 'GET', headers: { 'Content-Type': 'application/json' } })
+            .then(function(r) {
+                if (!r.ok) { window.location.href = '/login'; return; }
+                return r.json();
+            })
+            .then(function(d) {
+                if (!d || d.status !== 'success') { window.location.href = '/login'; return; }
+                var u = d.user;
+                userEmail.textContent = u.email;
+                userEmail.style.display = 'inline';
+                logoutBtn.style.display = 'inline-block';
+                window.__userId = u.user_id;
+                try { localStorage.setItem('user', JSON.stringify(u)); } catch(e) {}
+                if (window.__pageInit) window.__pageInit(u.user_id);
+            })
+            .catch(function() { window.location.href = '/login'; });
+
+        logoutBtn.addEventListener('click', function() {
+            fetch('/api/v1/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+                .then(function() { window.location.href = '/login'; })
+                .catch(function() { window.location.href = '/login'; });
+        });
     }
 
-    function toggleTheme() {
-        let currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-        let newTheme = currentTheme === 'light' ? 'dark' : 'light';
-        
-        htmlElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
-        updateToggleIcon(newTheme);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    function checkMobile() { document.documentElement.classList.toggle('mobile', window.innerWidth < 1024); }
+
+    var navToggle = document.getElementById('nav-toggle');
+    var mainNav = document.getElementById('main-nav');
+    if (navToggle && mainNav) {
+        navToggle.addEventListener('click', function() {
+            mainNav.classList.toggle('nav-open');
+        });
     }
 
-    toggleButton.addEventListener('click', toggleTheme);
-    initializeTheme();
-});
-
-
-/**
- * 2. Логика загрузки данных с API (Dashboard)
- */
-async function loadDashboardData() {
-    console.log("Attempting to load financial data from API...");
-    try {
-        // Запрашиваем данные сводки за текущий тестовый период (Май 2024)
-        const response = await fetch('/api/v1/transactions'); 
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        if (data.status === 'success') {
-            const summary = data.data;
-            document.getElementById('total-spent').textContent = `${summary.total_spent.toFixed(2)} RUB`;
-            document.getElementById('total-budgeted').textContent = `${summary.total_budgeted.toFixed(2)} RUB`;
-
-            // В реальном приложении здесь будет вызов функции для заполнения таблицы транзакций
-            console.log("Dashboard data loaded successfully.");
-        } else {
-            alert(`Ошибка загрузки данных: ${data.message}`);
-        }
-    } catch (error) {
-        console.error("Критическая ошибка при загрузке данных с API:", error);
-    }
-}
-
-// Загружаем данные после того, как DOM полностью готов
-window.onload = loadDashboardData;
+    var links = document.querySelectorAll('.nav-link');
+    var path = window.location.pathname;
+    links.forEach(function(l) { if (l.getAttribute('href') === path) l.classList.add('active'); });
+})();

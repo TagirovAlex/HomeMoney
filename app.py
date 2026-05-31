@@ -142,7 +142,7 @@ def create_app():
 
     @app.route('/api/v1/logout', methods=['POST'])
     def logout():
-        from services.auth_service import _extract_token, AuthService, blacklist
+        from services.auth_service import _extract_token, blacklist
         token = _extract_token()
         if token:
             payload = AuthService.verify_token(token)
@@ -285,9 +285,7 @@ def create_app():
         from utils.database_session import get_db
         with get_db() as session:
             cats = {c.id: c.name for c in session.query(Category).all()}
-        from models.database import Category as CatModel
-        with get_db() as session:
-            cat_icons = {c.id: c.icon or "" for c in session.query(CatModel).all()}
+            cat_icons = {c.id: c.icon or "" for c in session.query(Category).all()}
         return jsonify({"status": "success", "data": [
             {"id": b.id, "category_id": b.category_id, "category_name": cats.get(b.category_id, f"ID:{b.category_id}"),
              "category_icon": cat_icons.get(b.category_id, ""),

@@ -9,14 +9,12 @@ from data_access.repositories.income_repository import SQLAlchemyIncomeSourceRep
 from data_access.repositories.saving_repository import SQLAlchemySavingRepository
 from data_access.repositories.category_repository import SQLAlchemyCategoryRepository
 from services.financial_service import FinancialService
-from services.auth_service import AuthService, require_auth, require_csrf, generate_csrf_token, _extract_token, blacklist
+from services.auth_service import AuthService, require_auth, generate_csrf_token, _extract_token, blacklist
 from utils.rate_limiter import register_limiter, login_limiter
 from utils.env_manager import get_settings, update_settings
 from utils.backup_service import BackupService
 from utils.bot_manager import start_bot, stop_bot, status_bot, check_proxy
-from models.database import Category, Transaction, Budget, IncomeSource
 from config import Config
-from utils.database_session import get_db
 
 def create_app():
     app = Flask(__name__)
@@ -209,11 +207,10 @@ def create_app():
             return jsonify({"status": "error", "message": "Доступ запрещён"}), 403
 
         if request.method == 'GET':
-            with get_db() as session:
-                tx = session.query(Transaction).filter(Transaction.id == tx_id, Transaction.user_id == user_id).first()
-                if not tx:
-                    return jsonify({"status": "error", "message": "Транзакция не найдена"}), 404
-                cat = session.query(Category).filter(Category.id == tx.category_id).first()
+            tx = transaction_repo.get_by_id(tx_id, user_id)
+            if not tx:
+                return jsonify({"status": "error", "message": "Транзакция не найдена"}), 404
+            cat = category_repo.get_by_id(tx.category_id)
             return jsonify({"status": "success", "data": {
                 "id": tx.id, "amount": tx.amount, "category_id": tx.category_id,
                 "category_name": cat.name if cat else "", "category_icon": cat.icon if cat else "",
@@ -488,21 +485,17 @@ def create_app():
     @app.route('/api/v1/categories/<int:cat_id>', methods=['DELETE'])
     @require_auth
     def delete_category(cat_id):
-        with get_db() as session:
-            cat = session.query(Category).filter(Category.id == cat_id).first()
-            if not cat:
-                return jsonify({"status": "error", "message": "Категория не найдена"}), 404
-            tx_count = session.query(Transaction).filter(Transaction.category_id == cat_id).count()
-            bg_count = session.query(Budget).filter(Budget.category_id == cat_id).count()
-            inc_count = session.query(IncomeSource).filter(IncomeSource.category_id == cat_id).count()
-            if tx_count > 0 or bg_count > 0 or inc_count > 0:
-                refs = []
-                if tx_count: refs.append(f"транзакции ({tx_count})")
-                if bg_count: refs.append(f"бюджеты ({bg_count})")
-                if inc_count: refs.append(f"доходы ({inc_count})")
-                return jsonify({"status": "error", "message": f"Нельзя удалить категорию: есть связанные записи: {', '.join(refs)}"}), 409
-            session.delete(cat)
-            session.commit()
+        cat = category_repo.get_by_id(cat_id)
+        if not cat:
+            return jsonify({"status": "error", "message": "Категория не найдена"}), 404
+        refs = category_repo.get_reference_counts(cat_id)
+        parts = []
+        if refs["transactions"]: parts.append(f"транзакции ({refs['transactions']})")
+        if refs["budgets"]: parts.append(f"бюджеты ({refs['budgets']})")
+        if refs["incomes"]: parts.append(f"доходы ({refs['incomes']})")
+        if parts:
+            return jsonify({"status": "error", "message": f"Нельзя удалить категорию: есть связанные записи: {', '.join(parts)}"}), 409
+        category_repo.delete(cat_id)
         return jsonify({"status": "success", "message": "Категория удалена"})
 
     @app.route('/api/v1/incomes', methods=['GET'])

@@ -25,6 +25,10 @@ class ITransactionRepository(ABC):
         pass
 
     @abstractmethod
+    def get_by_id(self, tx_id: int, user_id: int) -> Optional[Transaction]:
+        pass
+
+    @abstractmethod
     def update_transaction(self, tx_id: int, user_id: int, data: dict) -> Optional[Transaction]:
         pass
 
@@ -85,6 +89,10 @@ class SQLAlchemyTransactionRepository(ITransactionRepository):
             total = query.count()
             query = query.order_by(Transaction.date.desc()).offset((page - 1) * limit).limit(limit)
             return query.all(), total
+
+    def get_by_id(self, tx_id: int, user_id: int) -> Optional[Transaction]:
+        with self._db() as session:
+            return session.query(Transaction).filter(Transaction.id == tx_id, Transaction.user_id == user_id).first()
 
     def update_transaction(self, tx_id: int, user_id: int, data: dict) -> Optional[Transaction]:
         with self._db() as session:

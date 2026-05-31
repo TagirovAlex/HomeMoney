@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional
-from models.database import Category
+from typing import List, Optional, Dict
+from models.database import Category, Transaction, Budget, IncomeSource
 from utils.database_session import get_db
 
 
@@ -24,6 +24,10 @@ class ICategoryRepository(ABC):
 
     @abstractmethod
     def delete(self, category_id: int) -> bool:
+        pass
+
+    @abstractmethod
+    def get_reference_counts(self, category_id: int) -> Dict[str, int]:
         pass
 
 
@@ -65,3 +69,11 @@ class SQLAlchemyCategoryRepository(ICategoryRepository):
             session.delete(obj)
             session.commit()
             return True
+
+    def get_reference_counts(self, category_id: int) -> Dict[str, int]:
+        with self._db() as session:
+            return {
+                "transactions": session.query(Transaction).filter(Transaction.category_id == category_id).count(),
+                "budgets": session.query(Budget).filter(Budget.category_id == category_id).count(),
+                "incomes": session.query(IncomeSource).filter(IncomeSource.category_id == category_id).count(),
+            }

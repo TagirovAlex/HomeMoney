@@ -303,6 +303,7 @@ def create_app():
              "category_icon": cat_icons.get(b.category_id, ""),
              "target_amount": b.target_amount,
              "month": b.month, "year": b.year,
+             "period_end_month": b.period_end_month, "period_end_year": b.period_end_year,
              "is_template": b.is_template,
              "period_start": b.period_start_date.isoformat() if b.period_start_date else "",
              "period_end": b.period_end_date.isoformat() if b.period_end_date else ""}
@@ -318,12 +319,16 @@ def create_app():
         try:
             month = int(data['month']) if data.get('month') else None
             year = int(data['year']) if data.get('year') else None
+            period_end_month = int(data['period_end_month']) if data.get('period_end_month') else None
+            period_end_year = int(data['period_end_year']) if data.get('period_end_year') else None
             budget = financial_service.create_budget(
                 user_id=request.current_user["user_id"],
                 category_id=int(data['category_id']),
                 target_amount=float(data['target_amount']),
                 month=month,
                 year=year,
+                period_end_month=period_end_month,
+                period_end_year=period_end_year,
             )
             return jsonify({"status": "success", "message": "Бюджет создан", "budget_id": budget.id}), 201
         except Exception:
@@ -336,7 +341,7 @@ def create_app():
         data = request.get_json()
         if not data:
             return jsonify({"status": "error", "message": "Нет данных"}), 400
-        allowed = {"target_amount", "category_id", "month", "year"}
+        allowed = {"target_amount", "category_id", "month", "year", "period_end_month", "period_end_year"}
         update = {k: v for k, v in data.items() if k in allowed}
         if not update:
             return jsonify({"status": "error", "message": "Нет полей для обновления"}), 400

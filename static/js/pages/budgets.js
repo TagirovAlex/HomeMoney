@@ -1,20 +1,41 @@
-var MONTHS = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+var MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+var MONTHS_SHORT = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
 var currentMonth, currentYear;
 var allCategories = [], allBudgets = [];
 var catMap = {};
 
 function pad2(n) { return n < 10 ? '0' + n : '' + n; }
 
+function populateSelect(id, values) {
+    var sel = document.getElementById(id);
+    sel.innerHTML = values.map(function(v) { return '<option value="' + v.value + '">' + v.label + '</option>'; }).join('');
+}
+
+function populateMonthSelects() {
+    var months = [];
+    for (var i = 1; i <= 12; i++) months.push({ value: i, label: MONTHS[i-1] });
+    populateSelect('bg-month', months);
+    populateSelect('bg-period-from-month', months);
+    populateSelect('bg-period-to-month', months);
+    var year = new Date().getFullYear();
+    var years = [];
+    for (var y = year - 1; y <= year + 5; y++) years.push({ value: y, label: y });
+    populateSelect('bg-year', years);
+    populateSelect('bg-period-from-year', years);
+    populateSelect('bg-period-to-year', years);
+}
+
 function init() {
     var d = new Date();
     currentMonth = d.getMonth() + 1;
     currentYear = d.getFullYear();
+    populateMonthSelects();
     updateMonthLabel();
     loadData();
 }
 
 function updateMonthLabel() {
-    document.getElementById('month-label').textContent = MONTHS[currentMonth-1] + ' ' + currentYear;
+    document.getElementById('month-label').textContent = MONTHS_SHORT[currentMonth-1] + ' ' + currentYear;
 }
 
 function changeMonth(delta) {
@@ -46,23 +67,58 @@ async function loadData() {
     renderBudgets();
 }
 
+function getBudgetType() {
+    var radios = document.getElementsByName('bg-type');
+    for (var i = 0; i < radios.length; i++) {
+        if (radios[i].checked) return radios[i].value;
+    }
+    return 'template';
+}
+
+function onBudgetTypeChange() {
+    var t = getBudgetType();
+    document.getElementById('bg-month-fields').style.display = t === 'month' ? '' : 'none';
+    document.getElementById('bg-period-fields').style.display = t === 'period' ? '' : 'none';
+    if (t === 'month') {
+        document.getElementById('bg-month').value = currentMonth;
+        document.getElementById('bg-year').value = currentYear;
+    }
+    if (t === 'period') {
+        document.getElementById('bg-period-from-month').value = currentMonth;
+        document.getElementById('bg-period-from-year').value = currentYear;
+        document.getElementById('bg-period-to-month').value = currentMonth;
+        document.getElementById('bg-period-to-year').value = currentYear;
+    }
+}
+
 function renderBudgets() {
     var templates = allBudgets.filter(function(b) { return b.is_template; });
-    var overrides = allBudgets.filter(function(b) { return !b.is_template; });
-    var monthOverrides = overrides.filter(function(b) { return b.month === currentMonth && b.year === currentYear; });
+    var monthOverrides = allBudgets.filter(function(b) {
+        return !b.is_template && !b.period_end_month && b.month === currentMonth && b.year === currentYear;
+    });
+    var periodBudgets = allBudgets.filter(function(b) {
+        return b.period_end_month && b.month && b.year;
+    }).filter(function(b) {
+        var start = b.year * 12 + b.month;
+        var end = b.period_end_year * 12 + b.period_end_month;
+        var target = currentYear * 12 + currentMonth;
+        return start <= target && target <= end;
+    });
 
     var tplMap = {};
     templates.forEach(function(b) { tplMap[b.category_id] = b; });
     var ovrMap = {};
     monthOverrides.forEach(function(b) { ovrMap[b.category_id] = b; });
+    var perMap = {};
+    periodBudgets.forEach(function(b) { perMap[b.category_id] = b; });
 
     var catIds = {};
     allBudgets.forEach(function(b) { catIds[b.category_id] = true; });
     var cats = allCategories.filter(function(c) { return catIds[c.id]; });
     cats.sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); });
 
-    var html = '<section class="section"><h3>📋 Сводка на ' + MONTHS[currentMonth-1] + ' ' + currentYear + '</h3>';
-    if (!cats.length && !templates.length && !monthOverrides.length) {
+    var html = '<section class="section"><h3>📋 Сводка на ' + MONTHS_SHORT[currentMonth-1] + ' ' + currentYear + '</h3>';
+    if (!cats.length && !templates.length && !monthOverrides.length && !periodBudgets.length) {
         html += '<p>Нет бюджетов. Создайте первый.</p></section>';
         document.getElementById('budgets-list').innerHTML = html;
         return;
@@ -71,21 +127,22 @@ function renderBudgets() {
     html += '<div class="budget-grid"><div class="budget-grid-header">' +
         '<span class="bg-col-cat">Категория</span>' +
         '<span class="bg-col-tpl">Шаблон</span>' +
-        '<span class="bg-col-month">' + MONTHS[currentMonth-1] + ' ' + currentYear + '</span>' +
+        '<span class="bg-col-month">' + MONTHS_SHORT[currentMonth-1] + ' ' + currentYear + '</span>' +
         '<span class="bg-col-actions"></span>' +
         '</div>';
 
     cats.forEach(function(c) {
         var tpl = tplMap[c.id];
         var ovr = ovrMap[c.id];
+        var per = perMap[c.id];
         var tplAmount = tpl ? tpl.target_amount : null;
-        var monthAmount = ovr ? ovr.target_amount : (tplAmount || null);
-        var isOverride = ovr && (!tpl || ovr.target_amount !== tpl.target_amount);
+        var monthAmount = ovr ? ovr.target_amount : (per ? per.target_amount : (tplAmount || null));
+        var isOverride = !!(ovr || per);
         var icon = c.icon || '📁';
 
         html += '<div class="budget-grid-row' + (isOverride ? ' bg-override' : '') + '">';
         html += '<span class="bg-col-cat">' + icon + ' ' + c.name + '</span>';
-        html += '<span class="bg-col-tpl">' + (tplAmount !== null ? fmt(tplAmount) : '—') + '</span>';
+        html += '<span class="bg-col-tpl">' + (tplAmount !== null ? fmt(tplAmount) : (per ? '📅' : '—')) + '</span>';
         html += '<span class="bg-col-month">' + (monthAmount !== null ? fmt(monthAmount) : '—') + '</span>';
         html += '<span class="bg-col-actions">';
 
@@ -94,20 +151,18 @@ function renderBudgets() {
         } else {
             html += '<button class="btn btn-secondary btn-sm" onclick="addTemplate(' + c.id + ')" title="Добавить шаблон">📋</button>';
         }
-        if (ovr) {
-            html += '<button class="btn btn-secondary btn-sm" onclick="editBudget(' + ovr.id + ')" title="Редактировать">✏️</button>';
-            html += '<button class="btn btn-secondary btn-sm" onclick="deleteBudget(' + ovr.id + ')" title="Удалить переопределение">❌</button>';
-        } else if (tpl) {
+        var budgetForEdit = ovr || per || tpl;
+        if (budgetForEdit) {
+            html += '<button class="btn btn-secondary btn-sm" onclick="deleteBudget(' + budgetForEdit.id + ')" title="Удалить">❌</button>';
+        }
+        if (!per && tpl) {
             html += '<button class="btn btn-secondary btn-sm" onclick="addOverride(' + c.id + ',' + tpl.target_amount + ')" title="Переопределить на этот месяц">📝</button>';
-        } else {
-            html += '<button class="btn btn-secondary btn-sm" onclick="addOverride(' + c.id + ')" title="Добавить бюджет на месяц">➕</button>';
         }
 
         html += '</span></div>';
     });
 
     html += '</div></section>';
-
     document.getElementById('budgets-list').innerHTML = html;
 }
 
@@ -115,26 +170,24 @@ function showAddForm() {
     document.getElementById('bg-edit-id').value = '';
     document.getElementById('bg-category').value = '';
     document.getElementById('bg-amount').value = '';
-    document.getElementById('bg-is-template').checked = true;
     document.getElementById('bg-month').value = currentMonth;
     document.getElementById('bg-year').value = currentYear;
+    clearAllRadios();
+    document.querySelector('input[name="bg-type"][value="template"]').checked = true;
+    document.getElementById('bg-month-fields').style.display = 'none';
+    document.getElementById('bg-period-fields').style.display = 'none';
     document.getElementById('add-form-title').textContent = 'Новый бюджет';
     document.getElementById('bg-submit').textContent = 'Сохранить';
-    document.getElementById('bg-month-picker').style.display = 'none';
     document.getElementById('add-form').style.display = 'block';
+}
+
+function clearAllRadios() {
+    var radios = document.getElementsByName('bg-type');
+    for (var i = 0; i < radios.length; i++) radios[i].checked = false;
 }
 
 function hideAddForm() {
     document.getElementById('add-form').style.display = 'none';
-}
-
-function toggleMonthPicker() {
-    var isTpl = document.getElementById('bg-is-template').checked;
-    document.getElementById('bg-month-picker').style.display = isTpl ? 'none' : '';
-    if (!isTpl) {
-        document.getElementById('bg-month').value = currentMonth;
-        document.getElementById('bg-year').value = currentYear;
-    }
 }
 
 function editBudget(id) {
@@ -143,15 +196,28 @@ function editBudget(id) {
     document.getElementById('bg-edit-id').value = id;
     document.getElementById('bg-category').value = b.category_id;
     document.getElementById('bg-amount').value = b.target_amount;
-    var isTpl = b.is_template;
-    document.getElementById('bg-is-template').checked = isTpl;
-    if (isTpl) {
-        document.getElementById('bg-month-picker').style.display = 'none';
+    clearAllRadios();
+
+    if (b.is_template) {
+        document.querySelector('input[name="bg-type"][value="template"]').checked = true;
+        document.getElementById('bg-month-fields').style.display = 'none';
+        document.getElementById('bg-period-fields').style.display = 'none';
+    } else if (b.period_end_month) {
+        document.querySelector('input[name="bg-type"][value="period"]').checked = true;
+        document.getElementById('bg-month-fields').style.display = 'none';
+        document.getElementById('bg-period-fields').style.display = '';
+        document.getElementById('bg-period-from-month').value = b.month;
+        document.getElementById('bg-period-from-year').value = b.year;
+        document.getElementById('bg-period-to-month').value = b.period_end_month;
+        document.getElementById('bg-period-to-year').value = b.period_end_year;
     } else {
-        document.getElementById('bg-month').value = b.month;
-        document.getElementById('bg-year').value = b.year;
-        document.getElementById('bg-month-picker').style.display = '';
+        document.querySelector('input[name="bg-type"][value="month"]').checked = true;
+        document.getElementById('bg-month-fields').style.display = '';
+        document.getElementById('bg-period-fields').style.display = 'none';
+        document.getElementById('bg-month').value = b.month || currentMonth;
+        document.getElementById('bg-year').value = b.year || currentYear;
     }
+
     document.getElementById('add-form-title').textContent = 'Редактировать бюджет';
     document.getElementById('bg-submit').textContent = '✏️';
     document.getElementById('add-form').style.display = 'block';
@@ -161,8 +227,10 @@ function addTemplate(catId) {
     document.getElementById('bg-edit-id').value = '';
     document.getElementById('bg-category').value = catId;
     document.getElementById('bg-amount').value = '';
-    document.getElementById('bg-is-template').checked = true;
-    document.getElementById('bg-month-picker').style.display = 'none';
+    clearAllRadios();
+    document.querySelector('input[name="bg-type"][value="template"]').checked = true;
+    document.getElementById('bg-month-fields').style.display = 'none';
+    document.getElementById('bg-period-fields').style.display = 'none';
     document.getElementById('add-form-title').textContent = 'Новый шаблон';
     document.getElementById('bg-submit').textContent = 'Сохранить';
     document.getElementById('add-form').style.display = 'block';
@@ -172,11 +240,13 @@ function addOverride(catId, suggestedAmount) {
     document.getElementById('bg-edit-id').value = '';
     document.getElementById('bg-category').value = catId;
     document.getElementById('bg-amount').value = suggestedAmount || '';
-    document.getElementById('bg-is-template').checked = false;
+    clearAllRadios();
+    document.querySelector('input[name="bg-type"][value="month"]').checked = true;
     document.getElementById('bg-month').value = currentMonth;
     document.getElementById('bg-year').value = currentYear;
-    document.getElementById('bg-month-picker').style.display = '';
-    document.getElementById('add-form-title').textContent = 'Бюджет на ' + MONTHS[currentMonth-1] + ' ' + currentYear;
+    document.getElementById('bg-month-fields').style.display = '';
+    document.getElementById('bg-period-fields').style.display = 'none';
+    document.getElementById('add-form-title').textContent = 'Бюджет на ' + MONTHS_SHORT[currentMonth-1] + ' ' + currentYear;
     document.getElementById('bg-submit').textContent = 'Сохранить';
     document.getElementById('add-form').style.display = 'block';
 }
@@ -186,20 +256,24 @@ async function saveBudget(e) {
     var editId = document.getElementById('bg-edit-id').value;
     var catId = parseInt(document.getElementById('bg-category').value);
     var amount = parseFloat(document.getElementById('bg-amount').value);
-    var isTpl = document.getElementById('bg-is-template').checked;
-
+    var type = getBudgetType();
     var body = { category_id: catId, target_amount: amount };
-    if (!isTpl) {
+
+    if (type === 'month') {
         body.month = parseInt(document.getElementById('bg-month').value);
         body.year = parseInt(document.getElementById('bg-year').value);
+    } else if (type === 'period') {
+        body.month = parseInt(document.getElementById('bg-period-from-month').value);
+        body.year = parseInt(document.getElementById('bg-period-from-year').value);
+        body.period_end_month = parseInt(document.getElementById('bg-period-to-month').value);
+        body.period_end_year = parseInt(document.getElementById('bg-period-to-year').value);
     }
 
     var url = editId ? '/api/v1/budgets/' + editId : '/api/v1/budgets';
     var method = editId ? 'PUT' : 'POST';
 
     if (editId) {
-        var b = allBudgets.find(function(x) { return x.id === parseInt(editId); });
-        if (b) body = { target_amount: amount };
+        body.category_id = catId;
     }
 
     var r = await fetch(url, { method: method, headers: authHeaders(), body: JSON.stringify(body) });
@@ -223,7 +297,7 @@ async function copyFromPrev() {
     var prevMonth = currentMonth - 1;
     var prevYear = currentYear;
     if (prevMonth < 1) { prevMonth = 12; prevYear--; }
-    if (!confirm('Копировать переопределения из ' + MONTHS[prevMonth-1] + ' ' + prevYear + ' в ' + MONTHS[currentMonth-1] + ' ' + currentYear + '?')) return;
+    if (!confirm('Копировать переопределения из ' + MONTHS_SHORT[prevMonth-1] + ' ' + prevYear + ' в ' + MONTHS_SHORT[currentMonth-1] + ' ' + currentYear + '?')) return;
     var r = await fetch('/api/v1/budgets/copy', {
         method: 'POST',
         headers: authHeaders(),

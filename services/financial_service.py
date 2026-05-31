@@ -100,7 +100,14 @@ class FinancialService:
 
         return actual_spent > target_budget.target_amount
     
-    def create_budget(self, category_id: int, target_amount: float, user_id: int, month: int = None, year: int = None) -> Budget:
+    def create_budget(self, category_id: int, target_amount: float, user_id: int,
+                      month: int = None, year: int = None,
+                      period_end_month: int = None, period_end_year: int = None) -> Budget:
+        if period_end_month and period_end_year:
+            data = {"user_id": user_id, "category_id": category_id, "target_amount": target_amount,
+                    "month": month, "year": year,
+                    "period_end_month": period_end_month, "period_end_year": period_end_year}
+            return self.budget_repo.create_budget(data)
         if month and year:
             existing = self.budget_repo.get_override(user_id, category_id, month, year)
             if existing:

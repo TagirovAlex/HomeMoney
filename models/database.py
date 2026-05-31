@@ -52,6 +52,8 @@ class Budget(Base):
     target_amount = Column(Float, nullable=False)
     month = Column(Integer, nullable=True)
     year = Column(Integer, nullable=True)
+    period_end_month = Column(Integer, nullable=True)
+    period_end_year = Column(Integer, nullable=True)
     period_start_date = Column(DateTime, default=datetime.utcnow)
     period_end_date = Column(DateTime)
 

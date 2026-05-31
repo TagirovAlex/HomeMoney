@@ -19,14 +19,36 @@
         <input type="hidden" id="bg-edit-id" value="">
         <label>Категория <select id="bg-category" required></select></label>
         <label>Лимит <input type="number" step="0.01" id="bg-amount" required></label>
-        <label class="checkbox-label">
-            <input type="checkbox" id="bg-is-template" checked onchange="toggleMonthPicker()">
-            Каждый месяц (шаблон)
-        </label>
-        <div id="bg-month-picker" style="display:none">
-            <label>Месяц <input type="number" id="bg-month" min="1" max="12"></label>
-            <label>Год <input type="number" id="bg-year" min="2020" max="2099"></label>
+
+        <div class="radio-group">
+            <label class="radio-label"><input type="radio" name="bg-type" value="template" checked onclick="onBudgetTypeChange()">
+                Каждый месяц (шаблон)</label>
+            <label class="radio-label"><input type="radio" name="bg-type" value="month" onclick="onBudgetTypeChange()">
+                Один месяц</label>
+            <label class="radio-label"><input type="radio" name="bg-type" value="period" onclick="onBudgetTypeChange()">
+                Период</label>
         </div>
+
+        <div id="bg-month-fields" class="period-fields" style="display:none">
+            <label>Месяц
+                <select id="bg-month"></select>
+            </label>
+            <label>Год
+                <select id="bg-year"></select>
+            </label>
+        </div>
+
+        <div id="bg-period-fields" class="period-fields" style="display:none">
+            <label>С
+                <select id="bg-period-from-month"></select>
+                <select id="bg-period-from-year"></select>
+            </label>
+            <label>По
+                <select id="bg-period-to-month"></select>
+                <select id="bg-period-to-year"></select>
+            </label>
+        </div>
+
         <button type="submit" class="btn" id="bg-submit">Сохранить</button>
         <button type="button" class="btn btn-secondary" onclick="hideAddForm()">Отмена</button>
     </form>

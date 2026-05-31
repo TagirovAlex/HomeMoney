@@ -117,15 +117,25 @@ class FinancialService:
         }
         return self.budget_repo.create_budget(budget_data)
 
-    def get_detailed_report(self, user_id: int, role: str, month: int, year: int) -> dict:
-        """Генерирует детальный отчет с остатками и оборотами."""
-        from datetime import date, timedelta, datetime
-        start_date = date(year, month, 1)
-        try:
-            end_month = start_date + timedelta(days=32)
-            end_date = end_month.replace(day=1)  # Первый день следующего месяца
-        except ValueError as e:
-             raise ValueError(f"Некорректный месяц или год для отчета: {e}")
+    def get_detailed_report(self, user_id: int, role: str, month: int = None, year: int = None,
+                             start_date=None, end_date=None, category_id: int = None) -> dict:
+        from datetime import date, timedelta, datetime as dt_mod
+
+        if start_date and end_date:
+            if isinstance(start_date, str):
+                start_date = dt_mod.strptime(start_date, '%Y-%m-%d').date()
+            if isinstance(end_date, str):
+                end_date = dt_mod.strptime(end_date, '%Y-%m-%d').date()
+            end_date = end_date + timedelta(days=1)
+        elif month and year:
+            start_date = date(year, month, 1)
+            try:
+                end_month = start_date + timedelta(days=32)
+                end_date = end_month.replace(day=1)
+            except ValueError as e:
+                raise ValueError(f"Некорректный месяц или год для отчета: {e}")
+        else:
+            raise ValueError("Укажите month/year или start_date/end_date")
 
         transactions = self.transaction_repo.get_transactions_by_user(
             user_id=user_id,
@@ -133,10 +143,12 @@ class FinancialService:
             end_date=end_date
         )
 
-        # Все транзакции до начала периода (для начального остатка)
+        if category_id:
+            transactions = [t for t in transactions if t.category_id == category_id]
+
         prev_transactions = self.transaction_repo.get_transactions_by_user(
             user_id=user_id,
-            end_date=start_date  # < start_date — все до первого дня месяца
+            end_date=start_date
         )
 
         report = {
@@ -144,7 +156,6 @@ class FinancialService:
             "category_spending": {}
         }
 
-        # Определяем тип категорий (expense/income)
         from models.database import Category
         from utils.database_session import get_db
         with get_db() as session:
@@ -153,11 +164,9 @@ class FinancialService:
         def _is_income(t):
             return cat_types.get(t.category_id, 'expense') == 'income'
 
-        # Обороты за период
         total_income = sum(t.amount for t in transactions if _is_income(t))
         total_expense = sum(t.amount for t in transactions if not _is_income(t))
 
-        # Начальный остаток (все доходы до периода - все расходы до периода)
         opening_balance = (
             sum(t.amount for t in prev_transactions if _is_income(t)) -
             sum(t.amount for t in prev_transactions if not _is_income(t))
@@ -165,14 +174,11 @@ class FinancialService:
 
         closing_balance = opening_balance + total_income - total_expense
 
-        # Группировка расходов по категориям (только расходные транзакции)
-        from models.database import Category
-        from utils.database_session import get_db
         with get_db() as session:
             cat_info = {c.id: {"name": c.name, "icon": c.icon or ""} for c in session.query(Category).all()}
 
         category_map: dict[int, dict] = {}
-        for budget in self.budget_repo.get_active_budgets_for_user(user_id=user_id, month=month, year=year):
+        for budget in self.budget_repo.get_active_budgets_for_user(user_id=user_id, month=month or start_date.month, year=year or start_date.year):
             info = cat_info.get(budget.category_id, {"name": f"ID:{budget.category_id}", "icon": ""})
             category_map[budget.category_id] = {"name": info["name"], "icon": info["icon"], "total_spent": 0.0, "budget": budget.target_amount}
 
@@ -186,15 +192,45 @@ class FinancialService:
 
         report["summary"] = {
             "total_spent": round(total_expense, 2),
-            "total_budgeted": round(sum(b.target_amount for b in self.budget_repo.get_active_budgets_for_user(user_id=user_id, month=month, year=year)), 2),
+            "total_budgeted": round(sum(b.target_amount for b in self.budget_repo.get_active_budgets_for_user(user_id=user_id, month=month or start_date.month, year=year or start_date.year)), 2),
             "total_income": round(total_income, 2),
             "opening_balance": round(opening_balance, 2),
             "closing_balance": round(closing_balance, 2),
         }
         report["detailed_spending"] = {
-            cat_id: {"name": category_map[cat_id]["name"], "icon": category_map[cat_id]["icon"], "spent": round(category_map[cat_id]["total_spent"], 2), "budget": round(category_map[cat_id]["budget"], 2)}
+            cat_id: {
+                "name": category_map[cat_id]["name"],
+                "icon": category_map[cat_id]["icon"],
+                "spent": round(category_map[cat_id]["total_spent"], 2),
+                "budget": round(category_map[cat_id]["budget"], 2),
+                "transactions": [
+                    {
+                        "id": t.id,
+                        "amount": t.amount,
+                        "description": t.description or "",
+                        "date": t.date.isoformat() if t.date else "",
+                        "type": getattr(t, 'type', 'expense'),
+                    }
+                    for t in transactions
+                    if getattr(t, 'type', 'expense') == 'expense' and t.category_id == cat_id
+                ],
+            }
             for cat_id in category_map
         }
+
+        report["transactions"] = [
+            {
+                "id": t.id,
+                "amount": t.amount,
+                "category_id": t.category_id,
+                "category_name": cat_info.get(t.category_id, {}).get("name", f"ID:{t.category_id}"),
+                "category_icon": cat_info.get(t.category_id, {}).get("icon", ""),
+                "description": t.description or "",
+                "date": t.date.isoformat() if t.date else "",
+                "type": getattr(t, 'type', 'expense'),
+            }
+            for t in transactions
+        ]
 
         return report
 

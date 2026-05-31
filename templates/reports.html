@@ -4,38 +4,104 @@
 <div class="page-header">
     <h2>Отчёты</h2>
     <form class="period-form" onsubmit="loadReport(event)">
-        <label>Месяц <select id="r-month">
-            {% for m in range(1,13) %}<option value="{{ m }}" {% if m == current_month %}selected{% endif %}>{{ m }}</option>{% endfor %}
-        </select></label>
-        <label>Год <select id="r-year">
-            {% for y in range(current_year-1, current_year+2) %}<option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>{% endfor %}
-        </select></label>
-        <button type="submit" class="btn">Сформировать</button>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">
+            <div>
+                <button type="button" class="btn" onclick="setPreset('month', -1)">Прошлый месяц</button>
+                <button type="button" class="btn" onclick="setPreset('month', 0)">Текущий месяц</button>
+                <button type="button" class="btn" onclick="setPreset('quarter', 0)">Квартал</button>
+                <button type="button" class="btn" onclick="setPreset('year', 0)">Год</button>
+                <button type="button" class="btn" onclick="setPreset('custom')">Произвольно</button>
+            </div>
+        </div>
+        <div id="date-range-group" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;align-items:flex-end">
+            <label>Начало <input type="date" id="r-start"></label>
+            <label>Конец <input type="date" id="r-end"></label>
+            <label>Категория <select id="r-category"><option value="">Все</option></select></label>
+            <button type="submit" class="btn">Сформировать</button>
+        </div>
     </form>
 </div>
 
 <div class="summary-cards" id="report-summary"></div>
 <div class="summary-cards" id="report-balance" style="margin-top:12px"></div>
 <div class="summary-cards" id="report-savings" style="margin-top:12px"></div>
-<div class="section">
+<div class="section" id="category-detail-section">
     <h3>Детализация расходов по категориям</h3>
     <table class="data-table">
         <thead><tr><th>Категория</th><th>Потрачено</th><th>Бюджет</th><th>Остаток</th></tr></thead>
         <tbody id="report-table"></tbody>
     </table>
 </div>
+<div class="section" id="tx-list-section" style="display:none">
+    <h3>Все транзакции за период <span id="tx-list-title"></span></h3>
+    <table class="data-table">
+        <thead><tr><th>ID</th><th>Категория</th><th>Сумма</th><th>Описание</th><th>Дата</th><th>Тип</th></tr></thead>
+        <tbody id="tx-list-table"></tbody>
+    </table>
+</div>
 
 <script>
     var typeIcons = { deposit: '🏦', stocks: '📈', bonds: '📜', cash: '💵', other: '📦' };
+    var _reportData = null;
+    var _selectedCategoryId = null;
+
+    function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function todayStr() { var d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
+
+    function setPreset(type, offset) {
+        var d = new Date();
+        var y = d.getFullYear(), m = d.getMonth() + 1;
+        var start, end;
+        if (type === 'month') {
+            var tm = m + (offset || 0);
+            var ty = y;
+            if (tm < 1) { tm = 12; ty--; }
+            if (tm > 12) { tm = 1; ty++; }
+            start = ty + '-' + pad2(tm) + '-01';
+            var lastDay = new Date(ty, tm, 0).getDate();
+            end = ty + '-' + pad2(tm) + '-' + pad2(lastDay);
+        } else if (type === 'quarter') {
+            var q = Math.floor((m - 1) / 3);
+            var qStart = q * 3 + 1;
+            start = y + '-' + pad2(qStart) + '-01';
+            var qEnd = qStart + 2;
+            var lastDay = new Date(y, qEnd, 0).getDate();
+            end = y + '-' + pad2(qEnd) + '-' + pad2(lastDay);
+        } else if (type === 'year') {
+            start = y + '-01-01';
+            end = y + '-12-31';
+        } else {
+            document.getElementById('r-start').value = '';
+            document.getElementById('r-end').value = '';
+            return;
+        }
+        document.getElementById('r-start').value = start;
+        document.getElementById('r-end').value = end;
+    }
+
+    async function loadCategories() {
+        var r = await fetch('/api/v1/categories', { headers: authHeaders() });
+        var d = await r.json();
+        if (d.status !== 'success') return;
+        var sel = document.getElementById('r-category');
+        sel.innerHTML = '<option value="">Все категории</option>' +
+            d.data.map(function(c) { return '<option value="' + c.id + '">' + (c.icon || '📁') + ' ' + c.name + '</option>'; }).join('');
+    }
 
     async function loadReport(e) {
         if (e) e.preventDefault();
-        var m = document.getElementById('r-month').value;
-        var y = document.getElementById('r-year').value;
-        var url = '/api/v1/reports?month=' + m + '&year=' + y + '&_=' + Date.now();
-        var r = await fetch(url, { headers: authHeaders() });
+        var start = document.getElementById('r-start').value;
+        var end = document.getElementById('r-end').value;
+        if (!start || !end) { alert('Укажите период'); return; }
+        var cat = document.getElementById('r-category').value;
+        var params = 'start_date=' + start + '&end_date=' + end + '&_=' + Date.now();
+        if (cat) params += '&category_id=' + cat;
+        var r = await fetch('/api/v1/reports?' + params, { headers: authHeaders() });
         var d = await r.json();
         if (d.status !== 'success') { alert(d.message); return; }
+        _reportData = d.data;
+
         var s = d.data.summary;
         document.getElementById('report-summary').innerHTML =
             '<div class="card"><span class="card-label">💰 Доходы</span><span class="card-value" style="color:var(--color-success)">+' + fmt(s.total_income || 0) + ' RUB</span></div>' +
@@ -57,16 +123,68 @@
         } else {
             document.getElementById('report-savings').innerHTML = '';
         }
+
         var tbody = document.getElementById('report-table');
         var keys = Object.keys(d.data.detailed_spending || {});
-        if (keys.length === 0) { tbody.innerHTML = '<tr><td colspan="4">Нет расходов за выбранный период.</td></tr>'; return; }
-        tbody.innerHTML = keys.map(function(k) {
-            var item = d.data.detailed_spending[k];
-            var rem = fmt(item.budget - item.spent);
-            var icon = item.icon || '📁';
-            return '<tr><td>' + icon + ' ' + item.name + '</td><td>' + fmt(item.spent) + '</td><td>' + fmt(item.budget) + '</td><td>' + rem + '</td></tr>';
-        }).join('');
+        if (keys.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4">Нет расходов за выбранный период.</td></tr>';
+        } else {
+            tbody.innerHTML = keys.map(function(k) {
+                var item = d.data.detailed_spending[k];
+                var rem = fmt(item.budget - item.spent);
+                var icon = item.icon || '📁';
+                var txCount = (item.transactions || []).length;
+                var detailLink = txCount ? ' <a href="#" onclick="event.preventDefault();showCategoryDetail(' + k + ',\'' + item.name.replace(/'/g,"\\'") + '\')">(' + txCount + ')</a>' : '';
+                return '<tr><td>' + icon + ' ' + item.name + detailLink + '</td><td>' + fmt(item.spent) + '</td><td>' + fmt(item.budget) + '</td><td>' + rem + '</td></tr>';
+            }).join('');
+        }
+
+        var txs = d.data.transactions || [];
+        var txSection = document.getElementById('tx-list-section');
+        var txBody = document.getElementById('tx-list-table');
+        if (txs.length) {
+            txSection.style.display = 'block';
+            document.getElementById('tx-list-title').textContent = '(' + txs.length + ' шт., всего: ' + fmt(txs.reduce(function(a,t){return a+t.amount;},0)) + ' RUB)';
+            txBody.innerHTML = txs.map(function(t) {
+                var tl = t.type === 'income' ? '💰 Доход' : '💳 Расход';
+                return '<tr><td>' + t.id + '</td><td>' + (t.category_icon || '📁') + ' ' + t.category_name + '</td><td>' + fmt(t.amount) + '</td><td>' + t.description + '</td><td>' + (t.date ? t.date.slice(0,10) : '') + '</td><td>' + tl + '</td></tr>';
+            }).join('');
+        } else {
+            txSection.style.display = 'none';
+        }
     }
-    window.onload = loadReport;
+
+    function showCategoryDetail(catId, catName) {
+        _selectedCategoryId = catId;
+        var catData = _reportData.detailed_spending[catId];
+        if (!catData || !catData.transactions || !catData.transactions.length) {
+            alert('Нет транзакций по этой категории за период');
+            return;
+        }
+        var txs = catData.transactions;
+        var html = '<div class="card" style="grid-column:1/-1;padding:12px">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+            '<strong>' + (catData.icon || '📁') + ' ' + catName + '</strong>' +
+            '<span>Всего: ' + fmt(catData.spent) + ' RUB</span>' +
+            '<button class="btn btn-secondary" onclick="document.getElementById(\'cat-detail\').innerHTML=\'\';this.parentElement.parentElement.remove()">✕</button>' +
+            '</div>' +
+            '<table class="data-table"><thead><tr><th>ID</th><th>Сумма</th><th>Описание</th><th>Дата</th></tr></thead><tbody>' +
+            txs.map(function(t) {
+                return '<tr><td>' + t.id + '</td><td>' + fmt(t.amount) + '</td><td>' + t.description + '</td><td>' + (t.date ? t.date.slice(0,10) : '') + '</td></tr>';
+            }).join('') +
+            '</tbody></table></div>';
+        var container = document.getElementById('cat-detail');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'cat-detail';
+            container.style.cssText = 'margin-top:12px';
+            document.querySelector('.section').after(container);
+        }
+        container.innerHTML = html;
+    }
+
+    setPreset('month', 0);
+    loadCategories();
+    window.onload = function() { loadReport(null); };
 </script>
 {% endblock %}

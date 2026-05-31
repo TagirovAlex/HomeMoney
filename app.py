@@ -344,12 +344,22 @@ def create_app():
     def generate_report():
         uid = request.current_user["user_id"]
         role = request.current_user["role"]
-        month = request.args.get('month')
-        year = request.args.get('year')
-        if not month or not year:
-            return jsonify({"status": "error", "message": "Параметры month и year обязательны"}), 400
+        month = request.args.get('month', type=int)
+        year = request.args.get('year', type=int)
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        category_id = request.args.get('category_id', type=int)
         try:
-            report = financial_service.get_detailed_report(uid, role=role, month=int(month), year=int(year))
+            if start_date and end_date:
+                report = financial_service.get_detailed_report(
+                    uid, role=role, start_date=start_date, end_date=end_date,
+                    category_id=category_id)
+            else:
+                if not month or not year:
+                    return jsonify({"status": "error", "message": "Укажите month/year или start_date/end_date"}), 400
+                report = financial_service.get_detailed_report(
+                    uid, role=role, month=month, year=year,
+                    category_id=category_id)
             items = saving_repo.get_by_user(uid)
             type_labels = {"deposit": "Депозит", "stocks": "Акции", "bonds": "Облигации", "cash": "Наличные", "other": "Другое"}
             savings_data = []
@@ -365,6 +375,8 @@ def create_app():
             resp = make_response(jsonify({"status": "success", "data": report}))
             resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
             return resp
+        except ValueError as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
         except Exception as e:
             return jsonify({"status": "error", "message": "Внутренняя ошибка сервера"}), 500
 

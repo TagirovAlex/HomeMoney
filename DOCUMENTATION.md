@@ -178,7 +178,9 @@ python telegram_bot.py
 - **SOCKS5 прокси** — настройка через `.env`: `HM_BOT_PROXY_HOST`, `HM_BOT_PROXY_PORT`, `HM_BOT_PROXY_USERNAME`, `HM_BOT_PROXY_PASSWORD`
 - **Whitelist** — `HM_BOT_ALLOWED_USERS` (Telegram ID через запятую, пусто = все)
 - **Автологин** — если `telegram_id` пользователя сохранён в БД, бот не требует `/login`
-- **Пошаговый ввод транзакций** — inline-кнопка → выбор категории → сумма → описание
+- **Пошаговый ввод транзакций** — inline-кнопка → выбор категории → сумма → описание → дата
+- **Пагинация** — `/tx` показывает 5 транзакций на страницу с inline-навигацией
+- **Редактирование** — `/edittx <id>` с пошаговым изменением полей
 
 ### Управление из админ-панели
 
@@ -243,7 +245,7 @@ curl -H "Authorization: Bearer <token>" /api/v1/backup?type=json
 python -m pytest tests/ -v
 ```
 
-Покрытие: 44 теста (unit + integration: auth, financial service, CRUD, фильтры, пагинация, RBAC).
+Покрытие: 45 тестов (unit + integration: auth, financial service, CRUD, фильтры, пагинация, RBAC, отчёты).
 
 ---
 

@@ -76,11 +76,47 @@ class TestFinancialService:
         mock_budget_repo.get_active_budgets_for_user.return_value = [mock_budget]
         assert service.check_budget_exceeded(1, 1, 5, 2024) is False
 
-    def test_create_budget(self, service, mock_budget_repo):
+    def test_create_template(self, service, mock_budget_repo):
+        mock_budget_repo.get_template_for_category.return_value = None
         mock_budget_repo.create_budget.return_value = MagicMock(id=1)
         budget = service.create_budget(category_id=1, target_amount=1000.0, user_id=1)
         assert budget.id == 1
         mock_budget_repo.create_budget.assert_called_once_with({"user_id": 1, "category_id": 1, "target_amount": 1000.0})
+
+    def test_update_template_upsert(self, service, mock_budget_repo):
+        existing = MagicMock(id=5)
+        mock_budget_repo.get_template_for_category.return_value = existing
+        mock_budget_repo.update_budget.return_value = MagicMock(id=5, target_amount=2000.0)
+        budget = service.create_budget(category_id=1, target_amount=2000.0, user_id=1)
+        assert budget.id == 5
+        mock_budget_repo.update_budget.assert_called_once_with(5, 1, {"target_amount": 2000.0})
+
+    def test_create_override(self, service, mock_budget_repo):
+        mock_budget_repo.get_override.return_value = None
+        mock_budget_repo.create_budget.return_value = MagicMock(id=2)
+        budget = service.create_budget(category_id=1, target_amount=1500.0, user_id=1, month=6, year=2026)
+        assert budget.id == 2
+        mock_budget_repo.create_budget.assert_called_once_with(
+            {"user_id": 1, "category_id": 1, "target_amount": 1500.0, "month": 6, "year": 2026}
+        )
+
+    def test_update_override_upsert(self, service, mock_budget_repo):
+        existing = MagicMock(id=3)
+        mock_budget_repo.get_override.return_value = existing
+        mock_budget_repo.update_budget.return_value = MagicMock(id=3, target_amount=2500.0)
+        budget = service.create_budget(category_id=1, target_amount=2500.0, user_id=1, month=6, year=2026)
+        assert budget.id == 3
+        mock_budget_repo.update_budget.assert_called_once_with(3, 1, {"target_amount": 2500.0})
+
+    def test_copy_overrides(self, service, mock_budget_repo):
+        o1 = MagicMock(category_id=1, target_amount=5000.0)
+        o2 = MagicMock(category_id=2, target_amount=3000.0)
+        mock_budget_repo.get_overrides_for_month.return_value = [o1, o2]
+        mock_budget_repo.get_override.return_value = None
+        mock_budget_repo.create_budget.return_value = MagicMock(id=99)
+        copied = service.copy_overrides(1, 5, 2026, 6, 2026)
+        assert copied == 2
+        assert mock_budget_repo.create_budget.call_count == 2
 
     def test_process_regular_payments_no_repo(self, service):
         result = service.process_regular_payments(1)

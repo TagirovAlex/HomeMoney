@@ -50,11 +50,17 @@ class Budget(Base):
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     category_id = Column(Integer, ForeignKey('categories.id', ondelete='CASCADE'), nullable=False)
     target_amount = Column(Float, nullable=False)
+    month = Column(Integer, nullable=True)
+    year = Column(Integer, nullable=True)
     period_start_date = Column(DateTime, default=datetime.utcnow)
     period_end_date = Column(DateTime)
 
     user = relationship("User", back_populates="budgets")
     category = relationship("Category", back_populates="budgets")
+
+    @property
+    def is_template(self):
+        return self.month is None and self.year is None
 
 class IncomeSource(Base):
     __tablename__ = 'income_sources'

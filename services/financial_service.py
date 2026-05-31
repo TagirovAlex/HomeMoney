@@ -100,13 +100,40 @@ class FinancialService:
 
         return actual_spent > target_budget.target_amount
     
-    def create_budget(self, category_id: int, target_amount: float, user_id: int) -> Budget:
+    def create_budget(self, category_id: int, target_amount: float, user_id: int, month: int = None, year: int = None) -> Budget:
+        if month and year:
+            existing = self.budget_repo.get_override(user_id, category_id, month, year)
+            if existing:
+                return self.budget_repo.update_budget(existing.id, user_id, {"target_amount": target_amount})
+        else:
+            existing = self.budget_repo.get_template_for_category(user_id, category_id)
+            if existing:
+                return self.budget_repo.update_budget(existing.id, user_id, {"target_amount": target_amount})
         budget_data = {
             "user_id": user_id,
             "category_id": category_id,
             "target_amount": target_amount,
         }
+        if month and year:
+            budget_data["month"] = month
+            budget_data["year"] = year
         return self.budget_repo.create_budget(budget_data)
+
+    def copy_overrides(self, user_id: int, from_month: int, from_year: int, to_month: int, to_year: int) -> int:
+        overrides = self.budget_repo.get_overrides_for_month(user_id, from_month, from_year)
+        copied = 0
+        for o in overrides:
+            existing = self.budget_repo.get_override(user_id, o.category_id, to_month, to_year)
+            if not existing:
+                self.budget_repo.create_budget({
+                    "user_id": user_id,
+                    "category_id": o.category_id,
+                    "target_amount": o.target_amount,
+                    "month": to_month,
+                    "year": to_year,
+                })
+                copied += 1
+        return copied
 
     def get_detailed_report(self, user_id: int, role: str, month: int = None, year: int = None,
                              start_date=None, end_date=None, category_id: int = None,

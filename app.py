@@ -288,14 +288,22 @@ def create_app():
     @require_auth
     def list_budgets():
         uid = request.current_user["user_id"]
-        budgets = budget_repo.get_all_for_user(uid)
+        month = request.args.get('month', type=int)
+        year = request.args.get('year', type=int)
+        if month and year:
+            budgets = budget_repo.get_active_budgets_for_user(uid, month, year)
+        else:
+            budgets = budget_repo.get_all_for_user(uid)
         all_cats = category_repo.get_all()
         cats = {c.id: c.name for c in all_cats}
         cat_icons = {c.id: c.icon or "" for c in all_cats}
         return jsonify({"status": "success", "data": [
-            {"id": b.id, "category_id": b.category_id, "category_name": cats.get(b.category_id, f"ID:{b.category_id}"),
+            {"id": b.id, "category_id": b.category_id,
+             "category_name": cats.get(b.category_id, f"ID:{b.category_id}"),
              "category_icon": cat_icons.get(b.category_id, ""),
              "target_amount": b.target_amount,
+             "month": b.month, "year": b.year,
+             "is_template": b.is_template,
              "period_start": b.period_start_date.isoformat() if b.period_start_date else "",
              "period_end": b.period_end_date.isoformat() if b.period_end_date else ""}
             for b in budgets
@@ -308,10 +316,14 @@ def create_app():
         if not data or 'category_id' not in data or 'target_amount' not in data:
             return jsonify({"status": "error", "message": "category_id и target_amount обязательны"}), 400
         try:
+            month = int(data['month']) if data.get('month') else None
+            year = int(data['year']) if data.get('year') else None
             budget = financial_service.create_budget(
                 user_id=request.current_user["user_id"],
                 category_id=int(data['category_id']),
-                target_amount=float(data['target_amount'])
+                target_amount=float(data['target_amount']),
+                month=month,
+                year=year,
             )
             return jsonify({"status": "success", "message": "Бюджет создан", "budget_id": budget.id}), 201
         except Exception:
@@ -324,7 +336,7 @@ def create_app():
         data = request.get_json()
         if not data:
             return jsonify({"status": "error", "message": "Нет данных"}), 400
-        allowed = {"target_amount", "category_id"}
+        allowed = {"target_amount", "category_id", "month", "year"}
         update = {k: v for k, v in data.items() if k in allowed}
         if not update:
             return jsonify({"status": "error", "message": "Нет полей для обновления"}), 400
@@ -343,6 +355,25 @@ def create_app():
         if not ok:
             return jsonify({"status": "error", "message": "Бюджет не найден"}), 404
         return jsonify({"status": "success", "message": "Бюджет удалён"})
+
+    @app.route('/api/v1/budgets/copy', methods=['POST'])
+    @require_auth
+    def copy_budgets():
+        data = request.get_json()
+        if not data or not all(k in data for k in ("from_month", "from_year", "to_month", "to_year")):
+            return jsonify({"status": "error", "message": "from_month, from_year, to_month, to_year обязательны"}), 400
+        try:
+            copied = financial_service.copy_overrides(
+                user_id=request.current_user["user_id"],
+                from_month=int(data["from_month"]),
+                from_year=int(data["from_year"]),
+                to_month=int(data["to_month"]),
+                to_year=int(data["to_year"]),
+            )
+            return jsonify({"status": "success", "message": f"Скопировано {copied} бюджетов", "copied": copied})
+        except Exception:
+            logging.exception("copy_budgets: внутренняя ошибка")
+            return jsonify({"status": "error", "message": "Внутренняя ошибка сервера"}), 500
 
     @app.route('/api/v1/reports', methods=['GET'])
     @require_auth

@@ -6,18 +6,33 @@
     <button class="btn" onclick="showAddForm()">+ Создать</button>
 </div>
 
+<div class="month-nav">
+    <button class="btn btn-secondary" onclick="changeMonth(-1)">◀</button>
+    <span id="month-label" class="month-label"></span>
+    <button class="btn btn-secondary" onclick="changeMonth(1)">▶</button>
+    <button class="btn btn-secondary" onclick="copyFromPrev()" id="copy-btn" title="Копировать переопределения с прошлого месяца">📋 Копировать</button>
+</div>
+
 <div id="add-form" class="form-card" style="display:none">
     <h3 id="add-form-title">Новый бюджет</h3>
     <form onsubmit="saveBudget(event)">
         <input type="hidden" id="bg-edit-id" value="">
         <label>Категория <select id="bg-category" required></select></label>
         <label>Лимит <input type="number" step="0.01" id="bg-amount" required></label>
+        <label class="checkbox-label">
+            <input type="checkbox" id="bg-is-template" checked onchange="toggleMonthPicker()">
+            Каждый месяц (шаблон)
+        </label>
+        <div id="bg-month-picker" style="display:none">
+            <label>Месяц <input type="number" id="bg-month" min="1" max="12"></label>
+            <label>Год <input type="number" id="bg-year" min="2020" max="2099"></label>
+        </div>
         <button type="submit" class="btn" id="bg-submit">Сохранить</button>
         <button type="button" class="btn btn-secondary" onclick="hideAddForm()">Отмена</button>
     </form>
 </div>
 
-<div id="budgets-list" class="budgets-grid"></div>
+<div id="budgets-list"></div>
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/pages/budgets.js') }}"></script>

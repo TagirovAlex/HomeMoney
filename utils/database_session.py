@@ -97,4 +97,21 @@ def _run_migrations():
                   Column('jti', String, unique=True, nullable=False),
                   Column('expires_at', DateTime, nullable=False))
             meta.create_all(engine)
+        # budgets.month + budgets.year
+        if 'budgets' in inspector.get_table_names():
+            cols = [c['name'] for c in inspector.get_columns('budgets')]
+            if 'month' not in cols:
+                conn.execute(text("ALTER TABLE budgets ADD COLUMN month INTEGER"))
+            if 'year' not in cols:
+                conn.execute(text("ALTER TABLE budgets ADD COLUMN year INTEGER"))
+            # заполняем month/year из period_start_date для существующих записей
+            result = conn.execute(text(
+                "SELECT COUNT(*) FROM budgets WHERE month IS NULL AND year IS NULL AND period_start_date IS NOT NULL"
+            ))
+            if result.scalar() > 0:
+                conn.execute(text(
+                    "UPDATE budgets SET month = CAST(strftime('%m', period_start_date) AS INTEGER), "
+                    "year = CAST(strftime('%Y', period_start_date) AS INTEGER) "
+                    "WHERE month IS NULL AND year IS NULL AND period_start_date IS NOT NULL"
+                ))
         conn.commit()

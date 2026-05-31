@@ -1,11 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
+from sqlalchemy import or_, and_
 from models.database import Budget 
-from utils.database_session import get_db # Используем контекстный менеджер для сессии
+from utils.database_session import get_db
 
 class IBudgetRepository(ABC):
-    """Интерфейс репозитория для работы с бюджетами."""
-
     @abstractmethod
     def get_active_budgets_for_user(self, user_id: int, month: int, year: int) -> List[Budget]:
         pass
@@ -26,28 +25,44 @@ class IBudgetRepository(ABC):
     def delete_budget(self, budget_id: int, user_id: int) -> bool:
         pass
 
+    @abstractmethod
+    def get_templates(self, user_id: int) -> List[Budget]:
+        pass
+
+    @abstractmethod
+    def get_overrides_for_month(self, user_id: int, month: int, year: int) -> List[Budget]:
+        pass
+
+    @abstractmethod
+    def get_template_for_category(self, user_id: int, category_id: int) -> Optional[Budget]:
+        pass
+
+    @abstractmethod
+    def get_override(self, user_id: int, category_id: int, month: int, year: int) -> Optional[Budget]:
+        pass
+
 class SQLAlchemyBudgetRepository(IBudgetRepository):
-    """Рабочий репозиторий бюджетов с использованием SQLAlchemy."""
 
     def __init__(self):
         self._db = get_db
 
-    # --- Методы реализации IBudgetRepository ---
-    
     def get_active_budgets_for_user(self, user_id: int, month: int, year: int) -> List[Budget]:
-        from datetime import date, timedelta 
-        try:
-            start = date(year, month, 1)
-            end_month = start + timedelta(days=32)
-            end = (end_month.replace(day=1) - timedelta(days=1)) # Последний день месяца
-        except ValueError:
-             return []
-
+        """Возвращает бюджеты, действующие в указанном месяце:
+        шаблоны + переопределения для этого месяца. Если есть и шаблон,
+        и переопределение на одну категорию — побеждает переопределение."""
         with self._db() as session:
-            return session.query(Budget).filter(
-                Budget.user_id == user_id, 
-                Budget.period_start_date <= end
+            budgets = session.query(Budget).filter(
+                Budget.user_id == user_id,
+                or_(
+                    and_(Budget.month.is_(None), Budget.year.is_(None)),
+                    and_(Budget.month == month, Budget.year == year)
+                )
             ).all()
+            resolved = {}
+            for b in budgets:
+                if b.category_id not in resolved or (b.month is not None and b.year is not None):
+                    resolved[b.category_id] = b
+            return list(resolved.values())
 
     def create_budget(self, budget_data: dict) -> Budget:
         with self._db() as session:
@@ -80,3 +95,37 @@ class SQLAlchemyBudgetRepository(IBudgetRepository):
             session.delete(b)
             session.commit()
             return True
+
+    def get_templates(self, user_id: int) -> List[Budget]:
+        with self._db() as session:
+            return session.query(Budget).filter(
+                Budget.user_id == user_id,
+                Budget.month.is_(None),
+                Budget.year.is_(None)
+            ).all()
+
+    def get_overrides_for_month(self, user_id: int, month: int, year: int) -> List[Budget]:
+        with self._db() as session:
+            return session.query(Budget).filter(
+                Budget.user_id == user_id,
+                Budget.month == month,
+                Budget.year == year
+            ).all()
+
+    def get_template_for_category(self, user_id: int, category_id: int) -> Optional[Budget]:
+        with self._db() as session:
+            return session.query(Budget).filter(
+                Budget.user_id == user_id,
+                Budget.category_id == category_id,
+                Budget.month.is_(None),
+                Budget.year.is_(None)
+            ).first()
+
+    def get_override(self, user_id: int, category_id: int, month: int, year: int) -> Optional[Budget]:
+        with self._db() as session:
+            return session.query(Budget).filter(
+                Budget.user_id == user_id,
+                Budget.category_id == category_id,
+                Budget.month == month,
+                Budget.year == year
+            ).first()

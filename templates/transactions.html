@@ -21,21 +21,21 @@
 </div>
 
 <div class="filter-bar">
-    <label>Месяц
-        <select id="f-month">
-            <option value="1">Янв</option><option value="2">Фев</option><option value="3">Мар</option>
-            <option value="4">Апр</option><option value="5">Май</option><option value="6">Июн</option>
-            <option value="7">Июл</option><option value="8">Авг</option><option value="9">Сен</option>
-            <option value="10">Окт</option><option value="11">Ноя</option><option value="12">Дек</option>
-        </select>
-    </label>
-    <label>Год
-        <select id="f-year"></select>
-    </label>
-    <label>Категория
-        <select id="f-category"><option value="">Все</option></select>
-    </label>
-    <button class="btn" onclick="loadTransactions()">Применить</button>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">
+        <div>
+            <button type="button" class="btn" onclick="setPreset('month', -1)">Прошлый месяц</button>
+            <button type="button" class="btn" onclick="setPreset('month', 0)">Текущий месяц</button>
+            <button type="button" class="btn" onclick="setPreset('quarter', 0)">Квартал</button>
+            <button type="button" class="btn" onclick="setPreset('year', 0)">Год</button>
+            <button type="button" class="btn" onclick="setPreset('custom')">Произвольно</button>
+        </div>
+    </div>
+    <div id="date-range-group" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;align-items:flex-end">
+        <label>Начало <input type="date" id="f-start"></label>
+        <label>Конец <input type="date" id="f-end"></label>
+        <label>Категория <select id="f-category"><option value="">Все</option></select></label>
+        <button class="btn" onclick="loadTransactions()">Применить</button>
+    </div>
 </div>
 
 <table class="data-table">
@@ -70,6 +70,39 @@
     var userId = null, curPage = 1, totalPages = 1, pageSize = 20;
     var sortBy = 'id', sortDir = 'desc';
 
+    function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function setPreset(type, offset) {
+        var d = new Date();
+        var y = d.getFullYear(), m = d.getMonth() + 1;
+        var start, end;
+        if (type === 'month') {
+            var tm = m + (offset || 0);
+            var ty = y;
+            if (tm < 1) { tm = 12; ty--; }
+            if (tm > 12) { tm = 1; ty++; }
+            start = ty + '-' + pad2(tm) + '-01';
+            var lastDay = new Date(ty, tm, 0).getDate();
+            end = ty + '-' + pad2(tm) + '-' + pad2(lastDay);
+        } else if (type === 'quarter') {
+            var q = Math.floor((m - 1) / 3);
+            var qStart = q * 3 + 1;
+            start = y + '-' + pad2(qStart) + '-01';
+            var qEnd = qStart + 2;
+            var lastDay = new Date(y, qEnd, 0).getDate();
+            end = y + '-' + pad2(qEnd) + '-' + pad2(lastDay);
+        } else if (type === 'year') {
+            start = y + '-01-01';
+            end = y + '-12-31';
+        } else {
+            document.getElementById('f-start').value = '';
+            document.getElementById('f-end').value = '';
+            return;
+        }
+        document.getElementById('f-start').value = start;
+        document.getElementById('f-end').value = end;
+    }
+
     function setSort(col) {
         if (sortBy === col) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; }
         else { sortBy = col; sortDir = 'desc'; }
@@ -95,20 +128,6 @@
 
     function getUser() {
         try { var u = JSON.parse(localStorage.getItem('user')); userId = u.id; } catch(e) { userId = null; }
-    }
-
-    function initFilters() {
-        var now = new Date();
-        var m = document.getElementById('f-month');
-        m.value = now.getMonth() + 1;
-        var y = document.getElementById('f-year');
-        for (var i = now.getFullYear() - 2; i <= now.getFullYear() + 1; i++) {
-            var opt = document.createElement('option');
-            opt.value = i; opt.textContent = i;
-            if (i === now.getFullYear()) opt.selected = true;
-            y.appendChild(opt);
-        }
-        loadCategoriesFilter();
     }
 
     async function loadCategoriesFilter() {
@@ -145,10 +164,12 @@
     async function loadTransactions() {
         getUser();
         if (!userId) return;
-        var m = document.getElementById('f-month').value;
-        var y = document.getElementById('f-year').value;
+        var start = document.getElementById('f-start').value;
+        var end = document.getElementById('f-end').value;
+        if (!start || !end) { return; }
         var cat = document.getElementById('f-category').value;
-        var r = await fetch('/api/v1/user/' + userId + '/transactions?month=' + m + '&year=' + y + '&category_id=' + cat + '&page=' + curPage + '&limit=' + pageSize, { headers: authHeaders() });
+        var url = '/api/v1/user/' + userId + '/transactions?start_date=' + start + '&end_date=' + end + '&category_id=' + cat + '&page=' + curPage + '&limit=' + pageSize;
+        var r = await fetch(url, { headers: authHeaders() });
         var d = await r.json();
         var tbody = document.getElementById('tx-table');
         if (d.status !== 'success') { tbody.innerHTML = '<tr><td colspan="7">' + d.message + '</td></tr>'; return; }
@@ -257,7 +278,10 @@
     }
 
     window.onload = function() {
-        initFilters(); loadCategories(); setDefaultDate();
+        setPreset('month', 0);
+        loadCategoriesFilter();
+        loadCategories();
+        setDefaultDate();
         pageSize = parseInt(document.getElementById('page-size').value);
         loadTransactions();
     };

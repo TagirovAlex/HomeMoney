@@ -302,12 +302,13 @@ class FinancialService:
             })
         return result
 
-    def get_filtered_user_transactions(self, user_id: int, month: int = None, year: int = None, category_id: int = None, page: int = 1, limit: int = 50) -> dict:
+    def get_filtered_user_transactions(self, user_id: int, month: int = None, year: int = None, category_id: int = None, page: int = 1, limit: int = 50, start_date=None, end_date=None) -> dict:
         from models.database import Category
         from utils.database_session import get_db
 
         transactions, total = self.transaction_repo.get_filtered_for_user(
-            user_id, month=month, year=year, category_id=category_id, page=page, limit=limit
+            user_id, month=month, year=year, category_id=category_id, page=page, limit=limit,
+            start_date=start_date, end_date=end_date
         )
         with get_db() as session:
             cats = {c.id: {"name": c.name, "icon": c.icon or ""} for c in session.query(Category).all()}

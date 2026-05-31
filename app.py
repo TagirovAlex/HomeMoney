@@ -263,8 +263,11 @@ def create_app():
             cat = request.args.get('category_id', type=int)
             page = request.args.get('page', 1, type=int)
             limit = request.args.get('limit', 50, type=int)
+            start_date = request.args.get('start_date')
+            end_date = request.args.get('end_date')
             result = financial_service.get_filtered_user_transactions(
-                user_id, month=month, year=year, category_id=cat, page=page, limit=limit
+                user_id, month=month, year=year, category_id=cat, page=page, limit=limit,
+                start_date=start_date, end_date=end_date
             )
             return jsonify({"status": "success", "data": result["data"],
                             "total": result["total"], "page": result["page"],

@@ -53,10 +53,17 @@ class SQLAlchemyTransactionRepository:
         with self._db() as session:
             return session.query(Transaction).filter(Transaction.user_id == user_id).all()
 
-    def get_filtered_for_user(self, user_id: int, month: int = None, year: int = None, category_id: int = None, page: int = 1, limit: int = 50) -> Tuple[List[Transaction], int]:
+    def get_filtered_for_user(self, user_id: int, month: int = None, year: int = None, category_id: int = None, page: int = 1, limit: int = 50, start_date=None, end_date=None) -> Tuple[List[Transaction], int]:
         with self._db() as session:
             query = session.query(Transaction).filter(Transaction.user_id == user_id)
-            if month and year:
+            if start_date and end_date:
+                if isinstance(start_date, str):
+                    start_date = datetime.strptime(start_date, '%Y-%m-%d')
+                if isinstance(end_date, str):
+                    end_date = datetime.strptime(end_date, '%Y-%m-%d')
+                from datetime import timedelta
+                query = query.filter(Transaction.date >= start_date, Transaction.date < end_date + timedelta(days=1))
+            elif month and year:
                 start = datetime(year, month, 1)
                 _, last_day = monthrange(year, month)
                 end = datetime(year, month, last_day, 23, 59, 59)

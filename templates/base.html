@@ -76,7 +76,9 @@
                     userEmail.textContent = u.email;
                     userEmail.style.display = 'inline';
                     logoutBtn.style.display = 'inline-block';
+                    window.__userId = u.id;
                     try { localStorage.setItem('user', JSON.stringify(u)); } catch(e) {}
+                    if (window.__pageInit) window.__pageInit(u.id);
                 })
                 .catch(function() { window.location.href = '/login'; });
 

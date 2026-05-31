@@ -125,6 +125,7 @@
     }
 
     function getUser() {
+        if (window.__userId) { userId = window.__userId; return; }
         try { var u = JSON.parse(localStorage.getItem('user')); userId = u.id; } catch(e) { userId = null; }
     }
 
@@ -275,7 +276,8 @@
         if (r.ok) loadTransactions();
     }
 
-    window.onload = function() {
+    window.__pageInit = function(uid) {
+        userId = uid;
         setPreset('month', 0);
         loadCategoriesFilter();
         loadCategories();
@@ -283,5 +285,6 @@
         pageSize = parseInt(document.getElementById('page-size').value);
         loadTransactions();
     };
+    if (window.__userId) window.__pageInit(window.__userId);
 </script>
 {% endblock %}

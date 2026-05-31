@@ -32,9 +32,28 @@ def app():
 def client(app):
     return app.test_client()
 
-def auth_token(client, email, password):
+def auth_headers(client, email, password):
+    import re
+    # ensure csrf_token cookie exists — after_request sets it on any response
+    init = client.get("/")
+    csrf = ""
+    for val in init.headers.get_all("Set-Cookie"):
+        m = re.search(r'csrf_token=([^;]+)', val)
+        if m:
+            csrf = m.group(1)
+            break
     r = client.post("/api/v1/login", json={"email": email, "password": password})
-    return r.get_json()["token"]
+    token = r.get_json()["token"]
+    if not csrf:
+        for val in r.headers.get_all("Set-Cookie"):
+            m = re.search(r'csrf_token=([^;]+)', val)
+            if m:
+                csrf = m.group(1)
+                break
+    h = {"Authorization": f"Bearer {token}"}
+    if csrf:
+        h["X-CSRF-Token"] = csrf
+    return h
 
 class TestPublicAPI:
     def test_health(self, client):
@@ -66,8 +85,8 @@ class TestPublicAPI:
 
 class TestAuthProtectedAPI:
     def test_me(self, client):
-        token = auth_token(client, "admin@test.com", "admin")
-        r = client.get("/api/v1/me", headers={"Authorization": f"Bearer {token}"})
+        h = auth_headers(client, "admin@test.com", "admin")
+        r = client.get("/api/v1/me", headers=h)
         assert r.status_code == 200
         assert r.get_json()["user"]["role"] == "Admin"
 
@@ -76,64 +95,61 @@ class TestAuthProtectedAPI:
         assert r.status_code == 401
 
     def test_transactions_list(self, client):
-        token = auth_token(client, "admin@test.com", "admin")
-        r = client.get("/api/v1/transactions", headers={"Authorization": f"Bearer {token}"})
+        h = auth_headers(client, "admin@test.com", "admin")
+        r = client.get("/api/v1/transactions", headers=h)
         assert r.status_code == 200
 
     def test_create_transaction(self, client):
-        token = auth_token(client, "user@test.com", "user")
+        h = auth_headers(client, "user@test.com", "user")
         r = client.post("/api/v1/user/2/create_transaction",
             json={"amount": 150.0, "category_id": 1, "description": "test"},
-            headers={"Authorization": f"Bearer {token}"})
+            headers=h)
         assert r.status_code == 201
 
     def test_user_transactions(self, client):
-        token = auth_token(client, "user@test.com", "user")
-        r = client.get("/api/v1/user/2/transactions",
-            headers={"Authorization": f"Bearer {token}"})
+        h = auth_headers(client, "user@test.com", "user")
+        r = client.get("/api/v1/user/2/transactions", headers=h)
         assert r.status_code == 200
         d = r.get_json()
         assert d["status"] == "success"
 
     def test_categories_list(self, client):
-        token = auth_token(client, "admin@test.com", "admin")
-        r = client.get("/api/v1/categories", headers={"Authorization": f"Bearer {token}"})
+        h = auth_headers(client, "admin@test.com", "admin")
+        r = client.get("/api/v1/categories", headers=h)
         assert r.status_code == 200
 
     def test_incomes_list(self, client):
-        token = auth_token(client, "user@test.com", "user")
-        r = client.get("/api/v1/incomes", headers={"Authorization": f"Bearer {token}"})
+        h = auth_headers(client, "user@test.com", "user")
+        r = client.get("/api/v1/incomes", headers=h)
         assert r.status_code == 200
 
     def test_create_income(self, client):
-        token = auth_token(client, "user@test.com", "user")
+        h = auth_headers(client, "user@test.com", "user")
         r = client.post("/api/v1/incomes",
             json={"name": "Salary", "is_regular": True},
-            headers={"Authorization": f"Bearer {token}"})
+            headers=h)
         assert r.status_code == 201
 
     def test_budgets_list(self, client):
-        token = auth_token(client, "admin@test.com", "admin")
-        r = client.get("/api/v1/budgets", headers={"Authorization": f"Bearer {token}"})
+        h = auth_headers(client, "admin@test.com", "admin")
+        r = client.get("/api/v1/budgets", headers=h)
         assert r.status_code == 200
 
     def test_create_budget(self, client):
-        token = auth_token(client, "user@test.com", "user")
+        h = auth_headers(client, "user@test.com", "user")
         r = client.post("/api/v1/budgets",
             json={"category_id": 1, "target_amount": 5000.0},
-            headers={"Authorization": f"Bearer {token}"})
+            headers=h)
         assert r.status_code == 201
 
     def test_report(self, client):
-        token = auth_token(client, "admin@test.com", "admin")
-        r = client.get("/api/v1/reports?month=5&year=2024",
-            headers={"Authorization": f"Bearer {token}"})
+        h = auth_headers(client, "admin@test.com", "admin")
+        r = client.get("/api/v1/reports?month=5&year=2024", headers=h)
         assert r.status_code == 200
 
     def test_transactions_with_filters(self, client):
-        token = auth_token(client, "user@test.com", "user")
-        r = client.get("/api/v1/user/2/transactions?month=5&year=2024&category_id=1&page=1&limit=10",
-            headers={"Authorization": f"Bearer {token}"})
+        h = auth_headers(client, "user@test.com", "user")
+        r = client.get("/api/v1/user/2/transactions?month=5&year=2024&category_id=1&page=1&limit=10", headers=h)
         assert r.status_code == 200
         d = r.get_json()
         assert d["status"] == "success"
@@ -143,77 +159,73 @@ class TestAuthProtectedAPI:
         assert d["page"] == 1
 
     def test_create_category(self, client):
-        token = auth_token(client, "user@test.com", "user")
+        h = auth_headers(client, "user@test.com", "user")
         r = client.post("/api/v1/categories",
             json={"name": "TestCat", "icon": "📁", "description": "test"},
-            headers={"Authorization": f"Bearer {token}"})
+            headers=h)
         assert r.status_code == 201
         assert r.get_json()["status"] == "success"
 
     def test_update_category(self, client):
-        token = auth_token(client, "admin@test.com", "admin")
+        h = auth_headers(client, "admin@test.com", "admin")
         r = client.put("/api/v1/categories/1",
             json={"name": "UpdatedFood", "icon": "🍎"},
-            headers={"Authorization": f"Bearer {token}"})
+            headers=h)
         assert r.status_code == 200
         assert r.get_json()["status"] == "success"
 
     def test_delete_category(self, client):
-        token = auth_token(client, "admin@test.com", "admin")
-        r = client.delete("/api/v1/categories/1",
-            headers={"Authorization": f"Bearer {token}"})
+        h = auth_headers(client, "admin@test.com", "admin")
+        r = client.delete("/api/v1/categories/1", headers=h)
         assert r.status_code == 200
 
     def test_update_budget(self, client):
-        token = auth_token(client, "user@test.com", "user")
+        h = auth_headers(client, "user@test.com", "user")
         r = client.post("/api/v1/budgets",
             json={"category_id": 1, "target_amount": 5000.0},
-            headers={"Authorization": f"Bearer {token}"})
+            headers=h)
         assert r.status_code == 201
         bid = r.get_json()["budget_id"]
         r = client.put(f"/api/v1/budgets/{bid}",
             json={"target_amount": 8000.0},
-            headers={"Authorization": f"Bearer {token}"})
+            headers=h)
         assert r.status_code == 200
 
     def test_delete_budget(self, client):
-        token = auth_token(client, "user@test.com", "user")
+        h = auth_headers(client, "user@test.com", "user")
         r = client.post("/api/v1/budgets",
             json={"category_id": 1, "target_amount": 3000.0},
-            headers={"Authorization": f"Bearer {token}"})
+            headers=h)
         assert r.status_code == 201
         bid = r.get_json()["budget_id"]
-        r = client.delete(f"/api/v1/budgets/{bid}",
-            headers={"Authorization": f"Bearer {token}"})
+        r = client.delete(f"/api/v1/budgets/{bid}", headers=h)
         assert r.status_code == 200
 
     def test_update_income(self, client):
-        token = auth_token(client, "user@test.com", "user")
+        h = auth_headers(client, "user@test.com", "user")
         r = client.post("/api/v1/incomes",
             json={"name": "Bonus", "amount": 5000, "is_regular": True},
-            headers={"Authorization": f"Bearer {token}"})
+            headers=h)
         assert r.status_code == 201
         iid = r.get_json()["income_id"]
         r = client.put(f"/api/v1/incomes/{iid}",
             json={"amount": 7000},
-            headers={"Authorization": f"Bearer {token}"})
+            headers=h)
         assert r.status_code == 200
 
     def test_delete_income(self, client):
-        token = auth_token(client, "user@test.com", "user")
+        h = auth_headers(client, "user@test.com", "user")
         r = client.post("/api/v1/incomes",
             json={"name": "Temp", "amount": 1000, "is_regular": True},
-            headers={"Authorization": f"Bearer {token}"})
+            headers=h)
         assert r.status_code == 201
         iid = r.get_json()["income_id"]
-        r = client.delete(f"/api/v1/incomes/{iid}",
-            headers={"Authorization": f"Bearer {token}"})
+        r = client.delete(f"/api/v1/incomes/{iid}", headers=h)
         assert r.status_code == 200
 
     def test_process_incomes(self, client):
-        token = auth_token(client, "user@test.com", "user")
-        r = client.post("/api/v1/incomes/process",
-            headers={"Authorization": f"Bearer {token}"})
+        h = auth_headers(client, "user@test.com", "user")
+        r = client.post("/api/v1/incomes/process", headers=h)
         assert r.status_code == 200
         d = r.get_json()
         assert d["status"] == "success"
@@ -224,25 +236,24 @@ class TestAuthProtectedAPI:
         assert r.status_code == 200
 
     def test_report_no_params_returns_400(self, client):
-        token = auth_token(client, "admin@test.com", "admin")
-        r = client.get("/api/v1/reports",
-            headers={"Authorization": f"Bearer {token}"})
+        h = auth_headers(client, "admin@test.com", "admin")
+        r = client.get("/api/v1/reports", headers=h)
         assert r.status_code == 400
 
 class TestAdminAPI:
     def test_list_users(self, client):
-        token = auth_token(client, "admin@test.com", "admin")
-        r = client.get("/api/v1/users", headers={"Authorization": f"Bearer {token}"})
+        h = auth_headers(client, "admin@test.com", "admin")
+        r = client.get("/api/v1/users", headers=h)
         assert r.status_code == 200
 
     def test_non_admin_cannot_list_users(self, client):
-        token = auth_token(client, "user@test.com", "user")
-        r = client.get("/api/v1/users", headers={"Authorization": f"Bearer {token}"})
+        h = auth_headers(client, "user@test.com", "user")
+        r = client.get("/api/v1/users", headers=h)
         assert r.status_code == 403
 
     def test_backup(self, client):
-        token = auth_token(client, "admin@test.com", "admin")
-        r = client.get("/api/v1/backup?type=json", headers={"Authorization": f"Bearer {token}"})
+        h = auth_headers(client, "admin@test.com", "admin")
+        r = client.get("/api/v1/backup?type=json", headers=h)
         assert r.status_code == 200
 
 def test_pages_render(client):

@@ -271,6 +271,15 @@ main { flex: 1; padding: 24px 5%; max-width: 1200px; margin: 0 auto; width: 100%
     .filter-bar label { white-space: normal; }
     .filter-bar select, .filter-bar input { width: 100%; }
     .data-table th, .data-table td { padding: 6px 8px; font-size: 0.85rem; }
+    #tx-main-table { display: block; }
+    #tx-main-table thead { display: none; }
+    #tx-main-table tr { display: flex; flex-wrap: wrap; padding: 8px 12px; margin-bottom: 8px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); background: var(--color-card-bg); align-items: center; }
+    #tx-main-table td { border: none; padding: 2px 4px; }
+    #tx-main-table td:nth-child(1) { font-weight: 600; }
+    #tx-main-table td:nth-child(3) { font-weight: 600; margin-left: auto; }
+    #tx-main-table td:nth-child(5) { color: var(--color-secondary); }
+    #tx-main-table td:nth-child(6) { color: var(--color-secondary); font-size: 0.85rem; }
+    #tx-main-table td:nth-child(7) { margin-left: auto; }
     .form-card { padding: 16px; }
     .form-card form { max-width: 100%; }
     .pagination { justify-content: center; }
@@ -310,6 +319,15 @@ main { flex: 1; padding: 24px 5%; max-width: 1200px; margin: 0 auto; width: 100%
 .mobile .filter-bar label { white-space: normal; }
 .mobile .filter-bar select, .mobile .filter-bar input { width: 100%; }
 .mobile .data-table th, .mobile .data-table td { padding: 6px 8px; font-size: 0.85rem; }
+.mobile #tx-main-table { display: block; }
+.mobile #tx-main-table thead { display: none; }
+.mobile #tx-main-table tr { display: flex; flex-wrap: wrap; padding: 8px 12px; margin-bottom: 8px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); background: var(--color-card-bg); align-items: center; }
+.mobile #tx-main-table td { border: none; padding: 2px 4px; }
+.mobile #tx-main-table td:nth-child(1) { font-weight: 600; }
+.mobile #tx-main-table td:nth-child(3) { font-weight: 600; margin-left: auto; }
+.mobile #tx-main-table td:nth-child(5) { color: var(--color-secondary); }
+.mobile #tx-main-table td:nth-child(6) { color: var(--color-secondary); font-size: 0.85rem; }
+.mobile #tx-main-table td:nth-child(7) { margin-left: auto; }
 .mobile .form-card { padding: 16px; }
 .mobile .form-card form { max-width: 100%; }
 .mobile .pagination { justify-content: center; }

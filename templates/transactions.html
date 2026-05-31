@@ -6,7 +6,7 @@
     <button class="btn" onclick="showAddForm()">+ Добавить</button>
 </div>
 
-<div id="add-form" class="form-card hidden">
+<div id="add-form" class="form-card hidden" style="display:none">
     <h3 id="form-title">Новая транзакция</h3>
     <form onsubmit="saveTransaction(event)">
         <label>Сумма <input type="number" step="0.01" id="tx-amount" required></label>
@@ -51,7 +51,7 @@
 </table>
 </div>
 
-<div class="pagination hidden" id="pagination">
+<div class="pagination hidden" id="pagination" style="display:none">
     <button class="btn btn-secondary" id="prev-page" onclick="goPage(-1)">← Назад</button>
     <span id="page-info" style="margin:0 12px"></span>
     <button class="btn btn-secondary" id="next-page" onclick="goPage(1)">Вперед →</button>

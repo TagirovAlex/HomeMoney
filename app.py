@@ -129,8 +129,6 @@ def create_app():
     @app.route('/api/v1/login', methods=['POST'])
     def login():
         ip = request.remote_addr or "unknown"
-        log = logging.getLogger(__name__)
-        log.debug("login attempt email=%s ip=%s cookies=%s", request.get_json(silent=True).get("email", "?") if request.get_json(silent=True) else "?", ip, list(request.cookies.keys()))
         if not login_limiter.is_allowed(f"login:{ip}"):
             retry_after = 60
             return jsonify({"status": "error", "message": f"Слишком много запросов. Попробуйте через {retry_after} секунд."}), 429
@@ -152,7 +150,6 @@ def create_app():
             httponly=True, samesite="Lax",
             max_age=3600, path="/"
         )
-        log.debug("login OK user=%d cookie_set=%s", user.id, [h for h in response.headers.get_all("Set-Cookie")])
         return response
 
     @app.route('/api/v1/logout', methods=['POST'])
@@ -172,21 +169,7 @@ def create_app():
     @app.route('/api/v1/me', methods=['GET'])
     @require_auth
     def me():
-        logging.getLogger(__name__).debug("me() OK — user=%s", request.current_user)
         return jsonify({"status": "success", "user": request.current_user})
-
-    @app.route('/api/v1/debug/headers', methods=['GET'])
-    def debug_headers():
-        """Diagnostic endpoint — returns what the server sees."""
-        return jsonify({
-            "cookies": {k: ("***" if "auth" in k.lower() or "token" in k.lower() else v) for k, v in request.cookies.items()},
-            "has_auth_cookie": "auth_token" in request.cookies,
-            "has_csrf_cookie": "csrf_token" in request.cookies,
-            "is_secure": request.is_secure,
-            "scheme": request.scheme,
-            "host": request.host,
-            "auth_header": ("Bearer ***" if request.headers.get("Authorization", "").startswith("Bearer ") else "none"),
-        })
 
     @app.route('/api/v1/transactions')
     @require_auth

@@ -2,6 +2,7 @@ import bcrypt
 import jwt
 import secrets
 import threading
+import logging
 from datetime import datetime, timedelta
 from functools import wraps
 from uuid import uuid4
@@ -9,6 +10,8 @@ from flask import request, jsonify
 from config import Config
 from utils.database_session import get_db
 from models.database import BlacklistedToken
+
+_log = logging.getLogger(__name__)
 
 SECRET_KEY = Config.SECRET_KEY
 
@@ -102,13 +105,21 @@ def require_csrf(f):
 def _extract_token():
     auth = request.headers.get("Authorization", "")
     if auth.startswith("Bearer "):
-        return auth[7:]
-    return request.cookies.get("auth_token")
+        token = auth[7:]
+        _log.debug("_extract_token from Authorization header")
+        return token
+    token = request.cookies.get("auth_token")
+    _log.debug("_extract_token from cookie: %s", "found" if token else "NOT FOUND")
+    return token
 
 def require_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         token = _extract_token()
+        _log.debug("require_auth method=%s path=%s has_token=%s cookies=%s auth_header=%s",
+                    request.method, request.path, bool(token),
+                    list(request.cookies.keys()),
+                    "Bearer ***" if request.headers.get("Authorization", "").startswith("Bearer ") else "none")
         if not token:
             return jsonify({"status": "error", "message": "Требуется авторизация"}), 401
         payload = AuthService.verify_token(token)

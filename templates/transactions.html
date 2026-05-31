@@ -126,7 +126,7 @@
 
     function getUser() {
         if (window.__userId) { userId = window.__userId; return; }
-        try { var u = JSON.parse(localStorage.getItem('user')); userId = u.id; } catch(e) { userId = null; }
+        try { var u = JSON.parse(localStorage.getItem('user')); userId = u.user_id; } catch(e) { userId = null; }
     }
 
     async function loadCategoriesFilter() {

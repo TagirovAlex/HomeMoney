@@ -23,6 +23,7 @@
                 </nav>
             </div>
             <div class="header-right">
+                <button id="nav-toggle" aria-label="Меню">☰</button>
                 <span id="user-email" class="user-email" style="display:none"></span>
                 <button id="theme-toggle" aria-label="Переключить тему">🌙</button>
                 <button id="logout-btn" class="btn-logout" style="display:none">Выйти</button>
@@ -82,6 +83,11 @@
                 fetch('/api/v1/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
                     .then(function() { window.location.href = '/login'; })
                     .catch(function() { window.location.href = '/login'; });
+            });
+
+            // Mobile nav toggle
+            document.getElementById('nav-toggle').addEventListener('click', function() {
+                document.getElementById('main-nav').classList.toggle('nav-open');
             });
 
             // Active nav link

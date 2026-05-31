@@ -42,14 +42,14 @@
         container.innerHTML = d.data.map(function(s) {
             var icon = icons[s.type] || '📦';
             var typeLabel = { deposit: 'Депозит', stocks: 'Акции', bonds: 'Облигации', cash: 'Наличные', other: 'Другое' }[s.type] || s.type;
-            return '<div class="card" style="text-align:left">' +
-                '<div style="display:flex;justify-content:space-between;align-items:center">' +
+            return '<div class="card card-left">' +
+                '<div class="flex-between">' +
                 '<div><span class="card-label">' + icon + ' ' + s.name + '</span><br>' +
-                '<span style="font-size:0.8rem;color:var(--text-secondary)">' + typeLabel + '</span><br>' +
-                '<span class="card-value" style="font-size:1.2rem">' + fmt(s.amount) + ' RUB</span>' +
-                (s.description ? '<br><span style="font-size:0.8rem">' + s.description + '</span>' : '') +
+                '<span class="text-secondary" style="font-size:0.8rem">' + typeLabel + '</span><br>' +
+                '<span class="card-value card-value-sm">' + fmt(s.amount) + ' RUB</span>' +
+                (s.description ? '<br><span class="text-secondary" style="font-size:0.8rem">' + s.description + '</span>' : '') +
                 '</div>' +
-                '<div><button class="btn btn-secondary" style="margin-right:4px" onclick="editSaving(' + s.id + ')">✏️</button>' +
+                '<div><button class="btn btn-secondary btn-icon" onclick="editSaving(' + s.id + ')">✏️</button>' +
                 '<button class="btn btn-secondary" onclick="deleteSaving(' + s.id + ')">❌</button></div>' +
                 '</div></div>';
         }).join('');

@@ -194,12 +194,98 @@ main { flex: 1; padding: 24px 5%; max-width: 1200px; margin: 0 auto; width: 100%
 .btn-logout { background: transparent; color: var(--color-secondary); border: 1px solid var(--color-border); padding: 6px 14px; font-size: 0.85rem; border-radius: 6px; cursor: pointer; }
 .btn-logout:hover { background: var(--color-border); opacity: 1; }
 
+/* --- UTILITY --- */
+.hidden { display: none !important; }
+.text-secondary { font-size: 0.85rem; color: var(--color-secondary); }
+.mt-8 { margin-top: 8px; }
+.mb-8 { margin-bottom: 8px; }
+.ml-auto { margin-left: auto; }
+.flex-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.flex-end { display: flex; align-items: flex-end; }
+.table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.sortable { cursor: pointer; }
+
+/* --- CARD VARIANTS --- */
+.card-full { grid-column: 1 / -1; }
+.card-left { text-align: left; }
+.card-value-sm { font-size: 1.2rem; }
+.card-value-md { font-size: 1.3rem; }
+.card-savings { grid-column: 1 / -1; text-align: left; }
+.card-detail { grid-column: 1 / -1; padding: 12px; }
+.card-detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+
+/* --- BUTTON VARIANTS --- */
+.btn-icon { margin-right: 4px; }
+.btn-sm { padding: 6px 12px; font-size: 0.85rem; }
+
+/* --- FORM HELPERS --- */
+.form-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.form-row + .form-row { margin-top: 8px; }
+.form-row input.flex-2 { flex: 2; min-width: 140px; }
+.form-row input.max-w-70 { max-width: 70px; }
+.form-row input.flex-1 { flex: 1; min-width: 100px; }
+.form-row select.flex-1 { flex: 1; min-width: 100px; }
+.input-sm { width: 80px; }
+.input-wide { width: 100%; box-sizing: border-box; }
+
+/* --- SETTINGS FORM --- */
+.settings-form { max-width: 600px; }
+.settings-fieldset { border: 1px solid var(--color-border); border-radius: 6px; padding: 12px; margin: 8px 0; }
+.settings-legend { font-size: 0.85rem; color: var(--color-secondary); }
+.settings-proxy-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.settings-proxy-row + .settings-proxy-row { margin-top: 8px; }
+.settings-proxy-row label.flex-2 { flex: 2; min-width: 140px; }
+.settings-proxy-row label.flex-1 { flex: 1; min-width: 70px; }
+.settings-proxy-row input { width: 100%; }
+.settings-check-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.settings-check-result { font-size: 0.85rem; }
+
+/* --- FILTER BAR HELPERS --- */
+.filter-bar-presets { display: flex; flex-wrap: wrap; gap: 4px; }
+.filter-bar-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* --- MOBILE NAV --- */
+#nav-toggle { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--color-text); padding: 4px 8px; min-height: 44px; min-width: 44px; }
+
+/* --- PAGE SPECIFIC --- */
+.cell-icon { font-size: 1.4rem; }
+
+/* --- MOBILE --- */
 @media (max-width: 768px) {
-    .header-left { flex-direction: column; align-items: flex-start; gap: 8px; }
-    nav { flex-wrap: wrap; }
+    #nav-toggle { display: inline-flex; }
+    nav { display: none; flex-direction: column; width: 100%; gap: 4px; }
+    nav.nav-open { display: flex; }
+    .header-left { flex-direction: column; align-items: flex-start; gap: 8px; width: 100%; }
+    main { padding: 16px 4%; }
+    header { padding: 8px 4%; }
+    .page-header { flex-direction: column; align-items: flex-start; }
+    .page-header h2 { font-size: 1.25rem; }
     .summary-cards { flex-direction: column; }
     .admin-grid { grid-template-columns: 1fr; }
-    .filter-bar { flex-wrap: wrap; }
+    .card { padding: 16px; }
+    .card-value { font-size: 1.4rem; }
+    .filter-bar { flex-wrap: wrap; flex-direction: column; align-items: stretch; }
+    .filter-bar-presets { justify-content: center; }
+    .filter-bar label { white-space: normal; }
+    .filter-bar select, .filter-bar input { width: 100%; }
+    .data-table th, .data-table td { padding: 6px 8px; font-size: 0.85rem; }
+    .form-card { padding: 16px; }
+    .form-card form { max-width: 100%; }
+    .pagination { justify-content: center; }
+    .settings-proxy-row { flex-direction: column; }
+    .settings-proxy-row label { min-width: 100%; }
     .error-card { padding: 40px 24px; }
     .error-code { font-size: 4rem; }
+    .auth-card { padding: 24px; }
+}
+
+@media (max-width: 480px) {
+    .card-value { font-size: 1.2rem; }
+    .page-header h2 { font-size: 1.1rem; }
+    .card { padding: 12px; }
+    .btn, button { padding: 8px 12px; }
+    .data-table th, .data-table td { padding: 4px 6px; font-size: 0.8rem; }
+    .error-card { padding: 24px 16px; }
+    .error-code { font-size: 3rem; }
 }

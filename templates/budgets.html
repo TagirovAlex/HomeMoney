@@ -35,13 +35,13 @@
         var container = document.getElementById('budgets-list');
         if (d.status !== 'success' || !d.data.length) { container.innerHTML = '<p>Нет бюджетов. Создайте первый.</p>'; return; }
         container.innerHTML = d.data.map(function(b) {
-            return '<div class="card" style="text-align:left;position:relative">' +
-                '<div style="display:flex;justify-content:space-between;align-items:flex-start">' +
+            return '<div class="card card-left">' +
+                '<div class="flex-between">' +
                 '<div><span class="card-label">' + (b.category_icon || '📁') + ' ' + b.category_name + '</span>' +
-                '<span class="card-value" style="font-size:1.3rem">' + fmt(b.target_amount) + ' RUB</span></div>' +
+                '<span class="card-value card-value-md">' + fmt(b.target_amount) + ' RUB</span></div>' +
                 '<div style="display:flex;gap:6px;flex-shrink:0">' +
-                '<button class="btn btn-secondary" style="padding:6px 12px;font-size:0.85rem" onclick="editBudget(' + b.id + ',' + b.category_id + ',' + b.target_amount + ')">✏️</button>' +
-                '<button class="btn btn-secondary" style="padding:6px 12px;font-size:0.85rem" onclick="deleteBudget(' + b.id + ')">❌</button></div></div></div>';
+                '<button class="btn btn-secondary btn-sm" onclick="editBudget(' + b.id + ',' + b.category_id + ',' + b.target_amount + ')">✏️</button>' +
+                '<button class="btn btn-secondary btn-sm" onclick="deleteBudget(' + b.id + ')">❌</button></div></div></div>';
         }).join('');
     }
 

@@ -127,19 +127,26 @@
             document.getElementById('report-savings').innerHTML = '';
         }
 
-        var tbody = document.getElementById('report-table');
-        var keys = Object.keys(d.data.detailed_spending || {});
-        if (keys.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4">Нет расходов за выбранный период.</td></tr>';
+        var catSelected = document.getElementById('r-category').value;
+        var catDetailSection = document.getElementById('category-detail-section');
+        if (catSelected) {
+            catDetailSection.style.display = 'none';
         } else {
-            tbody.innerHTML = keys.map(function(k) {
-                var item = d.data.detailed_spending[k];
-                var rem = fmt(item.budget - item.spent);
-                var icon = item.icon || '📁';
-                var txCount = (item.transactions || []).length;
-                var detailLink = txCount ? ' <a href="#" onclick="event.preventDefault();showCategoryDetail(' + k + ',\'' + item.name.replace(/'/g,"\\'") + '\')">(' + txCount + ')</a>' : '';
-                return '<tr><td>' + icon + ' ' + item.name + detailLink + '</td><td>' + fmt(item.spent) + '</td><td>' + fmt(item.budget) + '</td><td>' + rem + '</td></tr>';
-            }).join('');
+            catDetailSection.style.display = '';
+            var tbody = document.getElementById('report-table');
+            var keys = Object.keys(d.data.detailed_spending || {});
+            if (keys.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4">Нет расходов за выбранный период.</td></tr>';
+            } else {
+                tbody.innerHTML = keys.map(function(k) {
+                    var item = d.data.detailed_spending[k];
+                    var rem = fmt(item.budget - item.spent);
+                    var icon = item.icon || '📁';
+                    var txCount = (item.transactions || []).length;
+                    var detailLink = txCount ? ' <a href="#" onclick="event.preventDefault();showCategoryDetail(' + k + ',\'' + item.name.replace(/'/g,"\\'") + '\')">(' + txCount + ')</a>' : '';
+                    return '<tr><td>' + icon + ' ' + item.name + detailLink + '</td><td>' + fmt(item.spent) + '</td><td>' + fmt(item.budget) + '</td><td>' + rem + '</td></tr>';
+                }).join('');
+            }
         }
 
         var txs = d.data.transactions || [];

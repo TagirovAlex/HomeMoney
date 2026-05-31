@@ -178,10 +178,27 @@ class FinancialService:
         with get_db() as session:
             cat_info = {c.id: {"name": c.name, "icon": c.icon or ""} for c in session.query(Category).all()}
 
+        all_budgets = self.budget_repo.get_active_budgets_for_user(
+            user_id=user_id, month=month or start_date.month, year=year or start_date.year
+        )
+
+        if category_id:
+            budgets = [b for b in all_budgets if b.category_id == category_id]
+        else:
+            budgets = all_budgets
+
+        total_budgeted = round(sum(b.target_amount for b in budgets), 2)
+
         category_map: dict[int, dict] = {}
-        for budget in self.budget_repo.get_active_budgets_for_user(user_id=user_id, month=month or start_date.month, year=year or start_date.year):
-            info = cat_info.get(budget.category_id, {"name": f"ID:{budget.category_id}", "icon": ""})
-            category_map[budget.category_id] = {"name": info["name"], "icon": info["icon"], "total_spent": 0.0, "budget": budget.target_amount}
+        if category_id:
+            cat_name = cat_info.get(category_id, {}).get("name", f"ID:{category_id}")
+            cat_icon = cat_info.get(category_id, {}).get("icon", "")
+            cat_budget = next((b.target_amount for b in budgets if b.category_id == category_id), 0.0)
+            category_map[category_id] = {"name": cat_name, "icon": cat_icon, "total_spent": 0.0, "budget": cat_budget}
+        else:
+            for budget in budgets:
+                info = cat_info.get(budget.category_id, {"name": f"ID:{budget.category_id}", "icon": ""})
+                category_map[budget.category_id] = {"name": info["name"], "icon": info["icon"], "total_spent": 0.0, "budget": budget.target_amount}
 
         for t in transactions:
             if getattr(t, 'type', 'expense') != 'expense':
@@ -193,7 +210,7 @@ class FinancialService:
 
         report["summary"] = {
             "total_spent": round(total_expense, 2),
-            "total_budgeted": round(sum(b.target_amount for b in self.budget_repo.get_active_budgets_for_user(user_id=user_id, month=month or start_date.month, year=year or start_date.year)), 2),
+            "total_budgeted": total_budgeted,
             "total_income": round(total_income, 2),
             "opening_balance": round(opening_balance, 2),
             "closing_balance": round(closing_balance, 2),

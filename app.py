@@ -1,12 +1,22 @@
+import logging
+from datetime import date, datetime, timedelta
+from calendar import monthrange
 from flask import Flask, jsonify, request, render_template, make_response
 from data_access.repositories.user_repository import SQLAlchemyUserRepository
 from data_access.repositories.transaction_repository import SQLAlchemyTransactionRepository
 from data_access.repositories.budget_repository import SQLAlchemyBudgetRepository
 from data_access.repositories.income_repository import SQLAlchemyIncomeSourceRepository
-from data_access.repositories.saving_repository import SavingRepository
+from data_access.repositories.saving_repository import SQLAlchemySavingRepository
+from data_access.repositories.category_repository import SQLAlchemyCategoryRepository
 from services.financial_service import FinancialService
-from services.auth_service import AuthService, require_auth
+from services.auth_service import AuthService, require_auth, require_csrf, generate_csrf_token, _extract_token, blacklist
+from utils.rate_limiter import register_limiter, login_limiter
+from utils.env_manager import get_settings, update_settings
+from utils.backup_service import BackupService
+from utils.bot_manager import start_bot, stop_bot, status_bot, check_proxy
+from models.database import Category, Transaction, Budget, IncomeSource
 from config import Config
+from utils.database_session import get_db
 
 def create_app():
     app = Flask(__name__)
@@ -15,27 +25,33 @@ def create_app():
     with app.app_context():
         init_db()
 
+
     user_repo = SQLAlchemyUserRepository()
     transaction_repo = SQLAlchemyTransactionRepository()
     budget_repo = SQLAlchemyBudgetRepository()
     income_repo = SQLAlchemyIncomeSourceRepository()
-    saving_repo = SavingRepository()
+    saving_repo = SQLAlchemySavingRepository()
+    category_repo = SQLAlchemyCategoryRepository()
 
     financial_service = FinancialService(
         transaction_repo=transaction_repo,
         budget_repo=budget_repo,
         income_repo=income_repo,
+        category_repo=category_repo,
     )
 
     @app.after_request
     def add_security_headers(response):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+        if not request.cookies.get("csrf_token"):
+            csrf = generate_csrf_token()
+            response.set_cookie("csrf_token", csrf, httponly=False, samesite="Lax", max_age=3600, path="/")
         return response
 
     @app.context_processor
     def inject_now():
-        from datetime import datetime
         return {"now": datetime.now()}
 
     # --- Страницы ---
@@ -58,7 +74,6 @@ def create_app():
 
     @app.route('/reports')
     def reports_page():
-        from datetime import date
         today = date.today()
         return render_template('reports.html', current_month=today.month, current_year=today.year)
 
@@ -86,7 +101,6 @@ def create_app():
 
     @app.route('/api/v1/register', methods=['POST'])
     def register():
-        from utils.rate_limiter import register_limiter
         ip = request.remote_addr or "unknown"
         if not register_limiter.is_allowed(f"register:{ip}"):
             retry_after = 300
@@ -114,7 +128,6 @@ def create_app():
 
     @app.route('/api/v1/login', methods=['POST'])
     def login():
-        from utils.rate_limiter import login_limiter
         ip = request.remote_addr or "unknown"
         if not login_limiter.is_allowed(f"login:{ip}"):
             retry_after = 60
@@ -142,12 +155,12 @@ def create_app():
 
     @app.route('/api/v1/logout', methods=['POST'])
     def logout():
-        from services.auth_service import _extract_token, blacklist
         token = _extract_token()
         if token:
             payload = AuthService.verify_token(token)
             if payload:
-                blacklist.add(token, payload["exp"])
+                exp = datetime.fromtimestamp(payload["exp"]) if isinstance(payload.get("exp"), (int, float)) else datetime.utcnow() + timedelta(hours=1)
+                blacklist.add(payload.get("jti", token), exp)
         response = make_response(jsonify({"status": "success", "message": "Вы вышли из системы."}))
         response.set_cookie("auth_token", "", httponly=True, max_age=0, path="/")
         return response
@@ -163,16 +176,13 @@ def create_app():
     @require_auth
     def list_transactions():
         uid = request.current_user["user_id"]
-        from datetime import date
         today = date.today()
         try:
             summary = financial_service.get_monthly_summary(uid, month=today.month, year=today.year)
             limit = int(Config.DASHBOARD_TX_LIMIT)
             txs, _ = transaction_repo.get_filtered_for_user(uid, page=1, limit=limit)
-            from models.database import Category
-            from utils.database_session import get_db
-            with get_db() as s:
-                cats = {c.id: {"name": c.name, "icon": c.icon or "📁", "type": c.type or "expense"} for c in s.query(Category).all()}
+            all_cats = category_repo.get_all()
+            cats = {c.id: {"name": c.name, "icon": c.icon or "📁", "type": c.type or "expense"} for c in all_cats}
             recent = []
             for t in txs:
                 cat = cats.get(t.category_id, {"name": f"ID:{t.category_id}", "icon": "📁", "type": "expense"})
@@ -189,7 +199,8 @@ def create_app():
             items = saving_repo.get_by_user(uid)
             summary["total_savings"] = sum(s.amount for s in items)
             return jsonify({"status": "success", "data": summary})
-        except Exception as e:
+        except Exception:
+            logging.exception("list_transactions: внутренняя ошибка")
             return jsonify({"status": "error", "message": "Внутренняя ошибка сервера"}), 500
 
     @app.route('/api/v1/user/<int:user_id>/transactions/<int:tx_id>', methods=['GET', 'PUT', 'DELETE'])
@@ -199,8 +210,6 @@ def create_app():
             return jsonify({"status": "error", "message": "Доступ запрещён"}), 403
 
         if request.method == 'GET':
-            from models.database import Transaction, Category
-            from utils.database_session import get_db
             with get_db() as session:
                 tx = session.query(Transaction).filter(Transaction.id == tx_id, Transaction.user_id == user_id).first()
                 if not tx:
@@ -227,7 +236,8 @@ def create_app():
             return jsonify({"status": "success", "message": "Транзакция обновлена"})
         except ValueError as e:
             return jsonify({"status": "error", "message": str(e)}), 400
-        except Exception as e:
+        except Exception:
+            logging.exception("transaction_detail: внутренняя ошибка")
             return jsonify({"status": "error", "message": "Внутренняя ошибка сервера"}), 500
 
     @app.route('/api/v1/user/<int:user_id>/create_transaction', methods=['POST'])
@@ -249,7 +259,8 @@ def create_app():
             return jsonify({"status": "success", "message": "Транзакция добавлена", "transaction_id": tx.id}), 201
         except ValueError as e:
             return jsonify({"status": "error", "message": str(e)}), 400
-        except Exception as e:
+        except Exception:
+            logging.exception("create_transaction: внутренняя ошибка")
             return jsonify({"status": "error", "message": "Внутренняя ошибка сервера"}), 500
 
     @app.route('/api/v1/user/<int:user_id>/transactions', methods=['GET'])
@@ -273,7 +284,8 @@ def create_app():
                             "total": result["total"], "page": result["page"],
                             "limit": result["limit"], "month": result["month"],
                             "year": result["year"]})
-        except Exception as e:
+        except Exception:
+            logging.exception("user_transactions: внутренняя ошибка")
             return jsonify({"status": "error", "message": "Внутренняя ошибка сервера"}), 500
 
     @app.route('/api/v1/budgets', methods=['GET'])
@@ -281,11 +293,9 @@ def create_app():
     def list_budgets():
         uid = request.current_user["user_id"]
         budgets = budget_repo.get_all_for_user(uid)
-        from models.database import Category
-        from utils.database_session import get_db
-        with get_db() as session:
-            cats = {c.id: c.name for c in session.query(Category).all()}
-            cat_icons = {c.id: c.icon or "" for c in session.query(Category).all()}
+        all_cats = category_repo.get_all()
+        cats = {c.id: c.name for c in all_cats}
+        cat_icons = {c.id: c.icon or "" for c in all_cats}
         return jsonify({"status": "success", "data": [
             {"id": b.id, "category_id": b.category_id, "category_name": cats.get(b.category_id, f"ID:{b.category_id}"),
              "category_icon": cat_icons.get(b.category_id, ""),
@@ -308,7 +318,8 @@ def create_app():
                 target_amount=float(data['target_amount'])
             )
             return jsonify({"status": "success", "message": "Бюджет создан", "budget_id": budget.id}), 201
-        except Exception as e:
+        except Exception:
+            logging.exception("create_budget: внутренняя ошибка")
             return jsonify({"status": "error", "message": "Внутренняя ошибка сервера"}), 500
 
     @app.route('/api/v1/budgets/<int:budget_id>', methods=['PUT'])
@@ -324,10 +335,7 @@ def create_app():
         result = budget_repo.update_budget(budget_id, request.current_user["user_id"], update)
         if not result:
             return jsonify({"status": "error", "message": "Бюджет не найден"}), 404
-        from models.database import Category as CatModel
-        from utils.database_session import get_db
-        with get_db() as session:
-            cat = session.query(CatModel).filter(CatModel.id == result.category_id).first()
+        cat = category_repo.get_by_id(result.category_id)
         return jsonify({"status": "success", "budget_id": result.id,
                         "category_icon": cat.icon if cat else "",
                         "category_name": cat.name if cat else f"ID:{result.category_id}"})
@@ -379,7 +387,8 @@ def create_app():
             return resp
         except ValueError as e:
             return jsonify({"status": "error", "message": str(e)}), 400
-        except Exception as e:
+        except Exception:
+            logging.exception("generate_report: внутренняя ошибка")
             return jsonify({"status": "error", "message": "Внутренняя ошибка сервера"}), 500
 
     @app.route('/api/v1/backup', methods=['GET'])
@@ -387,7 +396,6 @@ def create_app():
     def backup_api():
         if request.current_user["role"] != "Admin":
             return jsonify({"status": "error", "message": "Только для администратора"}), 403
-        from utils.backup_service import BackupService
         svc = BackupService()
         result = svc.create_backup(request.args.get('type', 'full'))
         ok = "Ошибка" not in result
@@ -419,7 +427,7 @@ def create_app():
             return jsonify({"status": "error", "message": "Пользователь не найден"}), 404
         data = request.get_json()
         if data and data.get("role") in ("User", "Admin"):
-            user_repo._update_role(user_id, data["role"])
+            user_repo.update_role(user_id, data["role"])
             return jsonify({"status": "success", "message": f"Пользователь {user.email} подтверждён как {data['role']}"})
         return jsonify({"status": "success", "message": f"Пользователь {user.email} подтверждён"})
 
@@ -449,50 +457,38 @@ def create_app():
     @app.route('/api/v1/categories', methods=['GET', 'POST'])
     @require_auth
     def categories_api():
-        from models.database import Category
-        from utils.database_session import get_db
         if request.method == 'GET':
-            with get_db() as session:
-                cats = session.query(Category).all()
+            cats = category_repo.get_all()
             return jsonify({"status": "success", "data": [{"id": c.id, "name": c.name, "description": c.description or "", "icon": c.icon or "", "type": c.type or "expense"} for c in cats]})
         data = request.get_json()
         if not data or not data.get('name'):
             return jsonify({"status": "error", "message": "name обязателен"}), 400
-        with get_db() as session:
-            cat = Category(name=data['name'], description=data.get('description', ''), icon=data.get('icon', ''), type=data.get('type', 'expense'))
-            session.add(cat)
-            session.commit()
-            session.refresh(cat)
+        cat = category_repo.create({"name": data['name'], "description": data.get('description', ''), "icon": data.get('icon', ''), "type": data.get('type', 'expense')})
         return jsonify({"status": "success", "category_id": cat.id}), 201
 
     @app.route('/api/v1/categories/<int:cat_id>', methods=['PUT'])
     @require_auth
     def update_category(cat_id):
-        from models.database import Category
-        from utils.database_session import get_db
         data = request.get_json()
         if not data:
             return jsonify({"status": "error", "message": "Нет данных"}), 400
-        with get_db() as session:
-            cat = session.query(Category).filter(Category.id == cat_id).first()
-            if not cat:
-                return jsonify({"status": "error", "message": "Категория не найдена"}), 404
-            if 'name' in data:
-                cat.name = data['name']
-            if 'description' in data:
-                cat.description = data['description']
-            if 'icon' in data:
-                cat.icon = data['icon']
-            if 'type' in data:
-                cat.type = data['type']
-            session.commit()
+        update_data = {}
+        if 'name' in data:
+            update_data['name'] = data['name']
+        if 'description' in data:
+            update_data['description'] = data['description']
+        if 'icon' in data:
+            update_data['icon'] = data['icon']
+        if 'type' in data:
+            update_data['type'] = data['type']
+        updated = category_repo.update(cat_id, update_data)
+        if not updated:
+            return jsonify({"status": "error", "message": "Категория не найдена"}), 404
         return jsonify({"status": "success", "message": "Категория обновлена"})
 
     @app.route('/api/v1/categories/<int:cat_id>', methods=['DELETE'])
     @require_auth
     def delete_category(cat_id):
-        from models.database import Category, Transaction, Budget, IncomeSource
-        from utils.database_session import get_db
         with get_db() as session:
             cat = session.query(Category).filter(Category.id == cat_id).first()
             if not cat:
@@ -530,8 +526,6 @@ def create_app():
         data = request.get_json()
         if not data or not data.get('name'):
             return jsonify({"status": "error", "message": "name обязателен"}), 400
-        from datetime import date, timedelta
-        from calendar import monthrange
         rec = {
             "user_id": request.current_user["user_id"],
             "name": data['name'],
@@ -667,7 +661,6 @@ def create_app():
     def admin_settings():
         if request.current_user["role"] != "Admin":
             return jsonify({"status": "error", "message": "Только для администратора"}), 403
-        from utils.env_manager import get_settings, update_settings
         if request.method == 'GET':
             s = get_settings()
             def _mask(val: str) -> str:
@@ -712,7 +705,6 @@ def create_app():
     def bot_start():
         if request.current_user["role"] != "Admin":
             return jsonify({"status": "error", "message": "Только для администратора"}), 403
-        from utils.bot_manager import start_bot
         msg = start_bot()
         ok = "Ошибка" not in msg and "уже" not in msg
         return jsonify({"status": "success" if ok else "error", "message": msg})
@@ -722,7 +714,6 @@ def create_app():
     def bot_stop():
         if request.current_user["role"] != "Admin":
             return jsonify({"status": "error", "message": "Только для администратора"}), 403
-        from utils.bot_manager import stop_bot
         msg = stop_bot()
         return jsonify({"status": "success", "message": msg})
 
@@ -731,7 +722,6 @@ def create_app():
     def bot_status():
         if request.current_user["role"] != "Admin":
             return jsonify({"status": "error", "message": "Только для администратора"}), 403
-        from utils.bot_manager import status_bot
         st = status_bot()
         return jsonify({"status": "success", "data": st})
 
@@ -740,7 +730,6 @@ def create_app():
     def bot_check_proxy():
         if request.current_user["role"] != "Admin":
             return jsonify({"status": "error", "message": "Только для администратора"}), 403
-        from utils.bot_manager import check_proxy
         result = check_proxy()
         return jsonify({"status": "success" if result.get("ok") else "error", "data": result})
 
@@ -761,9 +750,10 @@ def create_app():
     return app
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     try:
         app = create_app()
-        print(f"--- HomeMoney запущен (Debug={Config.DEBUG}) ---")
+        logging.info("HomeMoney запущен (Debug=%s)", Config.DEBUG)
         app.run(debug=Config.DEBUG)
     except Exception as e:
-        print(f"КРИТИЧЕСКАЯ ОШИБКА: {e}")
+        logging.critical("КРИТИЧЕСКАЯ ОШИБКА: %s", e, exc_info=True)

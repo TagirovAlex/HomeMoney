@@ -1,4 +1,4 @@
-import sys, os, secrets, string
+import os, secrets, string
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 alphabet = string.ascii_letters + string.digits
@@ -14,38 +14,43 @@ from utils.database_session import init_db
 init_db()
 
 from data_access.repositories.user_repository import SQLAlchemyUserRepository
+from data_access.repositories.category_repository import SQLAlchemyCategoryRepository
 from services.auth_service import AuthService
 from services.financial_service import FinancialService
 from data_access.repositories.transaction_repository import SQLAlchemyTransactionRepository
 from data_access.repositories.budget_repository import SQLAlchemyBudgetRepository
-from models.database import Category
-from utils.database_session import get_db
 
 u = SQLAlchemyUserRepository()
-tx = SQLAlchemyTransactionRepository()
-bg = SQLAlchemyBudgetRepository()
-fs = FinancialService(tx, bg)
+tx_repo = SQLAlchemyTransactionRepository()
+bg_repo = SQLAlchemyBudgetRepository()
+cat_repo = SQLAlchemyCategoryRepository()
+fs = FinancialService(tx_repo, bg_repo, category_repo=cat_repo)
 
 u.create({"email":"admin@demo.com","hashed_password":AuthService.hash_password(ADMIN_PW),"role":"Admin","status":"active"})
 u.create({"email":"ivan@demo.com","hashed_password":AuthService.hash_password(USER_PW),"role":"User","status":"active"})
 u.create({"email":"petr@demo.com","hashed_password":AuthService.hash_password(PENDING_PW),"role":"User","status":"pending"})
 
-with get_db() as s:
-    for name in ["Продукты","Аренда","Транспорт","Связь","Развлечения","Здоровье"]:
-        s.add(Category(name=name))
-    s.commit()
+cat_names = ["Продукты","Аренда","Транспорт","Связь","Развлечения","Здоровье"]
+for name in cat_names:
+    cat_repo.create({"name": name})
 
-for desc, cat, amt in [
-    ("Ашан",1,3500),("Пятёрочка",1,1200),("Метро",1,2800),
-    ("Квартплата",2,15000),("Такси",3,800),("Бензин",3,3200),
-    ("Билайн",4,600),("Кино",5,1200),("Спортзал",6,3000),
-    ("Продукты",1,2100),("Аптека",6,1500),
-]:
-    fs.add_transaction(2, amt, cat, desc)
+cats = {c.name: c.id for c in cat_repo.get_all()}
+ivan = u.get_by_email("ivan@demo.com")
+ivan_id = ivan.id if ivan else None
 
-fs.create_budget(user_id=2, category_id=1, target_amount=15000)
-fs.create_budget(user_id=2, category_id=2, target_amount=18000)
-fs.create_budget(user_id=2, category_id=3, target_amount=5000)
+if ivan_id:
+    tx_data = [
+        ("Ашан","Продукты",3500),("Пятёрочка","Продукты",1200),("Метро","Продукты",2800),
+        ("Квартплата","Аренда",15000),("Такси","Транспорт",800),("Бензин","Транспорт",3200),
+        ("Билайн","Связь",600),("Кино","Развлечения",1200),("Спортзал","Здоровье",3000),
+        ("Продукты","Продукты",2100),("Аптека","Здоровье",1500),
+    ]
+    for desc, cat_name, amt in tx_data:
+        fs.add_transaction(ivan_id, amt, cats[cat_name], desc)
+
+    fs.create_budget(user_id=ivan_id, category_id=cats["Продукты"], target_amount=15000)
+    fs.create_budget(user_id=ivan_id, category_id=cats["Аренда"], target_amount=18000)
+    fs.create_budget(user_id=ivan_id, category_id=cats["Транспорт"], target_amount=5000)
 
 print("Demo data ready!")
 print()

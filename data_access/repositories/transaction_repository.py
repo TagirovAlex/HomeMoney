@@ -24,6 +24,14 @@ class ITransactionRepository(ABC):
     def get_filtered_for_user(self, user_id: int, month: int = None, year: int = None, category_id: int = None, page: int = 1, limit: int = 50) -> Tuple[List[Transaction], int]:
         pass
 
+    @abstractmethod
+    def update_transaction(self, tx_id: int, user_id: int, data: dict) -> Optional[Transaction]:
+        pass
+
+    @abstractmethod
+    def delete_transaction(self, tx_id: int, user_id: int) -> bool:
+        pass
+
 class SQLAlchemyTransactionRepository(ITransactionRepository):
     """Рабочий репозиторий транзакций с использованием SQLAlchemy."""
 

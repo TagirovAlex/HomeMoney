@@ -1,53 +1,54 @@
 import bcrypt
 import jwt
-import time
+import secrets
 import threading
 from datetime import datetime, timedelta
 from functools import wraps
+from uuid import uuid4
 from flask import request, jsonify
 from config import Config
+from utils.database_session import get_db
+from models.database import BlacklistedToken
 
 SECRET_KEY = Config.SECRET_KEY
 
 
 class TokenBlacklist:
-    def __init__(self):
-        self._blacklist: dict[str, float] = {}
-        self._lock = threading.Lock()
+    def add(self, jti: str, expires_at: datetime) -> None:
+        with get_db() as session:
+            existing = session.query(BlacklistedToken).filter(BlacklistedToken.jti == jti).first()
+            if not existing:
+                session.add(BlacklistedToken(jti=jti, expires_at=expires_at))
+                session.commit()
 
-    def add(self, token: str, expires_at: float) -> None:
-        with self._lock:
-            self._blacklist[token] = expires_at
-
-    def is_blacklisted(self, token: str) -> bool:
-        with self._lock:
-            exp = self._blacklist.get(token)
-            if exp is None:
-                return False
-            if time.time() > exp:
-                del self._blacklist[token]
-                return False
-            return True
+    def is_blacklisted(self, jti: str) -> bool:
+        with get_db() as session:
+            return session.query(BlacklistedToken).filter(
+                BlacklistedToken.jti == jti,
+                BlacklistedToken.expires_at > datetime.utcnow(),
+            ).first() is not None
 
     def cleanup(self) -> None:
-        now = time.time()
-        with self._lock:
-            expired = [k for k, v in self._blacklist.items() if now > v]
-            for k in expired:
-                del self._blacklist[k]
+        with get_db() as session:
+            session.query(BlacklistedToken).filter(
+                BlacklistedToken.expires_at <= datetime.utcnow()
+            ).delete()
+            session.commit()
 
     def clear(self) -> None:
-        with self._lock:
-            self._blacklist.clear()
+        with get_db() as session:
+            session.query(BlacklistedToken).delete()
+            session.commit()
 
 
 blacklist = TokenBlacklist()
 
-# Автоматическая чистка каждые 5 минут
+
 def _run_cleanup():
     while True:
-        time.sleep(300)
+        threading.Event().wait(300)
         blacklist.cleanup()
+
 
 _cleanup_thread = threading.Thread(target=_run_cleanup, daemon=True)
 _cleanup_thread.start()
@@ -68,6 +69,8 @@ class AuthService:
         payload = {
             "user_id": user_id,
             "role": role,
+            "jti": str(uuid4()),
+            "iat": datetime.utcnow(),
             "exp": datetime.utcnow() + timedelta(hours=1),
         }
         return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
@@ -82,6 +85,20 @@ class AuthService:
             return None
 
 
+def generate_csrf_token() -> str:
+    return secrets.token_hex(32)
+
+def require_csrf(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if request.method in ("POST", "PUT", "DELETE"):
+            cookie = request.cookies.get("csrf_token")
+            header = request.headers.get("X-CSRF-Token")
+            if not cookie or not header or not secrets.compare_digest(cookie, header):
+                return jsonify({"status": "error", "message": "CSRF-токен недействителен"}), 403
+        return f(*args, **kwargs)
+    return decorated
+
 def _extract_token():
     auth = request.headers.get("Authorization", "")
     if auth.startswith("Bearer "):
@@ -94,11 +111,16 @@ def require_auth(f):
         token = _extract_token()
         if not token:
             return jsonify({"status": "error", "message": "Требуется авторизация"}), 401
-        if blacklist.is_blacklisted(token):
-            return jsonify({"status": "error", "message": "Токен отозван. Выполните вход заново."}), 401
         payload = AuthService.verify_token(token)
         if not payload:
             return jsonify({"status": "error", "message": "Токен недействителен"}), 401
+        if blacklist.is_blacklisted(payload.get("jti", "")):
+            return jsonify({"status": "error", "message": "Токен отозван. Выполните вход заново."}), 401
+        if request.method in ("POST", "PUT", "DELETE"):
+            csrf_cookie = request.cookies.get("csrf_token")
+            csrf_header = request.headers.get("X-CSRF-Token")
+            if not csrf_cookie or not csrf_header or not secrets.compare_digest(csrf_cookie, csrf_header):
+                return jsonify({"status": "error", "message": "CSRF-токен недействителен"}), 403
         request.current_user = payload
         return f(*args, **kwargs)
     return decorated

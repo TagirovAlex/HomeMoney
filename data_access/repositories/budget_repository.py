@@ -14,6 +14,18 @@ class IBudgetRepository(ABC):
     def create_budget(self, budget_data: dict) -> Budget:
         pass
 
+    @abstractmethod
+    def get_all_for_user(self, user_id: int) -> List[Budget]:
+        pass
+
+    @abstractmethod
+    def update_budget(self, budget_id: int, user_id: int, data: dict) -> Optional[Budget]:
+        pass
+
+    @abstractmethod
+    def delete_budget(self, budget_id: int, user_id: int) -> bool:
+        pass
+
 class SQLAlchemyBudgetRepository(IBudgetRepository):
     """Рабочий репозиторий бюджетов с использованием SQLAlchemy."""
 

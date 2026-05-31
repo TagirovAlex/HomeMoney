@@ -88,4 +88,13 @@ def _run_migrations():
             cols = [c['name'] for c in inspector.get_columns('transactions')]
             if 'type' not in cols:
                 conn.execute(text("ALTER TABLE transactions ADD COLUMN type VARCHAR DEFAULT 'expense'"))
+        # blacklisted_tokens table (added in AuthService refactor)
+        if 'blacklisted_tokens' not in inspector.get_table_names():
+            from sqlalchemy import MetaData, Table
+            meta = MetaData()
+            Table('blacklisted_tokens', meta,
+                  Column('id', Integer, primary_key=True),
+                  Column('jti', String, unique=True, nullable=False),
+                  Column('expires_at', DateTime, nullable=False))
+            meta.create_all(engine)
         conn.commit()

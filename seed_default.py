@@ -1,5 +1,5 @@
 """Создание базовых категорий и демо-данных для нового пользователя."""
-import sys, os
+import os
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 from utils.database_session import init_db

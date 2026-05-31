@@ -1,9 +1,33 @@
+from abc import ABC, abstractmethod
 from typing import List, Optional
 from models.database import Saving
 from utils.database_session import get_db
 
 
-class SavingRepository:
+class ISavingRepository(ABC):
+
+    @abstractmethod
+    def get_by_user(self, user_id: int) -> List[Saving]:
+        pass
+
+    @abstractmethod
+    def get_by_id(self, saving_id: int, user_id: int) -> Optional[Saving]:
+        pass
+
+    @abstractmethod
+    def create(self, data: dict) -> Saving:
+        pass
+
+    @abstractmethod
+    def update(self, saving_id: int, user_id: int, data: dict) -> Optional[Saving]:
+        pass
+
+    @abstractmethod
+    def delete(self, saving_id: int, user_id: int) -> bool:
+        pass
+
+
+class SQLAlchemySavingRepository(ISavingRepository):
     def __init__(self):
         self._db = get_db
 

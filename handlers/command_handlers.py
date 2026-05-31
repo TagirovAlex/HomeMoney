@@ -9,6 +9,8 @@ from data_access.repositories.user_repository import SQLAlchemyUserRepository
 from data_access.repositories.transaction_repository import SQLAlchemyTransactionRepository
 from data_access.repositories.budget_repository import SQLAlchemyBudgetRepository
 from data_access.repositories.income_repository import SQLAlchemyIncomeSourceRepository
+from data_access.repositories.category_repository import SQLAlchemyCategoryRepository
+from data_access.repositories.saving_repository import SQLAlchemySavingRepository
 from services.financial_service import FinancialService
 from services.auth_service import AuthService
 from models.database import Category, User, Transaction
@@ -19,6 +21,14 @@ from datetime import date as dt_date
 router = Router()
 
 user_sessions: dict[int, dict] = {}
+
+_user_repo = SQLAlchemyUserRepository()
+_tx_repo = SQLAlchemyTransactionRepository()
+_bg_repo = SQLAlchemyBudgetRepository()
+_inc_repo = SQLAlchemyIncomeSourceRepository()
+_cat_repo = SQLAlchemyCategoryRepository()
+_sav_repo = SQLAlchemySavingRepository()
+_fs = FinancialService(_tx_repo, _bg_repo, _inc_repo, _cat_repo)
 
 def get_session(tg_id: int) -> dict:
     if tg_id not in user_sessions:
@@ -116,7 +126,7 @@ async def _do_login(message: Message, tg_id: int, email: str, password: str) -> 
     if not login_limiter.is_allowed(f"bot_login:{tg_id}"):
         await message.answer("❌ Слишком много попыток входа. Попробуйте через 60 секунд.")
         return False
-    repo = SQLAlchemyUserRepository()
+    repo = _user_repo
     user = repo.get_by_email(email)
     if not user or not AuthService.verify_password(password, user.hashed_password):
         await message.answer("❌ Неверный email или пароль")
@@ -214,9 +224,9 @@ async def _cmd_report(tg_id: int, message: Message):
         month = today.month
         year = today.year
     try:
-        tx_repo = SQLAlchemyTransactionRepository()
-        bg_repo = SQLAlchemyBudgetRepository()
-        fs = FinancialService(tx_repo, bg_repo)
+        tx_repo = _tx_repo
+        bg_repo = _bg_repo
+        fs = _fs
         report = fs.get_detailed_report(sess["user_id"], role=sess.get("role", "User"), month=month, year=year)
         summary = report.get("summary", {})
         total = summary.get("total_spent", 0)
@@ -258,7 +268,7 @@ async def cmd_report(message: Message):
 async def _cmd_budgets(tg_id: int, message: Message):
     sess = get_session(tg_id)
     try:
-        bg_repo = SQLAlchemyBudgetRepository()
+        bg_repo = _bg_repo
         budgets = bg_repo.get_all_for_user(sess["user_id"])
         if not budgets:
             await message.answer("Нет бюджетов. Создайте через веб-интерфейс.", reply_markup=menu_kb())
@@ -283,7 +293,7 @@ async def cmd_budgets(message: Message):
 async def _cmd_incomes(tg_id: int, message: Message):
     sess = get_session(tg_id)
     try:
-        inc_repo = SQLAlchemyIncomeSourceRepository()
+        inc_repo = _inc_repo
         srcs = inc_repo.get_by_user(sess["user_id"])
         if not srcs:
             await message.answer("Нет доходов. Создайте через веб-интерфейс.", reply_markup=menu_kb())
@@ -397,8 +407,8 @@ async def tx_enter_date(message: Message):
             return
     sess["data"]["date"] = tx_date
     try:
-        tx_repo = SQLAlchemyTransactionRepository()
-        fs = FinancialService(tx_repo, SQLAlchemyBudgetRepository())
+        tx_repo = _tx_repo
+        fs = _fs
         tx = fs.add_transaction(
             user_id=sess["user_id"],
             amount=sess["data"]["amount"],
@@ -486,8 +496,8 @@ async def _render_tx_page(callback: CallbackQuery, month: int, year: int, page: 
     sm = None if all_mode else month
     sy = None if all_mode else year
     try:
-        tx_repo = SQLAlchemyTransactionRepository()
-        fs = FinancialService(tx_repo, SQLAlchemyBudgetRepository())
+        tx_repo = _tx_repo
+        fs = _fs
         result = fs.get_filtered_user_transactions(
             sess["user_id"], month=sm, year=sy, page=page, limit=5
         )
@@ -526,8 +536,8 @@ async def _render_tx_page(callback: CallbackQuery, month: int, year: int, page: 
 async def _cmd_tx(tg_id: int, message: Message, page: int = 1, month: int = None, year: int = None):
     sess = get_session(tg_id)
     try:
-        tx_repo = SQLAlchemyTransactionRepository()
-        fs = FinancialService(tx_repo, SQLAlchemyBudgetRepository())
+        tx_repo = _tx_repo
+        fs = _fs
         result = fs.get_filtered_user_transactions(
             sess["user_id"], month=month, year=year, page=page, limit=5
         )
@@ -608,8 +618,8 @@ async def cmd_edittx(message: Message):
         return
 
     sess = get_session(tg_id)
-    tx_repo = SQLAlchemyTransactionRepository()
-    fs = FinancialService(tx_repo, SQLAlchemyBudgetRepository())
+    tx_repo = _tx_repo
+    fs = _fs
     txs = fs.get_user_transactions(sess["user_id"])
     tx_data = next((t for t in txs if t["id"] == tx_id), None)
     if not tx_data:
@@ -720,8 +730,8 @@ async def edit_enter_date(message: Message):
         update_data["date"] = tx_date
 
     try:
-        tx_repo = SQLAlchemyTransactionRepository()
-        fs = FinancialService(tx_repo, SQLAlchemyBudgetRepository())
+        tx_repo = _tx_repo
+        fs = _fs
         fs.update_transaction(tx_id, sess["user_id"], update_data)
         sess["step"] = None
         await message.answer(
@@ -785,8 +795,8 @@ async def cb_tx_edit(callback: CallbackQuery):
         return
     tx_id = int(callback.data.split(":")[1])
     sess = get_session(tg_id)
-    tx_repo = SQLAlchemyTransactionRepository()
-    fs = FinancialService(tx_repo, SQLAlchemyBudgetRepository())
+    tx_repo = _tx_repo
+    fs = _fs
     txs = fs.get_user_transactions(sess["user_id"])
     tx_data = next((t for t in txs if t["id"] == tx_id), None)
     if not tx_data:
@@ -962,10 +972,10 @@ async def cmd_process(message: Message):
     tg_id = message.from_user.id
     sess = get_session(tg_id)
     try:
-        tx_repo = SQLAlchemyTransactionRepository()
-        bg_repo = SQLAlchemyBudgetRepository()
-        inc_repo = SQLAlchemyIncomeSourceRepository()
-        fs = FinancialService(tx_repo, bg_repo, inc_repo)
+        tx_repo = _tx_repo
+        bg_repo = _bg_repo
+        inc_repo = _inc_repo
+        fs = _fs
         result = fs.process_regular_payments(sess["user_id"])
         processed = result.get("processed", 0)
         errors = result.get("errors", [])

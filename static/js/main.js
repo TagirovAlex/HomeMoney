@@ -21,8 +21,16 @@
 
     window.fmt = function(n) { return (n || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
 
+    window.getCookie = function(name) {
+        var m = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+        return m ? decodeURIComponent(m[2]) : '';
+    };
+
     window.authHeaders = function() {
-        return { 'Content-Type': 'application/json' };
+        var h = { 'Content-Type': 'application/json' };
+        var csrf = getCookie('csrf_token');
+        if (csrf) { h['X-CSRF-Token'] = csrf; }
+        return h;
     };
 
     var userEmail = document.getElementById('user-email');

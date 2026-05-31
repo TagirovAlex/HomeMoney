@@ -14,6 +14,30 @@ class IUserRepository(ABC):
     def get_all(self, current_user_id: int, role: str) -> List[User]:
         pass
 
+    @abstractmethod
+    def create(self, user_data: dict) -> User:
+        pass
+
+    @abstractmethod
+    def get_by_id(self, user_id: int) -> Optional[User]:
+        pass
+
+    @abstractmethod
+    def update_status(self, user_id: int, status: str) -> Optional[User]:
+        pass
+
+    @abstractmethod
+    def get_pending(self) -> List[User]:
+        pass
+
+    @abstractmethod
+    def update_telegram_id(self, user_id: int, telegram_id: str) -> Optional[User]:
+        pass
+
+    @abstractmethod
+    def update_role(self, user_id: int, role: str) -> Optional[User]:
+        pass
+
 class SQLAlchemyUserRepository(IUserRepository):
     """Рабочий репозиторий пользователей с использованием SQLAlchemy."""
 
@@ -58,7 +82,7 @@ class SQLAlchemyUserRepository(IUserRepository):
         with self._db() as session:
             return session.query(User).filter(User.status == "pending").all()
 
-    def _update_role(self, user_id: int, role: str) -> Optional[User]:
+    def update_role(self, user_id: int, role: str) -> Optional[User]:
         with self._db() as session:
             user = session.query(User).filter(User.id == user_id).first()
             if user:

@@ -10,6 +10,9 @@ class Config:
     _SECRET_KEY = os.environ.get("HM_SECRET_KEY")
     if not _SECRET_KEY:
         import logging
+        _debug = os.environ.get("HM_DEBUG", "false").lower() in ("true", "1", "yes")
+        if not _debug:
+            raise RuntimeError("HM_SECRET_KEY не задан! Установите его в .env для production.")
         logging.warning("HM_SECRET_KEY не задан. Используется DEVELOPMENT-ключ! Установите HM_SECRET_KEY в .env")
         _SECRET_KEY = "hm-dev-secret-key-32-bytes-min!!"
     SECRET_KEY = _SECRET_KEY

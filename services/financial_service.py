@@ -1,19 +1,19 @@
-from typing import Optional
+from typing import Optional, List
 from data_access.repositories.transaction_repository import ITransactionRepository
 from data_access.repositories.budget_repository import IBudgetRepository
 from data_access.repositories.income_repository import IIncomeSourceRepository
+from data_access.repositories.category_repository import ICategoryRepository
 from models.database import Transaction, Budget
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from calendar import monthrange
 
 class FinancialService:
-    """Сервисный слой (Use Case) для бизнес-логики финансов."""
 
-    def __init__(self, transaction_repo: ITransactionRepository, budget_repo: IBudgetRepository, income_repo: IIncomeSourceRepository = None):
-        # Зависимости внедряются через конструктор. Это обеспечивает тестируемость.
+    def __init__(self, transaction_repo: ITransactionRepository, budget_repo: IBudgetRepository, income_repo: IIncomeSourceRepository = None, category_repo: ICategoryRepository = None):
         self.transaction_repo = transaction_repo
         self.budget_repo = budget_repo
         self.income_repo = income_repo
+        self.category_repo = category_repo
 
     def add_transaction(self, user_id: int, amount: float, category_id: int, description: str = "", date=None) -> Transaction:
         """Добавить транзакцию. Тип (расход/доход) определяется из категории."""
@@ -22,13 +22,9 @@ class FinancialService:
         if len(description) > 500:
             raise ValueError("Описание не может быть длиннее 500 символов")
 
-        from models.database import Category
-        from utils.database_session import get_db
-        with get_db() as s:
-            cat = s.query(Category).filter(Category.id == category_id).first()
-            tx_type = cat.type if cat else "expense"
+        cat = self.category_repo.get_by_id(category_id) if self.category_repo else None
+        tx_type = cat.type if cat else "expense"
 
-        from datetime import datetime
         transaction_data = {
             "user_id": user_id,
             "amount": abs(amount),
@@ -38,14 +34,12 @@ class FinancialService:
         }
         if date:
             if isinstance(date, str):
-                from datetime import datetime
                 date = datetime.strptime(date, "%Y-%m-%d")
             transaction_data["date"] = date
         return self.transaction_repo.add_transaction(transaction_data)
 
     def get_monthly_summary(self, user_id: int, month: int, year: int) -> dict:
         """Получить сводку расходов/доходов за месяц (бюджет, фактические расходы)."""
-        from datetime import date, timedelta, datetime
         start_date = date(year, month, 1)
         try:
             end_month = start_date + timedelta(days=32)
@@ -60,10 +54,8 @@ class FinancialService:
             start_date=start_date, 
             end_date=end_date
         )
-        from models.database import Category
-        from utils.database_session import get_db
-        with get_db() as s:
-            cat_types = {c.id: c.type for c in s.query(Category).all()}
+        all_cats = self.category_repo.get_all() if self.category_repo else []
+        cat_types = {c.id: c.type for c in all_cats}
         total_income = sum(t.amount for t in transactions if cat_types.get(t.category_id, getattr(t, 'type', 'expense')) == 'income')
         total_spent = sum(t.amount for t in transactions if cat_types.get(t.category_id, getattr(t, 'type', 'expense')) == 'expense')
 
@@ -80,7 +72,6 @@ class FinancialService:
 
     def check_budget_exceeded(self, user_id: int, category_id: int, current_month: int, current_year: int) -> bool:
         """Проверить, превышен ли бюджет по указанной категории."""
-        from datetime import date, timedelta
         start_date = date(current_year, current_month, 1)
         try:
             end_month = start_date + timedelta(days=32)
@@ -120,13 +111,11 @@ class FinancialService:
     def get_detailed_report(self, user_id: int, role: str, month: int = None, year: int = None,
                              start_date=None, end_date=None, category_id: int = None,
                              include_transactions: bool = False) -> dict:
-        from datetime import date, timedelta, datetime as dt_mod
-
         if start_date and end_date:
             if isinstance(start_date, str):
-                start_date = dt_mod.strptime(start_date, '%Y-%m-%d').date()
+                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
             if isinstance(end_date, str):
-                end_date = dt_mod.strptime(end_date, '%Y-%m-%d').date()
+                end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
             end_date = end_date + timedelta(days=1)
         elif month and year:
             start_date = date(year, month, 1)
@@ -157,10 +146,8 @@ class FinancialService:
             "category_spending": {}
         }
 
-        from models.database import Category
-        from utils.database_session import get_db
-        with get_db() as session:
-            cat_types = {c.id: c.type for c in session.query(Category).all()}
+        all_cats = self.category_repo.get_all() if self.category_repo else []
+        cat_types = {c.id: c.type for c in all_cats}
 
         def _is_income(t):
             return cat_types.get(t.category_id, 'expense') == 'income'
@@ -175,8 +162,7 @@ class FinancialService:
 
         closing_balance = opening_balance + total_income - total_expense
 
-        with get_db() as session:
-            cat_info = {c.id: {"name": c.name, "icon": c.icon or ""} for c in session.query(Category).all()}
+        cat_info = {c.id: {"name": c.name, "icon": c.icon or ""} for c in all_cats}
 
         all_budgets = self.budget_repo.get_active_budgets_for_user(
             user_id=user_id, month=month or start_date.month, year=year or start_date.year
@@ -264,14 +250,10 @@ class FinancialService:
         if "amount" in update:
             update["amount"] = abs(float(update["amount"]))
         if "date" in update and isinstance(update["date"], str):
-            from datetime import datetime
             update["date"] = datetime.strptime(update["date"], "%Y-%m-%d")
         if "category_id" in update:
-            from models.database import Category
-            from utils.database_session import get_db
-            with get_db() as s:
-                cat = s.query(Category).filter(Category.id == update["category_id"]).first()
-                update["type"] = cat.type if cat else "expense"
+            cat = self.category_repo.get_by_id(update["category_id"]) if self.category_repo else None
+            update["type"] = cat.type if cat else "expense"
         tx = self.transaction_repo.update_transaction(tx_id, user_id, update)
         if not tx:
             raise ValueError("Транзакция не найдена")
@@ -281,12 +263,9 @@ class FinancialService:
         return self.transaction_repo.delete_transaction(tx_id, user_id)
 
     def get_user_transactions(self, user_id: int) -> list:
-        from models.database import Category
-        from utils.database_session import get_db
-
         transactions = self.transaction_repo.get_all_for_user(user_id)
-        with get_db() as session:
-            cats = {c.id: {"name": c.name, "icon": c.icon or ""} for c in session.query(Category).all()}
+        all_cats = self.category_repo.get_all() if self.category_repo else []
+        cats = {c.id: {"name": c.name, "icon": c.icon or ""} for c in all_cats}
         result = []
         for t in transactions:
             cat = cats.get(t.category_id, {"name": f"ID:{t.category_id}", "icon": "📁"})
@@ -303,15 +282,12 @@ class FinancialService:
         return result
 
     def get_filtered_user_transactions(self, user_id: int, month: int = None, year: int = None, category_id: int = None, page: int = 1, limit: int = 50, start_date=None, end_date=None) -> dict:
-        from models.database import Category
-        from utils.database_session import get_db
-
         transactions, total = self.transaction_repo.get_filtered_for_user(
             user_id, month=month, year=year, category_id=category_id, page=page, limit=limit,
             start_date=start_date, end_date=end_date
         )
-        with get_db() as session:
-            cats = {c.id: {"name": c.name, "icon": c.icon or ""} for c in session.query(Category).all()}
+        all_cats = self.category_repo.get_all() if self.category_repo else []
+        cats = {c.id: {"name": c.name, "icon": c.icon or ""} for c in all_cats}
         result = []
         for t in transactions:
             cat = cats.get(t.category_id, {"name": f"ID:{t.category_id}", "icon": "📁"})
@@ -331,13 +307,11 @@ class FinancialService:
     def process_regular_payments(self, user_id: int) -> dict:
         if not self.income_repo:
             return {"processed": 0, "errors": ["income_repo не подключён"]}
-        from datetime import datetime
         due = self.income_repo.get_due_regular(user_id)
         processed = 0
         errors = []
         for src in due:
             try:
-                from datetime import datetime
                 txn_date = src.next_date or datetime.combine(date.today(), datetime.min.time())
                 self.add_transaction(
                     user_id=user_id,
@@ -349,10 +323,9 @@ class FinancialService:
                 # Рассчитываем следующую дату
                 next_d = txn_date
                 if src.period == "daily":
-                    from datetime import timedelta as tdelta
-                    next_d = next_d + tdelta(days=1)
+                    next_d = next_d + timedelta(days=1)
                 elif src.period == "weekly":
-                    next_d = next_d + tdelta(weeks=1)
+                    next_d = next_d + timedelta(weeks=1)
                 elif src.period == "monthly":
                     m = next_d.month + 1
                     y = next_d.year
@@ -367,7 +340,7 @@ class FinancialService:
                     day = min(src.day_of_period, max_day)
                     next_d = date(y, next_d.month, day)
                 else:
-                    next_d = next_d + tdelta(days=30)
+                    next_d = next_d + timedelta(days=30)
                 self.income_repo.update(src.id, user_id, {"next_date": next_d})
                 processed += 1
             except Exception as e:

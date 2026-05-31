@@ -118,7 +118,8 @@ class FinancialService:
         return self.budget_repo.create_budget(budget_data)
 
     def get_detailed_report(self, user_id: int, role: str, month: int = None, year: int = None,
-                             start_date=None, end_date=None, category_id: int = None) -> dict:
+                             start_date=None, end_date=None, category_id: int = None,
+                             include_transactions: bool = False) -> dict:
         from datetime import date, timedelta, datetime as dt_mod
 
         if start_date and end_date:
@@ -197,13 +198,16 @@ class FinancialService:
             "opening_balance": round(opening_balance, 2),
             "closing_balance": round(closing_balance, 2),
         }
-        report["detailed_spending"] = {
-            cat_id: {
+        report["detailed_spending"] = {}
+        for cat_id in category_map:
+            entry = {
                 "name": category_map[cat_id]["name"],
                 "icon": category_map[cat_id]["icon"],
                 "spent": round(category_map[cat_id]["total_spent"], 2),
                 "budget": round(category_map[cat_id]["budget"], 2),
-                "transactions": [
+            }
+            if include_transactions:
+                entry["transactions"] = [
                     {
                         "id": t.id,
                         "amount": t.amount,
@@ -213,24 +217,25 @@ class FinancialService:
                     }
                     for t in transactions
                     if getattr(t, 'type', 'expense') == 'expense' and t.category_id == cat_id
-                ],
-            }
-            for cat_id in category_map
-        }
+                ]
+            report["detailed_spending"][cat_id] = entry
 
-        report["transactions"] = [
-            {
-                "id": t.id,
-                "amount": t.amount,
-                "category_id": t.category_id,
-                "category_name": cat_info.get(t.category_id, {}).get("name", f"ID:{t.category_id}"),
-                "category_icon": cat_info.get(t.category_id, {}).get("icon", ""),
-                "description": t.description or "",
-                "date": t.date.isoformat() if t.date else "",
-                "type": getattr(t, 'type', 'expense'),
-            }
-            for t in transactions
-        ]
+        if include_transactions:
+            report["transactions"] = [
+                {
+                    "id": t.id,
+                    "amount": t.amount,
+                    "category_id": t.category_id,
+                    "category_name": cat_info.get(t.category_id, {}).get("name", f"ID:{t.category_id}"),
+                    "category_icon": cat_info.get(t.category_id, {}).get("icon", ""),
+                    "description": t.description or "",
+                    "date": t.date.isoformat() if t.date else "",
+                    "type": getattr(t, 'type', 'expense'),
+                }
+                for t in transactions
+            ]
+        else:
+            report["transactions"] = []
 
         return report
 

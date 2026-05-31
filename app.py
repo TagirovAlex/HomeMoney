@@ -349,17 +349,18 @@ def create_app():
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
         category_id = request.args.get('category_id', type=int)
+        include_tx = request.args.get('include_transactions', '0') in ('1', 'true', 'yes')
         try:
             if start_date and end_date:
                 report = financial_service.get_detailed_report(
                     uid, role=role, start_date=start_date, end_date=end_date,
-                    category_id=category_id)
+                    category_id=category_id, include_transactions=include_tx)
             else:
                 if not month or not year:
                     return jsonify({"status": "error", "message": "Укажите month/year или start_date/end_date"}), 400
                 report = financial_service.get_detailed_report(
                     uid, role=role, month=month, year=year,
-                    category_id=category_id)
+                    category_id=category_id, include_transactions=include_tx)
             items = saving_repo.get_by_user(uid)
             type_labels = {"deposit": "Депозит", "stocks": "Акции", "bonds": "Облигации", "cash": "Наличные", "other": "Другое"}
             savings_data = []

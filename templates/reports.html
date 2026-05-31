@@ -17,6 +17,7 @@
             <label>Начало <input type="date" id="r-start"></label>
             <label>Конец <input type="date" id="r-end"></label>
             <label>Категория <select id="r-category"><option value="">Все</option></select></label>
+            <label><input type="checkbox" id="r-show-tx"> Список транзакций</label>
             <button type="submit" class="btn">Сформировать</button>
         </div>
     </form>
@@ -95,8 +96,10 @@
         var end = document.getElementById('r-end').value;
         if (!start || !end) { alert('Укажите период'); return; }
         var cat = document.getElementById('r-category').value;
+        var showTx = document.getElementById('r-show-tx').checked;
         var params = 'start_date=' + start + '&end_date=' + end + '&_=' + Date.now();
         if (cat) params += '&category_id=' + cat;
+        if (showTx) params += '&include_transactions=1';
         var r = await fetch('/api/v1/reports?' + params, { headers: authHeaders() });
         var d = await r.json();
         if (d.status !== 'success') { alert(d.message); return; }
@@ -183,8 +186,10 @@
         container.innerHTML = html;
     }
 
-    setPreset('month', 0);
-    loadCategories();
-    window.onload = function() { loadReport(null); };
+    window.onload = function() {
+        setPreset('month', 0);
+        loadCategories();
+        loadReport(null);
+    };
 </script>
 {% endblock %}

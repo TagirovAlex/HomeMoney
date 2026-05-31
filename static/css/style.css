@@ -151,7 +151,7 @@ main { flex: 1; padding: 24px 5%; max-width: 1200px; margin: 0 auto; width: 100%
 .pagination button:disabled { opacity: 0.4; cursor: default; }
 
 /* --- ADMIN --- */
-.admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 24px; max-width: 1200px; margin: 0 auto; }
+.admin-grid { display: grid; grid-template-columns: 1fr; gap: 24px; max-width: 1200px; margin: 0 auto; }
 .admin-card { text-align: left; overflow-x: auto; }
 .admin-card h3 { margin: 0 0 16px; }
 .admin-card form { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; align-items: flex-end; }
@@ -262,7 +262,6 @@ main { flex: 1; padding: 24px 5%; max-width: 1200px; margin: 0 auto; width: 100%
     .page-header { flex-direction: column; align-items: flex-start; }
     .page-header h2 { font-size: 1.25rem; }
     .summary-cards { flex-direction: column; }
-    .admin-grid { grid-template-columns: 1fr; }
     .card { padding: 16px; }
     .card-value { font-size: 1.4rem; }
     .filter-bar { flex-wrap: wrap; flex-direction: column; align-items: stretch; }

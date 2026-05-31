@@ -266,6 +266,9 @@ main { flex: 1; padding: 24px 5%; max-width: 1200px; margin: 0 auto; width: 100%
     .summary-cards { flex-direction: column; }
     .card { padding: 16px; }
     .card-value { font-size: 1.4rem; }
+    .period-form { flex-direction: column; align-items: stretch; }
+    .period-form .flex-row div { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+    .period-form .btn { flex: 1 1 auto; min-width: 0; padding: 6px 10px; font-size: 0.85rem; }
     .filter-bar { flex-wrap: wrap; flex-direction: column; align-items: stretch; }
     .filter-bar-presets { justify-content: center; }
     .filter-bar label { white-space: normal; }
@@ -314,6 +317,9 @@ main { flex: 1; padding: 24px 5%; max-width: 1200px; margin: 0 auto; width: 100%
 .mobile .summary-cards { flex-direction: column; }
 .mobile .card { padding: 16px; }
 .mobile .card-value { font-size: 1.4rem; }
+.mobile .period-form { flex-direction: column; align-items: stretch; }
+.mobile .period-form .flex-row div { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.mobile .period-form .btn { flex: 1 1 auto; min-width: 0; padding: 6px 10px; font-size: 0.85rem; }
 .mobile .filter-bar { flex-wrap: wrap; flex-direction: column; align-items: stretch; }
 .mobile .filter-bar-presets { justify-content: center; }
 .mobile .filter-bar label { white-space: normal; }

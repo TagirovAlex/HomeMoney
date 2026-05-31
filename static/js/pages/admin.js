@@ -134,60 +134,86 @@ async function saveBotSettings(e) {
 }
 
 async function loadBotStatus() {
-    var r = await fetch('/api/v1/admin/bot/status', { headers: authHeaders() });
-    var d = await r.json();
-    var el = document.getElementById('bot-status-text');
-    if (d.status === 'success' && d.data.running) {
-        el.textContent = '✅ запущен (PID: ' + d.data.pid + ')';
-    } else {
-        el.textContent = '⏹ остановлен';
-    }
-    var hel = document.getElementById('bot-health-text');
-    var health = d.data.health || {};
-    if (health.reachable) {
-        hel.innerHTML = '✅ Online — @' + (health.username || '') + ' (' + (health.first_name || '') + ')';
-    } else {
-        hel.innerHTML = '❌ ' + (health.error || 'недоступен');
+    try {
+        var r = await fetch('/api/v1/admin/bot/status', { headers: authHeaders() });
+        var d = await r.json();
+        var el = document.getElementById('bot-status-text');
+        if (d.status === 'success' && d.data && d.data.running) {
+            el.textContent = '✅ запущен (PID: ' + d.data.pid + ')';
+        } else {
+            el.textContent = '⏹ остановлен';
+        }
+        var hel = document.getElementById('bot-health-text');
+        var health = d.data && d.data.health ? d.data.health : {};
+        if (health.reachable) {
+            hel.innerHTML = '✅ Online — @' + (health.username || '') + ' (' + (health.first_name || '') + ')';
+        } else {
+            hel.innerHTML = '❌ ' + (health.error || 'недоступен');
+        }
+    } catch (e) {
+        document.getElementById('bot-status-text').textContent = '❌ ошибка загрузки';
     }
 }
 
 async function checkProxy() {
     var el = document.getElementById('proxy-check-result');
     el.textContent = '⏳ проверка...';
-    var r = await fetch('/api/v1/admin/bot/check-proxy', { method: 'POST', headers: authHeaders() });
-    var d = await r.json();
-    var data = d.data || {};
-    if (data.ok) {
-        el.innerHTML = '✅ ' + data.proxy + ' — OK';
-    } else {
-        el.innerHTML = '❌ ' + (data.error || 'ошибка подключения');
+    try {
+        var r = await fetch('/api/v1/admin/bot/check-proxy', { method: 'POST', headers: authHeaders() });
+        var d = await r.json();
+        var data = d.data || {};
+        if (data.ok) {
+            el.innerHTML = '✅ ' + data.proxy + ' — OK';
+        } else {
+            el.innerHTML = '❌ ' + (data.error || 'ошибка подключения');
+        }
+    } catch (e) {
+        el.textContent = '❌ ' + e.message;
     }
 }
 
 async function botStart() {
     var out = document.getElementById('bot-result');
-    out.textContent = 'Запуск...';
-    var r = await fetch('/api/v1/admin/bot/start', { method: 'POST', headers: authHeaders() });
-    var d = await r.json();
-    out.textContent = d.message;
-    loadBotStatus();
+    out.textContent = '⏳ Запуск...';
+    try {
+        var r = await fetch('/api/v1/admin/bot/start', { method: 'POST', headers: authHeaders() });
+        var d = await r.json();
+        out.textContent = d.message;
+        loadBotStatus();
+    } catch (e) {
+        out.textContent = '❌ Ошибка: ' + e.message;
+    }
 }
 
 async function botStop() {
     var out = document.getElementById('bot-result');
-    out.textContent = 'Остановка...';
-    var r = await fetch('/api/v1/admin/bot/stop', { method: 'POST', headers: authHeaders() });
-    var d = await r.json();
-    out.textContent = d.message;
-    loadBotStatus();
+    out.textContent = '⏳ Остановка...';
+    try {
+        var r = await fetch('/api/v1/admin/bot/stop', { method: 'POST', headers: authHeaders() });
+        var d = await r.json();
+        out.textContent = d.message;
+        loadBotStatus();
+    } catch (e) {
+        out.textContent = '❌ Ошибка: ' + e.message;
+    }
 }
 
 async function backup(type) {
     var out = document.getElementById('backup-result');
-    out.textContent = 'Создание бэкапа...';
-    var r = await fetch('/api/v1/backup?type=' + type, { headers: authHeaders() });
-    var d = await r.json();
-    out.textContent = d.message;
+    out.textContent = '⏳ Создание бэкапа...';
+    try {
+        var r = await fetch('/api/v1/backup?type=' + type, { headers: authHeaders() });
+        var d = await r.json();
+        out.textContent = d.message;
+    } catch (e) {
+        out.textContent = '❌ Ошибка: ' + e.message;
+    }
 }
 
-window.onload = function() { loadPending(); loadUsers(); loadCategories(); loadSettings(); loadBotStatus(); };
+window.onload = function() {
+    loadPending().catch(function() {});
+    loadUsers().catch(function() {});
+    loadCategories().catch(function() {});
+    loadSettings().catch(function() {});
+    loadBotStatus().catch(function() {});
+};

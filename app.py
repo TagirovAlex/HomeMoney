@@ -145,10 +145,9 @@ def create_app():
         token = AuthService.create_token(user.id, user.role)
         login_limiter.reset(f"login:{ip}")
         response = make_response(jsonify({"status": "success", "token": token, "user": {"id": user.id, "email": user.email, "role": user.role, "status": user.status}}))
-        is_secure = not Config.DEBUG
         response.set_cookie(
             "auth_token", token,
-            httponly=True, secure=is_secure, samesite="Lax",
+            httponly=True, secure=request.is_secure, samesite="Lax",
             max_age=3600, path="/"
         )
         return response

@@ -269,9 +269,11 @@ main { flex: 1; padding: 24px 5%; max-width: 1200px; margin: 0 auto; width: 100%
     .period-form { flex-direction: column; align-items: stretch; }
     .period-form .flex-row div { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
     .period-form .btn { flex: 1 1 auto; min-width: 0; padding: 6px 10px; font-size: 0.85rem; }
-    .filter-bar { flex-wrap: wrap; flex-direction: column; align-items: stretch; }
-    .filter-bar-presets { justify-content: center; }
-    .filter-bar label { white-space: normal; }
+    .filter-bar { flex-direction: column; align-items: stretch; }
+    .filter-bar-presets { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+    .filter-bar-presets .btn { flex: 1 1 auto; min-width: 0; padding: 6px 10px; font-size: 0.85rem; }
+    .filter-bar-controls { display: flex; flex-direction: column; gap: 8px; }
+    .filter-bar-controls label { width: 100%; }
     .filter-bar select, .filter-bar input { width: 100%; }
     .data-table th, .data-table td { padding: 6px 8px; font-size: 0.85rem; }
     #tx-main-table { display: block; }
@@ -320,9 +322,11 @@ main { flex: 1; padding: 24px 5%; max-width: 1200px; margin: 0 auto; width: 100%
 .mobile .period-form { flex-direction: column; align-items: stretch; }
 .mobile .period-form .flex-row div { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
 .mobile .period-form .btn { flex: 1 1 auto; min-width: 0; padding: 6px 10px; font-size: 0.85rem; }
-.mobile .filter-bar { flex-wrap: wrap; flex-direction: column; align-items: stretch; }
-.mobile .filter-bar-presets { justify-content: center; }
-.mobile .filter-bar label { white-space: normal; }
+.mobile .filter-bar { flex-direction: column; align-items: stretch; }
+.mobile .filter-bar-presets { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.mobile .filter-bar-presets .btn { flex: 1 1 auto; min-width: 0; padding: 6px 10px; font-size: 0.85rem; }
+.mobile .filter-bar-controls { display: flex; flex-direction: column; gap: 8px; }
+.mobile .filter-bar-controls label { width: 100%; }
 .mobile .filter-bar select, .mobile .filter-bar input { width: 100%; }
 .mobile .data-table th, .mobile .data-table td { padding: 6px 8px; font-size: 0.85rem; }
 .mobile #tx-main-table { display: block; }

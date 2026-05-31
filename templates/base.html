@@ -23,9 +23,10 @@
                 </nav>
             </div>
             <div class="header-right">
-                <span id="user-email" class="user-email" style="display:none"></span>
+                <button id="nav-toggle" aria-label="Меню">☰</button>
+                <span id="user-email" class="user-email hidden"></span>
                 <button id="theme-toggle" aria-label="Переключить тему">🌙</button>
-                <button id="logout-btn" class="btn-logout" style="display:none">Выйти</button>
+                <button id="logout-btn" class="btn-logout hidden">Выйти</button>
             </div>
         </header>
         <main>
@@ -60,6 +61,11 @@
                 return { 'Content-Type': 'application/json' };
             };
 
+            // --- Mobile nav toggle ---
+            document.getElementById('nav-toggle').addEventListener('click', function() {
+                document.getElementById('main-nav').classList.toggle('nav-open');
+            });
+
             // --- Auth check via cookie ---
             var userEmail = document.getElementById('user-email');
             var logoutBtn = document.getElementById('logout-btn');
@@ -73,8 +79,8 @@
                     if (!d || d.status !== 'success') { window.location.href = '/login'; return; }
                     var u = d.user;
                     userEmail.textContent = u.email;
-                    userEmail.style.display = 'inline';
-                    logoutBtn.style.display = 'inline-block';
+                    userEmail.classList.remove('hidden');
+                    logoutBtn.classList.remove('hidden');
                 })
                 .catch(function() { window.location.href = '/login'; });
 

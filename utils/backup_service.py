@@ -5,12 +5,14 @@ from models.database import Base
 
 class BackupService:
 
-    def __init__(self, db_path: str = "home_money.db"):
+    def __init__(self, db_path: str = "home_money.db", backup_dir: str = "backups"):
         self.db_path = db_path
+        self.backup_dir = backup_dir
+        os.makedirs(self.backup_dir, exist_ok=True)
 
     def create_backup(self, backup_type: str = "full") -> str:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_file = f"backup_{timestamp}_{backup_type}"
+        backup_file = os.path.join(self.backup_dir, f"backup_{timestamp}_{backup_type}")
 
         try:
             if backup_type == "full":

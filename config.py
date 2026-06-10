@@ -20,6 +20,9 @@ class Config:
     # База данных
     DATABASE_URL = os.environ.get("HM_DATABASE_URL", "sqlite:///./instance/home_money.db")
 
+    # Директория для бэкапов (должна быть вне webroot)
+    BACKUP_DIR = os.environ.get("HM_BACKUP_DIR", "backups")
+
     # Telegram Bot
     BOT_TOKEN = os.environ.get("HM_BOT_TOKEN", "")
 

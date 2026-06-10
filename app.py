@@ -430,7 +430,7 @@ def create_app():
     def backup_api():
         if request.current_user["role"] != "Admin":
             return jsonify({"status": "error", "message": "Только для администратора"}), 403
-        svc = BackupService()
+        svc = BackupService(backup_dir=Config.BACKUP_DIR)
         result = svc.create_backup(request.args.get('type', 'full'))
         ok = "Ошибка" not in result
         return jsonify({"status": "success" if ok else "error", "message": result})

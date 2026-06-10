@@ -1,4 +1,5 @@
 import bcrypt
+import hashlib
 import jwt
 import secrets
 import threading
@@ -8,7 +9,7 @@ from uuid import uuid4
 from flask import request, jsonify
 from config import Config
 from utils.database_session import get_db
-from models.database import BlacklistedToken
+from models.database import BlacklistedToken, RefreshToken as RefreshTokenModel
 
 SECRET_KEY = Config.SECRET_KEY
 
@@ -74,6 +75,43 @@ class AuthService:
             "exp": datetime.utcnow() + timedelta(hours=1),
         }
         return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+
+    @staticmethod
+    def create_refresh_token(user_id: int, role: str) -> str:
+        token = secrets.token_urlsafe(48)
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        expires_at = datetime.utcnow() + timedelta(days=Config.REFRESH_TOKEN_EXPIRE_DAYS)
+        with get_db() as session:
+            session.add(RefreshTokenModel(
+                user_id=user_id,
+                role=role,
+                token_hash=token_hash,
+                expires_at=expires_at,
+            ))
+            session.commit()
+        return token
+
+    @staticmethod
+    def verify_refresh_token(token: str):
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        with get_db() as session:
+            record = session.query(RefreshTokenModel).filter(
+                RefreshTokenModel.token_hash == token_hash,
+                RefreshTokenModel.revoked == False,
+                RefreshTokenModel.expires_at > datetime.utcnow(),
+            ).first()
+            if not record:
+                return None
+            return {"user_id": record.user_id, "role": record.role, "token_id": record.id}
+
+    @staticmethod
+    def revoke_refresh_token(token: str) -> None:
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        with get_db() as session:
+            session.query(RefreshTokenModel).filter(
+                RefreshTokenModel.token_hash == token_hash
+            ).update({"revoked": True})
+            session.commit()
 
     @staticmethod
     def verify_token(token: str):

@@ -118,4 +118,17 @@ def _run_migrations():
                     "year = CAST(strftime('%Y', period_start_date) AS INTEGER) "
                     "WHERE month IS NULL AND year IS NULL AND period_start_date IS NOT NULL"
                 ))
+        # refresh_tokens table
+        if 'refresh_tokens' not in inspector.get_table_names():
+            from sqlalchemy import MetaData, Table, Boolean
+            meta = MetaData()
+            Table('refresh_tokens', meta,
+                  Column('id', Integer, primary_key=True),
+                  Column('user_id', Integer, nullable=False),
+                  Column('role', String, default='User'),
+                  Column('token_hash', String, unique=True, nullable=False),
+                  Column('expires_at', DateTime, nullable=False),
+                  Column('revoked', Boolean, default=False),
+                  Column('created_at', DateTime, nullable=False))
+            meta.create_all(engine)
         conn.commit()

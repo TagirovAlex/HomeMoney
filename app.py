@@ -143,12 +143,18 @@ def create_app():
         if user.status == "rejected":
             return jsonify({"status": "error", "message": "Аккаунт отклонён."}), 403
         token = AuthService.create_token(user.id, user.role)
+        refresh_token = AuthService.create_refresh_token(user.id, user.role)
         login_limiter.reset(f"login:{ip}")
-        response = make_response(jsonify({"status": "success", "token": token, "user": {"id": user.id, "email": user.email, "role": user.role, "status": user.status}}))
+        response = make_response(jsonify({"status": "success", "token": token, "refresh_token": refresh_token, "user": {"id": user.id, "email": user.email, "role": user.role, "status": user.status}}))
         response.set_cookie(
             "auth_token", token,
             httponly=True, samesite="Lax",
             max_age=3600, path="/"
+        )
+        response.set_cookie(
+            "refresh_token", refresh_token,
+            httponly=True, samesite="Lax",
+            max_age=86400 * Config.REFRESH_TOKEN_EXPIRE_DAYS, path="/api/v1/refresh"
         )
         return response
 
@@ -160,8 +166,37 @@ def create_app():
             if payload:
                 exp = datetime.fromtimestamp(payload["exp"]) if isinstance(payload.get("exp"), (int, float)) else datetime.utcnow() + timedelta(hours=1)
                 blacklist.add(payload.get("jti", token), exp)
+        refresh_token = request.cookies.get("refresh_token") or (request.get_json(silent=True) or {}).get("refresh_token", "")
+        if refresh_token:
+            AuthService.revoke_refresh_token(refresh_token)
         response = make_response(jsonify({"status": "success", "message": "Вы вышли из системы."}))
         response.set_cookie("auth_token", "", httponly=True, max_age=0, path="/")
+        response.set_cookie("refresh_token", "", httponly=True, max_age=0, path="/api/v1/refresh")
+        return response
+
+    @app.route('/api/v1/refresh', methods=['POST'])
+    def refresh():
+        refresh_token = request.cookies.get("refresh_token") or (request.get_json(silent=True) or {}).get("refresh_token", "")
+        if not refresh_token:
+            return jsonify({"status": "error", "message": "Требуется refresh token"}), 401
+        payload = AuthService.verify_refresh_token(refresh_token)
+        if not payload:
+            return jsonify({"status": "error", "message": "Refresh token недействителен"}), 401
+        AuthService.revoke_refresh_token(refresh_token)
+        role = payload.get("role", "User")
+        token = AuthService.create_token(payload["user_id"], role)
+        new_refresh_token = AuthService.create_refresh_token(payload["user_id"], role)
+        response = make_response(jsonify({"status": "success", "token": token, "refresh_token": new_refresh_token}))
+        response.set_cookie(
+            "auth_token", token,
+            httponly=True, samesite="Lax",
+            max_age=3600, path="/"
+        )
+        response.set_cookie(
+            "refresh_token", new_refresh_token,
+            httponly=True, samesite="Lax",
+            max_age=86400 * Config.REFRESH_TOKEN_EXPIRE_DAYS, path="/api/v1/refresh"
+        )
         return response
 
     # --- Защищённые API ---

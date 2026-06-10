@@ -17,6 +17,9 @@ class Config:
         _SECRET_KEY = "hm-dev-secret-key-32-bytes-min!!"
     SECRET_KEY = _SECRET_KEY
 
+    # Refresh token (30 дней по умолчанию)
+    REFRESH_TOKEN_EXPIRE_DAYS = int(os.environ.get("HM_REFRESH_TOKEN_EXPIRE_DAYS", "30"))
+
     # База данных
     DATABASE_URL = os.environ.get("HM_DATABASE_URL", "sqlite:///./instance/home_money.db")
 

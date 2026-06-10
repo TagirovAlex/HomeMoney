@@ -98,3 +98,13 @@ class BlacklistedToken(Base):
     id = Column(Integer, primary_key=True)
     jti = Column(String, unique=True, nullable=False, index=True)
     expires_at = Column(DateTime, nullable=False)
+
+class RefreshToken(Base):
+    __tablename__ = 'refresh_tokens'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    role = Column(String, default='User')
+    token_hash = Column(String, unique=True, nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    revoked = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)

@@ -38,6 +38,9 @@ pip install -r requirements.txt
 
 cp .env.example .env
 # Отредактируйте секреты
+# ⚠️ ОБЯЗАТЕЛЬНО замените HM_SECRET_KEY на случайную строку 32+ символов!
+# Значение из .env.example (change-me-to-random-secret-32-bytes!!) легко угадать.
+# В production приложение не запустится без установленного HM_SECRET_KEY.
 nano .env
 
 python seed_demo.py   # демо-данные + админ

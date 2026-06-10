@@ -3,14 +3,14 @@
 {% block content %}
 <div class="page-header">
     <h2>Отчёты</h2>
-    <form class="period-form" onsubmit="loadReport(event)">
+    <form class="period-form" id="report-form">
         <div class="flex-row">
             <div>
-                <button type="button" class="btn" onclick="setPreset('month', -1)">Прошлый месяц</button>
-                <button type="button" class="btn" onclick="setPreset('month', 0)">Текущий месяц</button>
-                <button type="button" class="btn" onclick="setPreset('quarter', 0)">Квартал</button>
-                <button type="button" class="btn" onclick="setPreset('year', 0)">Год</button>
-                <button type="button" class="btn" onclick="setPreset('custom')">Произвольно</button>
+                <button type="button" class="btn" data-preset="month,-1">Прошлый месяц</button>
+                <button type="button" class="btn" data-preset="month,0">Текущий месяц</button>
+                <button type="button" class="btn" data-preset="quarter,0">Квартал</button>
+                <button type="button" class="btn" data-preset="year,0">Год</button>
+                <button type="button" class="btn" data-preset="custom">Произвольно</button>
             </div>
         </div>
         <div id="date-range-group" class="flex-row mt-8">

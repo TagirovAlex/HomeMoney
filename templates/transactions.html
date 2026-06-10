@@ -3,59 +3,59 @@
 {% block content %}
 <div class="page-header">
     <h2>Транзакции</h2>
-    <button class="btn" onclick="showAddForm()">+ Добавить</button>
+    <button class="btn" id="tx-add-btn">+ Добавить</button>
 </div>
 
 <div id="add-form" class="form-card hidden">
     <h3 id="form-title">Новая транзакция</h3>
-    <form onsubmit="saveTransaction(event)">
+    <form id="tx-form">
         <label>Сумма <input type="number" step="0.01" id="tx-amount" required></label>
-        <label>Категория <select id="tx-category" required onchange="txCategoryChanged()"></select></label>
+        <label>Категория <select id="tx-category" required></select></label>
         <div id="tx-budget-info" class="text-secondary budget-info"></div>
         <label>Дата <input type="date" id="tx-date"></label>
         <label>Описание <input type="text" id="tx-desc"></label>
         <input type="hidden" id="tx-edit-id" value="">
         <button type="submit" class="btn" id="tx-submit">Сохранить</button>
-        <button type="button" class="btn btn-secondary" onclick="hideAddForm()">Отмена</button>
+        <button type="button" class="btn btn-secondary" id="tx-cancel-btn">Отмена</button>
     </form>
 </div>
 
 <div class="filter-bar flex-between">
     <div class="filter-bar-presets">
-        <button type="button" class="btn" onclick="setPreset('month', -1)">Прошлый месяц</button>
-        <button type="button" class="btn" onclick="setPreset('month', 0)">Текущий месяц</button>
-        <button type="button" class="btn" onclick="setPreset('quarter', 0)">Квартал</button>
-        <button type="button" class="btn" onclick="setPreset('year', 0)">Год</button>
-        <button type="button" class="btn" onclick="setPreset('custom')">Произвольно</button>
+        <button type="button" class="btn" data-preset="month,-1">Прошлый месяц</button>
+        <button type="button" class="btn" data-preset="month,0">Текущий месяц</button>
+        <button type="button" class="btn" data-preset="quarter,0">Квартал</button>
+        <button type="button" class="btn" data-preset="year,0">Год</button>
+        <button type="button" class="btn" data-preset="custom">Произвольно</button>
     </div>
     <div class="filter-bar-controls">
         <label>Начало <input type="date" id="f-start"></label>
         <label>Конец <input type="date" id="f-end"></label>
         <label>Категория <select id="f-category"><option value="">Все</option></select></label>
-        <button class="btn" onclick="loadTransactions()">Применить</button>
+        <button class="btn" id="tx-apply-btn">Применить</button>
     </div>
 </div>
 
 <table class="data-table" id="tx-main-table">
     <thead>
-        <tr><th onclick="setSort('id')" class="sortable">ID<span id="s-id"></span></th>
-            <th onclick="setSort('category_name')" class="sortable">Категория<span id="s-category_name"></span></th>
-            <th onclick="setSort('amount')" class="sortable">Сумма<span id="s-amount"></span></th>
-            <th onclick="setSort('type')" class="sortable">Тип<span id="s-type"></span></th>
-            <th onclick="setSort('description')" class="sortable">Описание<span id="s-description"></span></th>
-            <th onclick="setSort('date')" class="sortable">Дата<span id="s-date"></span></th>
+        <tr><th data-sort="id" class="sortable">ID<span id="s-id"></span></th>
+            <th data-sort="category_name" class="sortable">Категория<span id="s-category_name"></span></th>
+            <th data-sort="amount" class="sortable">Сумма<span id="s-amount"></span></th>
+            <th data-sort="type" class="sortable">Тип<span id="s-type"></span></th>
+            <th data-sort="description" class="sortable">Описание<span id="s-description"></span></th>
+            <th data-sort="date" class="sortable">Дата<span id="s-date"></span></th>
             <th></th></tr>
     </thead>
     <tbody id="tx-table"></tbody>
 </table>
 
 <div class="pagination hidden" id="pagination">
-    <button class="btn btn-secondary" id="prev-page" onclick="goPage(-1)">← Назад</button>
+    <button class="btn btn-secondary" id="prev-page">← Назад</button>
     <span id="page-info" class="mx-12"></span>
-    <button class="btn btn-secondary" id="next-page" onclick="goPage(1)">Вперед →</button>
+    <button class="btn btn-secondary" id="next-page">Вперед →</button>
     <label class="ml-auto text-secondary">
         Показать
-        <select id="page-size" onchange="changeLimit()" class="page-size-select">
+        <select id="page-size" class="page-size-select">
             <option value="10">10</option>
             <option value="20" selected>20</option>
             <option value="50">50</option>

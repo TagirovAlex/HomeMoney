@@ -3,12 +3,12 @@
 {% block content %}
 <div class="page-header">
     <h2>Накопления</h2>
-    <button class="btn" onclick="showAddForm()">+ Добавить</button>
+    <button class="btn" id="sv-add-btn">+ Добавить</button>
 </div>
 
 <div id="add-form" class="form-card hidden">
     <h3 id="form-title">Новое накопление</h3>
-    <form onsubmit="saveSaving(event)">
+    <form id="sv-form">
         <input type="hidden" id="saving-id" value="">
         <label>Название <input type="text" id="saving-name" required></label>
         <label>Сумма <input type="number" step="0.01" id="saving-amount" value="0" required></label>
@@ -23,7 +23,7 @@
         </label>
         <label>Описание <input type="text" id="saving-desc"></label>
         <button type="submit" class="btn" id="form-submit">Сохранить</button>
-        <button type="button" class="btn btn-secondary" onclick="hideAddForm()">Отмена</button>
+        <button type="button" class="btn btn-secondary" id="sv-cancel-btn">Отмена</button>
     </form>
 </div>
 

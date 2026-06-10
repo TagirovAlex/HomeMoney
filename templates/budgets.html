@@ -3,29 +3,29 @@
 {% block content %}
 <div class="page-header">
     <h2>Бюджеты</h2>
-    <button class="btn" onclick="showAddForm()">+ Создать</button>
+    <button class="btn" id="bg-add-btn">+ Создать</button>
 </div>
 
 <div class="month-nav">
-    <button class="btn btn-secondary" onclick="changeMonth(-1)">◀</button>
+    <button class="btn btn-secondary" id="bg-prev-btn">◀</button>
     <span id="month-label" class="month-label"></span>
-    <button class="btn btn-secondary" onclick="changeMonth(1)">▶</button>
-    <button class="btn btn-secondary" onclick="copyFromPrev()" id="copy-btn" title="Копировать переопределения с прошлого месяца">📋 Копировать</button>
+    <button class="btn btn-secondary" id="bg-next-btn">▶</button>
+    <button class="btn btn-secondary" id="copy-btn" title="Копировать переопределения с прошлого месяца">📋 Копировать</button>
 </div>
 
 <div id="add-form" class="form-card hidden">
     <h3 id="add-form-title">Новый бюджет</h3>
-    <form onsubmit="saveBudget(event)">
+    <form id="bg-form">
         <input type="hidden" id="bg-edit-id" value="">
         <label>Категория <select id="bg-category" required></select></label>
         <label>Лимит <input type="number" step="0.01" id="bg-amount" required></label>
 
         <div class="radio-group">
-            <label class="radio-label"><input type="radio" name="bg-type" value="template" checked onclick="onBudgetTypeChange()">
+            <label class="radio-label"><input type="radio" name="bg-type" value="template" checked>
                 Каждый месяц (шаблон)</label>
-            <label class="radio-label"><input type="radio" name="bg-type" value="month" onclick="onBudgetTypeChange()">
+            <label class="radio-label"><input type="radio" name="bg-type" value="month">
                 Один месяц</label>
-            <label class="radio-label"><input type="radio" name="bg-type" value="period" onclick="onBudgetTypeChange()">
+            <label class="radio-label"><input type="radio" name="bg-type" value="period">
                 Период</label>
         </div>
 
@@ -50,7 +50,7 @@
         </div>
 
         <button type="submit" class="btn" id="bg-submit">Сохранить</button>
-        <button type="button" class="btn btn-secondary" onclick="hideAddForm()">Отмена</button>
+        <button type="button" class="btn btn-secondary" id="bg-cancel-btn">Отмена</button>
     </form>
 </div>
 

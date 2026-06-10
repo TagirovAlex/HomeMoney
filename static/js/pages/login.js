@@ -6,7 +6,7 @@ function toggleAuthMode() {
     document.getElementById('auth-submit').textContent = isLogin ? 'Войти' : 'Зарегистрироваться';
     document.getElementById('auth-switch-text').textContent = isLogin ? 'Нет аккаунта?' : 'Уже есть аккаунт?';
     document.getElementById('auth-switch-link').textContent = isLogin ? 'Зарегистрироваться' : 'Войти';
-    document.getElementById('auth-error').style.display = 'none';
+    document.getElementById('auth-error').classList.add('hidden');
 }
 
 async function handleAuth(e) {
@@ -27,11 +27,19 @@ async function handleAuth(e) {
             window.location.href = '/';
         } else {
             errEl.textContent = d.message;
-            errEl.style.display = 'block';
+            errEl.classList.remove('hidden');
         }
     } catch(e) {
         errEl.textContent = 'Ошибка соединения';
-        errEl.style.display = 'block';
+        errEl.classList.remove('hidden');
     }
     return false;
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('auth-form').addEventListener('submit', handleAuth);
+    document.getElementById('auth-switch-link').addEventListener('click', function(e) {
+        e.preventDefault();
+        toggleAuthMode();
+    });
+});

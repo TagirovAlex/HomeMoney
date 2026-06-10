@@ -110,14 +110,14 @@ async function loadTransactions() {
     tbody.innerHTML = sorted.map(function(tx) {
         var typeLabel = tx.type === 'income' ? '💰 Доход' : '💳 Расход';
         return '<tr><td>' + tx.id + '</td><td>' + (tx.category_icon || '📁') + ' ' + tx.category_name + '</td><td>' + fmt(tx.amount) + '</td><td>' + typeLabel + '</td><td>' + tx.description + '</td><td>' + (tx.date ? tx.date.slice(0, 10) : '') + '</td>' +
-            '<td><button class="btn btn-secondary btn-icon" onclick="editTransaction(' + tx.id + ')">✏️</button>' +
-            '<button class="btn btn-secondary" onclick="deleteTransaction(' + tx.id + ')">❌</button></td></tr>';
+            '<td><button class="btn btn-secondary btn-icon" data-action="edit" data-id="' + tx.id + '">✏️</button>' +
+            '<button class="btn btn-secondary" data-action="delete" data-id="' + tx.id + '">❌</button></td></tr>';
     }).join('');
     ['id','category_name','amount','type','description','date'].forEach(function(c) {
         document.getElementById('s-' + c).textContent = sortIcon(c);
     });
     totalPages = Math.ceil(d.total / d.limit) || 1;
-    document.getElementById('pagination').style.display = 'block';
+    document.getElementById('pagination').classList.remove('hidden');
     document.getElementById('page-info').textContent = curPage + ' / ' + totalPages;
     document.getElementById('prev-page').disabled = curPage <= 1;
     document.getElementById('next-page').disabled = curPage >= totalPages;
@@ -209,7 +209,7 @@ async function deleteTransaction(txId) {
     if (r.ok) loadTransactions();
 }
 
-window.__pageInit = function(uid) {
+function initPage(uid) {
     userId = uid;
     setPreset('month', 0);
     loadCategoriesFilter();
@@ -217,5 +217,46 @@ window.__pageInit = function(uid) {
     setDefaultDate();
     pageSize = parseInt(document.getElementById('page-size').value);
     loadTransactions();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.__userId) initPage(window.__userId);
+
+    document.getElementById('tx-form').addEventListener('submit', saveTransaction);
+    document.getElementById('tx-add-btn').addEventListener('click', showAddForm);
+    document.getElementById('tx-cancel-btn').addEventListener('click', hideAddForm);
+    document.getElementById('tx-apply-btn').addEventListener('click', loadTransactions);
+    document.getElementById('tx-category').addEventListener('change', txCategoryChanged);
+    document.getElementById('page-size').addEventListener('change', changeLimit);
+    document.getElementById('prev-page').addEventListener('click', function() { goPage(-1); });
+    document.getElementById('next-page').addEventListener('click', function() { goPage(1); });
+
+    document.querySelector('.filter-bar-presets').addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-preset]');
+        if (!btn) return;
+        var parts = btn.getAttribute('data-preset').split(',');
+        setPreset(parts[0], parts.length > 1 ? parseInt(parts[1]) : 0);
+    });
+
+    document.querySelector('#tx-main-table thead tr').addEventListener('click', function(e) {
+        var th = e.target.closest('[data-sort]');
+        if (!th) return;
+        setSort(th.getAttribute('data-sort'));
+    });
+
+    document.getElementById('tx-table').addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        var id = parseInt(btn.getAttribute('data-id'));
+        if (btn.getAttribute('data-action') === 'edit') editTransaction(id);
+        else if (btn.getAttribute('data-action') === 'delete') deleteTransaction(id);
+    });
+});
+
+window.__pageInit = function(uid) {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() { initPage(uid); });
+    } else {
+        initPage(uid);
+    }
 };
-if (window.__userId) window.__pageInit(window.__userId);

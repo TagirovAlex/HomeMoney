@@ -13,14 +13,14 @@
             <div id="auth-form">
                 <h2 id="auth-title">Вход</h2>
                 <div id="auth-error" class="auth-error hidden"></div>
-                <form onsubmit="return handleAuth(event)">
+                <form id="auth-form">
                     <label>Email <input type="email" id="auth-email" required></label>
                     <label>Пароль <input type="password" id="auth-password" required></label>
                     <button type="submit" class="btn auth-btn" id="auth-submit">Войти</button>
                 </form>
                 <p class="auth-switch">
                     <span id="auth-switch-text">Нет аккаунта?</span>
-                    <a href="#" onclick="toggleAuthMode(); return false" id="auth-switch-link">Зарегистрироваться</a>
+                    <a href="#" id="auth-switch-link">Зарегистрироваться</a>
                 </p>
             </div>
         </div>

@@ -4,21 +4,21 @@
 <div class="page-header">
     <h2>Источники дохода</h2>
     <div>
-        <button class="btn" onclick="processDue()">🔄 Обработать регулярные</button>
-        <button class="btn" onclick="showAddForm()">+ Добавить</button>
+    <button class="btn" id="inc-process-btn">🔄 Обработать регулярные</button>
+    <button class="btn" id="inc-add-btn">+ Добавить</button>
     </div>
 </div>
 
 <div id="add-form" class="form-card hidden">
     <h3 id="form-title">Новый источник дохода</h3>
-    <form onsubmit="saveIncome(event)">
+    <form id="inc-form">
         <input type="hidden" id="inc-id" value="">
         <label>Название <input type="text" id="inc-name" required></label>
         <label>Сумма <input type="number" step="0.01" id="inc-amount" value="0" required></label>
         <label>Категория <select id="inc-category" required></select></label>
         <label>Описание <input type="text" id="inc-desc"></label>
         <label>
-            <input type="checkbox" id="inc-regular" checked onchange="toggleRegular()"> Регулярный
+            <input type="checkbox" id="inc-regular" checked> Регулярный
         </label>
         <div id="regular-fields">
             <label>Период
@@ -32,7 +32,7 @@
             <label>День (для monthly/yearly) <input type="number" id="inc-day" value="1" min="1" max="31"></label>
         </div>
         <button type="submit" class="btn" id="form-submit">Сохранить</button>
-        <button type="button" class="btn btn-secondary" onclick="hideAddForm()">Отмена</button>
+        <button type="button" class="btn btn-secondary" id="inc-cancel-btn">Отмена</button>
     </form>
 </div>
 

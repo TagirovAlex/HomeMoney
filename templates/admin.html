@@ -10,8 +10,8 @@
         <h3>Telegram Bot</h3>
         <p>Статус процесса: <strong id="bot-status-text">проверка...</strong></p>
         <p>API: <strong id="bot-health-text">проверка...</strong></p>
-        <p><button class="btn" onclick="botStart()">▶️ Запустить</button>
-        <button class="btn btn-secondary" onclick="botStop()">⏹ Остановить</button></p>
+        <p><button class="btn" id="admin-bot-start">▶️ Запустить</button>
+        <button class="btn btn-secondary" id="admin-bot-stop">⏹ Остановить</button></p>
         <pre id="bot-result" class="backup-output"></pre>
     </div>
 	
@@ -33,7 +33,7 @@
 
     <div class="card admin-card card-full">
         <h3>Категории</h3>
-        <form onsubmit="addCat(event)">
+        <form id="admin-cat-form">
             <div class="form-row">
                 <input type="text" id="cat-name" placeholder="Название" required class="flex-2">
                 <input type="text" id="cat-icon" placeholder="Иконка (эмодзи)" class="max-w-70">
@@ -57,8 +57,8 @@
     <div class="card admin-card card-full">
         <h3>Бэкапы</h3>
         <p>Создать копию базы данных.</p>
-        <button class="btn" onclick="backup('full')">SQLite</button>
-        <button class="btn" onclick="backup('json')">JSON</button>
+        <button class="btn" id="admin-backup-full">SQLite</button>
+        <button class="btn" id="admin-backup-json">JSON</button>
         <pre id="backup-result" class="backup-output"></pre>
     </div>
 
@@ -66,7 +66,7 @@
 
     <div class="card admin-card card-full">
         <h3>Настройки Telegram бота</h3>
-        <form onsubmit="saveBotSettings(event)" class="settings-form">
+        <form id="admin-bot-form" class="settings-form">
             <label>Bot Token <input type="text" id="cfg-bot-token" placeholder="HM_BOT_TOKEN"></label>
             <fieldset class="settings-fieldset">
                 <legend class="settings-legend">Прокси (SOCKS5)</legend>
@@ -80,7 +80,7 @@
                 </div>
             </fieldset>
             <div class="settings-check-row">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="checkProxy()">🔍 Проверить прокси</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="admin-check-proxy">🔍 Проверить прокси</button>
                 <span id="proxy-check-result" class="settings-check-result"></span>
             </div>
             <label>Allowed Users (Telegram ID, запятые) <input type="text" id="cfg-bot-users" placeholder="123456,789012"></label>

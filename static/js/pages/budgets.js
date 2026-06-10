@@ -147,16 +147,16 @@ function renderBudgets() {
         html += '<span class="bg-col-actions">';
 
         if (tpl) {
-            html += '<button class="btn btn-secondary btn-sm" onclick="editBudget(' + tpl.id + ')" title="Редактировать шаблон">✏️</button>';
+            html += '<button class="btn btn-secondary btn-sm" data-action="edit-budget" data-id="' + tpl.id + '" title="Редактировать шаблон">✏️</button>';
         } else {
-            html += '<button class="btn btn-secondary btn-sm" onclick="addTemplate(' + c.id + ')" title="Добавить шаблон">📋</button>';
+            html += '<button class="btn btn-secondary btn-sm" data-action="add-template" data-id="' + c.id + '" title="Добавить шаблон">📋</button>';
         }
         var budgetForEdit = ovr || per || tpl;
         if (budgetForEdit) {
-            html += '<button class="btn btn-secondary btn-sm" onclick="deleteBudget(' + budgetForEdit.id + ')" title="Удалить">❌</button>';
+            html += '<button class="btn btn-secondary btn-sm" data-action="delete-budget" data-id="' + budgetForEdit.id + '" title="Удалить">❌</button>';
         }
         if (!per && tpl) {
-            html += '<button class="btn btn-secondary btn-sm" onclick="addOverride(' + c.id + ',' + tpl.target_amount + ')" title="Переопределить на этот месяц">📝</button>';
+            html += '<button class="btn btn-secondary btn-sm" data-action="add-override" data-cat="' + c.id + '" data-amount="' + tpl.target_amount + '" title="Переопределить на этот месяц">📝</button>';
         }
 
         html += '</span></div>';
@@ -313,4 +313,28 @@ async function copyFromPrev() {
     if (r.ok) loadData();
 }
 
-init();
+document.addEventListener('DOMContentLoaded', function() {
+    init();
+
+    document.getElementById('bg-form').addEventListener('submit', saveBudget);
+    document.getElementById('bg-add-btn').addEventListener('click', showAddForm);
+    document.getElementById('bg-cancel-btn').addEventListener('click', hideAddForm);
+    document.getElementById('bg-prev-btn').addEventListener('click', function() { changeMonth(-1); });
+    document.getElementById('bg-next-btn').addEventListener('click', function() { changeMonth(1); });
+    document.getElementById('copy-btn').addEventListener('click', copyFromPrev);
+
+    document.querySelector('.radio-group').addEventListener('change', function(e) {
+        if (e.target.name === 'bg-type') onBudgetTypeChange();
+    });
+
+    document.getElementById('budgets-list').addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        var action = btn.getAttribute('data-action');
+        var id = parseInt(btn.getAttribute('data-id'));
+        if (action === 'edit-budget') editBudget(id);
+        else if (action === 'delete-budget') deleteBudget(id);
+        else if (action === 'add-template') addTemplate(id);
+        else if (action === 'add-override') addOverride(parseInt(btn.getAttribute('data-cat')), parseFloat(btn.getAttribute('data-amount')));
+    });
+});

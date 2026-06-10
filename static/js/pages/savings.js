@@ -17,8 +17,8 @@ async function loadSavings() {
             '<span class="card-value card-value-sm">' + fmt(s.amount) + ' RUB</span>' +
             (s.description ? '<br><span class="text-secondary fs-small">' + s.description + '</span>' : '') +
             '</div>' +
-            '<div><button class="btn btn-secondary btn-icon" onclick="editSaving(' + s.id + ')">✏️</button>' +
-            '<button class="btn btn-secondary" onclick="deleteSaving(' + s.id + ')">❌</button></div>' +
+            '<div><button class="btn btn-secondary btn-icon" data-action="edit-saving" data-id="' + s.id + '">✏️</button>' +
+            '<button class="btn btn-secondary" data-action="delete-saving" data-id="' + s.id + '">❌</button></div>' +
             '</div></div>';
     }).join('');
 }
@@ -79,4 +79,18 @@ async function deleteSaving(id) {
     alert(d.message); loadSavings();
 }
 
-window.onload = loadSavings;
+document.addEventListener('DOMContentLoaded', function() {
+    loadSavings();
+
+    document.getElementById('sv-form').addEventListener('submit', saveSaving);
+    document.getElementById('sv-add-btn').addEventListener('click', showAddForm);
+    document.getElementById('sv-cancel-btn').addEventListener('click', hideAddForm);
+
+    document.getElementById('savings-list').addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        var id = parseInt(btn.getAttribute('data-id'));
+        if (btn.getAttribute('data-action') === 'edit-saving') editSaving(id);
+        else if (btn.getAttribute('data-action') === 'delete-saving') deleteSaving(id);
+    });
+});

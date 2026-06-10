@@ -22,8 +22,8 @@ async function loadIncomes() {
         return '<div class="card card-left">' +
             '<div class="flex-between">' +
             '<div><span class="card-label">' + label + '</span><br><span class="card-value card-value-sm">' + info + '</span></div>' +
-            '<div><button class="btn btn-secondary btn-icon" onclick="editIncome(' + s.id + ')">✏️</button>' +
-            '<button class="btn btn-secondary" onclick="deleteIncome(' + s.id + ')">❌</button></div>' +
+            '<div><button class="btn btn-secondary btn-icon" data-action="edit-income" data-id="' + s.id + '">✏️</button>' +
+            '<button class="btn btn-secondary" data-action="delete-income" data-id="' + s.id + '">❌</button></div>' +
             '</div></div>';
     }).join('');
 }
@@ -100,7 +100,7 @@ async function deleteIncome(id) {
 }
 
 async function processDue() {
-    var btn = document.querySelector('.btn:first-child');
+    var btn = document.getElementById('inc-process-btn');
     btn.textContent = '⏳ Обработка...';
     btn.disabled = true;
     var r = await fetch('/api/v1/incomes/process', { method: 'POST', headers: authHeaders() });
@@ -120,4 +120,21 @@ async function processDue() {
     loadIncomes();
 }
 
-window.onload = function() { loadCategories(); loadIncomes(); };
+document.addEventListener('DOMContentLoaded', function() {
+    loadCategories();
+    loadIncomes();
+
+    document.getElementById('inc-form').addEventListener('submit', saveIncome);
+    document.getElementById('inc-add-btn').addEventListener('click', showAddForm);
+    document.getElementById('inc-cancel-btn').addEventListener('click', hideAddForm);
+    document.getElementById('inc-process-btn').addEventListener('click', processDue);
+    document.getElementById('inc-regular').addEventListener('change', toggleRegular);
+
+    document.getElementById('incomes-list').addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        var id = parseInt(btn.getAttribute('data-id'));
+        if (btn.getAttribute('data-action') === 'edit-income') editIncome(id);
+        else if (btn.getAttribute('data-action') === 'delete-income') deleteIncome(id);
+    });
+});

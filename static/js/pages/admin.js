@@ -5,8 +5,8 @@ async function loadPending() {
     if (d.status !== 'success' || !d.data.length) { tbody.innerHTML = '<tr><td colspan="4">Нет заявок.</td></tr>'; return; }
     tbody.innerHTML = d.data.map(function(u) {
         return '<tr><td>' + u.id + '</td><td>' + u.email + '</td><td>' + (u.telegram_id || '') +
-            '</td><td><button class="btn" onclick="approve(' + u.id + ')">Да</button> ' +
-            '<button class="btn btn-secondary" onclick="reject(' + u.id + ')">Нет</button></td></tr>';
+            '</td><td><button class="btn" data-action="approve-user" data-id="' + u.id + '">Да</button> ' +
+            '<button class="btn btn-secondary" data-action="reject-user" data-id="' + u.id + '">Нет</button></td></tr>';
     }).join('');
 }
 
@@ -39,7 +39,7 @@ async function loadUsers() {
         var tg = u.telegram_id || '';
         return '<tr><td>' + u.id + '</td><td>' + u.email + '</td><td>' + u.role + '</td><td>' + u.status +
             '</td><td><input id="tg-' + u.id + '" type="text" value="' + tg + '" class="input-wide"></td>' +
-            '<td><button class="btn btn-secondary" onclick="setTelegram(' + u.id + ')">💾</button></td></tr>';
+            '<td><button class="btn btn-secondary" data-action="set-telegram" data-id="' + u.id + '">💾</button></td></tr>';
     }).join('');
 }
 
@@ -52,8 +52,8 @@ async function loadCategories() {
         var icon = c.icon || '📁';
         var typeLabel = c.type === 'income' ? '💰 Доход' : '💳 Расход';
         return '<tr><td>' + c.id + '</td><td class="cell-icon">' + icon + '</td><td>' + c.name + '</td><td>' + typeLabel + '</td>' +
-            '<td><button class="btn btn-secondary btn-icon" onclick="editCat(' + c.id + ',\'' + c.name.replace(/'/g,"\\'") + '\',\'' + (c.icon||'') + '\',\'' + (c.description||'').replace(/'/g,"\\'") + '\',\'' + c.type + '\')">✏️</button>' +
-            '<button class="btn btn-secondary" onclick="deleteCategory(' + c.id + ')">❌</button></td></tr>';
+            '<td><button class="btn btn-secondary btn-icon" data-action="edit-cat" data-id="' + c.id + '" data-name="' + c.name.replace(/"/g,'&quot;') + '" data-icon="' + (c.icon||'') + '" data-desc="' + (c.description||'').replace(/"/g,'&quot;') + '" data-type="' + c.type + '">✏️</button>' +
+            '<button class="btn btn-secondary" data-action="delete-cat" data-id="' + c.id + '">❌</button></td></tr>';
     }).join('');
 }
 
@@ -210,10 +210,44 @@ async function backup(type) {
     }
 }
 
-window.onload = function() {
+document.addEventListener('DOMContentLoaded', function() {
     loadPending().catch(function() {});
     loadUsers().catch(function() {});
     loadCategories().catch(function() {});
     loadSettings().catch(function() {});
     loadBotStatus().catch(function() {});
-};
+
+    document.getElementById('admin-cat-form').addEventListener('submit', addCat);
+    document.getElementById('admin-bot-form').addEventListener('submit', saveBotSettings);
+    document.getElementById('admin-bot-start').addEventListener('click', botStart);
+    document.getElementById('admin-bot-stop').addEventListener('click', botStop);
+    document.getElementById('admin-check-proxy').addEventListener('click', checkProxy);
+    document.getElementById('admin-backup-full').addEventListener('click', function() { backup('db'); });
+    document.getElementById('admin-backup-json').addEventListener('click', function() { backup('all'); });
+
+    document.getElementById('pending-body').addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        var id = parseInt(btn.getAttribute('data-id'));
+        if (btn.getAttribute('data-action') === 'approve-user') approve(id);
+        else if (btn.getAttribute('data-action') === 'reject-user') reject(id);
+    });
+
+    document.getElementById('users-body').addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        var id = parseInt(btn.getAttribute('data-id'));
+        if (btn.getAttribute('data-action') === 'set-telegram') setTelegram(id);
+    });
+
+    document.getElementById('categories-body').addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        var id = parseInt(btn.getAttribute('data-id'));
+        if (btn.getAttribute('data-action') === 'edit-cat') {
+            editCat(id, btn.getAttribute('data-name'), btn.getAttribute('data-icon'), btn.getAttribute('data-desc'), btn.getAttribute('data-type'));
+        } else if (btn.getAttribute('data-action') === 'delete-cat') {
+            deleteCategory(id);
+        }
+    });
+});

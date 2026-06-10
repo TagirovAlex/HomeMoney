@@ -20,4 +20,4 @@ async function loadDashboard() {
     } catch(e) { console.error(e); }
 }
 
-window.onload = loadDashboard;
+document.addEventListener('DOMContentLoaded', loadDashboard);

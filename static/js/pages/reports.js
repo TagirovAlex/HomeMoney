@@ -99,7 +99,7 @@ async function loadReport(e) {
                 var rem = fmt(item.budget - item.spent);
                 var icon = item.icon || '📁';
                 var txCount = (item.transactions || []).length;
-                var detailLink = txCount ? ' <a href="#" onclick="event.preventDefault();showCategoryDetail(' + k + ',\'' + item.name.replace(/'/g,"\\'") + '\')">(' + txCount + ')</a>' : '';
+                var detailLink = txCount ? ' <a href="#" data-action="show-detail" data-cat-id="' + k + '" data-cat-name="' + item.name.replace(/"/g,'&quot;') + '">(' + txCount + ')</a>' : '';
                 return '<tr><td>' + icon + ' ' + item.name + detailLink + '</td><td>' + fmt(item.spent) + '</td><td>' + fmt(item.budget) + '</td><td>' + rem + '</td></tr>';
             }).join('');
         }
@@ -132,7 +132,7 @@ function showCategoryDetail(catId, catName) {
         '<div class="card-detail-header">' +
         '<strong>' + (catData.icon || '📁') + ' ' + catName + '</strong>' +
         '<span>Всего: ' + fmt(catData.spent) + ' RUB</span>' +
-        '<button class="btn btn-secondary" onclick="this.parentElement.parentElement.remove()">✕</button>' +
+        '<button class="btn btn-secondary" data-action="close-detail">✕</button>' +
         '</div>' +
         '<table class="data-table"><thead><tr><th>ID</th><th>Сумма</th><th>Описание</th><th>Дата</th></tr></thead><tbody>' +
         txs.map(function(t) {
@@ -149,8 +149,30 @@ function showCategoryDetail(catId, catName) {
     container.innerHTML = html;
 }
 
-window.onload = function() {
+document.addEventListener('DOMContentLoaded', function() {
     setPreset('month', 0);
     loadCategories();
     loadReport(null);
-};
+
+    document.getElementById('report-form').addEventListener('submit', loadReport);
+
+    document.querySelector('.flex-row').addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-preset]');
+        if (!btn) return;
+        var parts = btn.getAttribute('data-preset').split(',');
+        setPreset(parts[0], parts.length > 1 ? parseInt(parts[1]) : 0);
+    });
+
+    document.getElementById('report-table').addEventListener('click', function(e) {
+        var link = e.target.closest('[data-action="show-detail"]');
+        if (!link) return;
+        e.preventDefault();
+        showCategoryDetail(link.getAttribute('data-cat-id'), link.getAttribute('data-cat-name'));
+    });
+
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-action="close-detail"]');
+        if (!btn) return;
+        btn.closest('.card-detail').remove();
+    });
+});

@@ -76,7 +76,7 @@ async function loadReport(e) {
             '<span class="card-label">🏦 Накопления (всего: ' + fmt(sv.total) + ' RUB)</span><br>' +
             sv.items.map(function(x) {
                 var ic = typeIcons[x.type] || '📦';
-                return '<span style="display:inline-block;margin:4px 12px 4px 0">' + ic + ' ' + x.name + ': <strong>' + fmt(x.amount) + ' RUB</strong> (' + x.type_label + ')</span><br>';
+                return '<span class="report-tag">' + ic + ' ' + x.name + ': <strong>' + fmt(x.amount) + ' RUB</strong> (' + x.type_label + ')</span><br>';
             }).join('') +
             '</div>';
     } else {

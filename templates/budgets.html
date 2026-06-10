@@ -13,7 +13,7 @@
     <button class="btn btn-secondary" onclick="copyFromPrev()" id="copy-btn" title="Копировать переопределения с прошлого месяца">📋 Копировать</button>
 </div>
 
-<div id="add-form" class="form-card" style="display:none">
+<div id="add-form" class="form-card hidden">
     <h3 id="add-form-title">Новый бюджет</h3>
     <form onsubmit="saveBudget(event)">
         <input type="hidden" id="bg-edit-id" value="">
@@ -29,7 +29,7 @@
                 Период</label>
         </div>
 
-        <div id="bg-month-fields" class="period-fields" style="display:none">
+        <div id="bg-month-fields" class="period-fields hidden">
             <label>Месяц
                 <select id="bg-month"></select>
             </label>
@@ -38,7 +38,7 @@
             </label>
         </div>
 
-        <div id="bg-period-fields" class="period-fields" style="display:none">
+        <div id="bg-period-fields" class="period-fields hidden">
             <label>С
                 <select id="bg-period-from-month"></select>
                 <select id="bg-period-from-year"></select>

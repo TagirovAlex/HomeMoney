@@ -9,7 +9,7 @@
     </div>
 </div>
 
-<div id="add-form" class="form-card" style="display:none">
+<div id="add-form" class="form-card hidden">
     <h3 id="form-title">Новый источник дохода</h3>
     <form onsubmit="saveIncome(event)">
         <input type="hidden" id="inc-id" value="">
@@ -38,7 +38,7 @@
 
 <div id="incomes-list" class="summary-cards"></div>
 
-<div id="process-result" class="card hidden" style="margin-top:16px"></div>
+<div id="process-result" class="card hidden mt-16"></div>
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/pages/incomes.js') }}"></script>

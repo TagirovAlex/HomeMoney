@@ -1,0 +1,44 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "filesystem": {
+      "type": "local",
+      "command": [
+        "node",
+        "C:\\Github\\mcpservers\\node_modules\\@modelcontextprotocol\\server-filesystem\\dist\\index.js",
+        "C:\\Github\\HomeMoney"
+      ],
+      "enabled": true
+    },
+    "sequential-thinking": {
+      "type": "local",
+      "command": [
+        "node",
+        "C:\\Github\\mcpservers\\node_modules\\@modelcontextprotocol\\server-sequential-thinking\\dist\\index.js"
+      ],
+      "enabled": true
+    },
+    "memory": {
+      "type": "local",
+      "command": [
+        "node",
+        "C:\\Github\\mcpservers\\node_modules\\@modelcontextprotocol\\server-memory\\dist\\index.js"
+      ],
+      "enabled": true,
+      "env": {
+        "MEMORY_FILE_PATH": "C:\\Github\\HomeMoney\\.opencode\\memory.jsonl"
+      }
+    },
+    "git": {
+      "type": "local",
+      "command": [
+        "C:\\Github\\ACCOS\\.venv\\Scripts\\python.exe",
+        "-m",
+        "mcp_server_git",
+        "--repository",
+        "C:\\Github\\HomeMoney"
+      ],
+      "enabled": true
+    }
+  }
+}

@@ -13,9 +13,9 @@ async function loadSavings() {
         return '<div class="card card-left">' +
             '<div class="flex-between">' +
             '<div><span class="card-label">' + icon + ' ' + s.name + '</span><br>' +
-            '<span class="text-secondary" style="font-size:0.8rem">' + typeLabel + '</span><br>' +
+            '<span class="text-secondary fs-small">' + typeLabel + '</span><br>' +
             '<span class="card-value card-value-sm">' + fmt(s.amount) + ' RUB</span>' +
-            (s.description ? '<br><span class="text-secondary" style="font-size:0.8rem">' + s.description + '</span>' : '') +
+            (s.description ? '<br><span class="text-secondary fs-small">' + s.description + '</span>' : '') +
             '</div>' +
             '<div><button class="btn btn-secondary btn-icon" onclick="editSaving(' + s.id + ')">✏️</button>' +
             '<button class="btn btn-secondary" onclick="deleteSaving(' + s.id + ')">❌</button></div>' +
